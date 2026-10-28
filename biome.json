@@ -33,7 +33,13 @@
       "!design/logo",
       "!design/tokens.css",
       "!design/reference",
-      "!design/licenses"
+      "!design/licenses",
+      "!apps/web/src/lib/api",
+      "!apps/web/e2e/.results",
+      "!apps/web/e2e/screenshots",
+      "!apps/web/static/sw.js",
+      "!**/*.svelte",
+      "!apps/web/static/*.svg"
     ]
   },
   "overrides": [
@@ -48,7 +54,7 @@
       }
     },
     {
-      "includes": ["design/**/*.css"],
+      "includes": ["design/**/*.css", "apps/web/src/**/*.css"],
       "linter": {
         "rules": {
           "style": {

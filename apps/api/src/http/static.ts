@@ -1,5 +1,6 @@
+import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { stat } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { extname, join, resolve, sep } from 'node:path';
 import { Readable } from 'node:stream';
 import type { Env, Hono } from 'hono';
@@ -21,6 +22,44 @@ const MIME: Record<string, string> = {
   '.txt': 'text/plain; charset=utf-8',
   '.map': 'application/json',
 };
+
+/**
+ * Content-Security-Policy für die Web-App. Skripte nur aus der eigenen Herkunft und die inline eingebetteten
+ * Start-Skripte von SvelteKit per Hash (kein 'unsafe-inline' für Skripte); keine Stile oder Skripte von außen.
+ */
+const hashCache = new Map<string, { mtimeMs: number; csp: string }>();
+async function htmlPolicy(file: string): Promise<string> {
+  const { mtimeMs } = await stat(file);
+  const cached = hashCache.get(file);
+  if (cached && cached.mtimeMs === mtimeMs) return cached.csp;
+  const html = await readFile(file, 'utf8');
+  const hashes = [...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gi)].map(
+    (m) =>
+      `'sha256-${createHash('sha256')
+        .update(m[1] ?? '')
+        .digest('base64')}'`,
+  );
+  const csp = [
+    "default-src 'self'",
+    `script-src 'self' ${hashes.join(' ')}`.trim(),
+    "style-src 'self'",
+    // Stil-Attribute (SvelteKit setzt z. B. beim Seitenwechsel-Hinweis eines; Komponenten setzen CSS-Variablen).
+    // Das erlaubt keine <style>-Elemente und keine Skripte.
+    "style-src-attr 'unsafe-inline'",
+    "img-src 'self' blob:",
+    "font-src 'self'",
+    "connect-src 'self'",
+    "manifest-src 'self'",
+    "worker-src 'self'",
+    "media-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join('; ');
+  hashCache.set(file, { mtimeMs, csp });
+  return csp;
+}
 
 async function fileIfExists(path: string): Promise<string | null> {
   try {
@@ -54,11 +93,13 @@ export function mountWeb<E extends Env>(app: Hono<E>, webDir: string): void {
 
     const ext = extname(file);
     const immutable = pathname.includes('/_app/immutable/');
-    return new Response(Readable.toWeb(createReadStream(file)) as ReadableStream, {
-      headers: {
-        'Content-Type': MIME[ext] ?? 'application/octet-stream',
-        'Cache-Control': immutable ? 'public, max-age=31536000, immutable' : 'no-cache',
-      },
-    });
+    const headers: Record<string, string> = {
+      'Content-Type': MIME[ext] ?? 'application/octet-stream',
+      'Cache-Control': immutable ? 'public, max-age=31536000, immutable' : 'no-cache',
+    };
+    if (ext === '.html') headers['Content-Security-Policy'] = await htmlPolicy(file);
+    // Der Service Worker (Push) darf den ganzen Ursprung steuern
+    if (pathname === '/sw.js') headers['Service-Worker-Allowed'] = '/';
+    return new Response(Readable.toWeb(createReadStream(file)) as ReadableStream, { headers });
   });
 }

@@ -1,0 +1,40 @@
+<script lang="ts">
+  import type { PartnerColor } from '#lib/api/client.ts';
+  import type { IconName } from '#lib/icons.ts';
+  import Avatar from './Avatar.svelte';
+  import Icon from './Icon.svelte';
+
+  type Props = {
+    src?: string;
+    alt?: string;
+    seat?: number;
+    color?: PartnerColor;
+    name?: string;
+    dateLabel?: string;
+    tag?: string;
+    tagIcon?: IconName;
+    empty?: string;
+    onclick?: () => void;
+  };
+  let { src, alt = '', seat = 1, color, name, dateLabel, tag, tagIcon, empty, onclick }: Props = $props();
+</script>
+
+
+
+<figure class="ds-photo {seat === 2 ? 'ds-p2' : 'ds-p1'} {color ? `ds-c-${color}` : ''}">
+  {#if empty}
+    <div class="ds-photo__empty"><Icon name="image" size={28} /><span>{empty}</span></div>
+  {:else}
+    <img {src} {alt} loading="lazy" />
+  {/if}
+  {#if name}<Avatar {seat} {color} {name} size="sm" class="ds-photo__who" />{/if}
+  {#if dateLabel || tag}
+    <figcaption class="ds-photo__cap">
+      {#if dateLabel}<span class="ds-photo__date">{dateLabel}</span>{/if}
+      {#if tag}<span class="ds-photo__tag">{#if tagIcon}<Icon name={tagIcon} size={16} />{/if}{tag}</span>{/if}
+    </figcaption>
+  {/if}
+  {#if onclick}
+    <button type="button" class="ds-photo__open" {onclick} aria-label="Foto ansehen: {name ?? ''} {dateLabel ?? ''}"></button>
+  {/if}
+</figure>

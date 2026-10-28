@@ -15,3 +15,8 @@ apps/android/android/.gradle/
 apps/android/android/local.properties
 *.log
 .DS_Store
+apps/web/.svelte-kit/
+apps/web/build/
+apps/web/e2e/.results/
+apps/web/e2e/screenshots/
+apps/web/src/lib/api/openapi.json

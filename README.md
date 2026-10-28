@@ -7,11 +7,11 @@ verfehlt, schuldet dem anderen etwas. Kein Statistik-Tracking, Fokus auf gemeins
 Keine Telemetrie und keine externen Dienste im Standardbetrieb. Mailversand und Push über Hersteller-Dienste
 sind optional und im Abschnitt [Datenschutz](#datenschutz) beschrieben.
 
-> **Status: in Entwicklung.** Das Backend ist vollständig und getestet: Konten, Anmeldung, Team-Einladungen,
-> optionaler Mailversand, Wochenziele, Foto-Check-ins mit Wochenlogik pro Zeitzone, Dashboard, Wetteinsatz mit
-> automatischer Wochenabrechnung, Schulden, Historie, Push (Web Push und UnifiedPush), Nudges und
-> Abend-Erinnerung. **Web-Oberfläche und Android-App folgen**; bis dahin ist die API unter `/api/v1`
-> bedienbar (OpenAPI-Spezifikation: `/api/v1/openapi.json`).
+> **Status: in Entwicklung.** Backend und **Web-Oberfläche** (mobil und Desktop, Hell und Dunkel, als PWA
+> installierbar) sind fertig und getestet: Konten, Anmeldung, Einladung per Link, optionaler Mailversand,
+> Wochenziele, Foto-Check-ins mit Wochenlogik pro Zeitzone, Anzeigetafel, Wetteinsatz mit automatischer
+> Wochenabrechnung, Schulden, Verlauf, Push (Web Push und UnifiedPush), Anstupsen und Abend-Erinnerung.
+> **Die Android-App folgt.** Die OpenAPI-Spezifikation liegt unter `/api/v1/openapi.json`.
 
 ## Inhalt
 
@@ -106,7 +106,12 @@ Die Daten (Datenbank, Fotos, Schlüssel) liegen im Volume `data` unter `/data`.
 
 ## Erste Schritte
 
-Solange es noch keine Web-Oberfläche gibt, geht alles über die API. Team gründen (mit dem Setup-Token):
+**Im Browser:** Öffne `PUBLIC_URL`, wähle „Neues Team gründen“ (mit dem `SETUP_TOKEN` aus der `.env`), setze dein
+Wochenziel und lade deinen Partner über **Start → Einladen** ein. Der Link (`/join/…`) führt ihn durch die
+Anmeldung; hat er schon ein Konto, kommt er nach der Anmeldung zurück zur Einladung. Auf dem Handy lässt sich die
+Seite über das Browser-Menü als App installieren („Zum Startbildschirm“).
+
+Dieselben Schritte gehen auch direkt über die API. Team gründen (mit dem Setup-Token):
 
 ```bash
 curl -X POST https://sweat.example.org/api/v1/auth/register \
@@ -279,11 +284,16 @@ pnpm test           # Tests (Vitest)
 pnpm typecheck
 pnpm lint           # Biome
 pnpm design:check   # Designsystem: tokens.css aktuell, Kontraste (WCAG AA) in Hell und Dunkel
+pnpm test:e2e       # Playwright (Chromium mit Fake-Kamera): baut die Web-App, startet die API, mobil und Desktop
 ```
+
+Die Web-Oberfläche entwickelst du mit `pnpm dev:api` (Port 3000) und `pnpm dev:web` (Vite, leitet `/api` an die
+API weiter). Nach Änderungen an der API erzeugt `pnpm --filter @double-sweat/web api:types` die Typen des
+API-Clients neu. Die Kamera braucht HTTPS oder `localhost`; ohne sie bietet die App die Fotoauswahl an.
 
 ```
 apps/api       Hono-API (TypeScript), SQLite via Drizzle, Scheduler, CLI
-apps/web       Web-Oberfläche (SvelteKit, PWA)               [folgt]
+apps/web       Web-Oberfläche (SvelteKit als SPA, PWA, Playwright-Tests)
 apps/android   Capacitor-Wrapper für die Android-App         [folgt]
 design/        Designsystem: Tokens, Schriften, Icons, Logo, Komponenten-CSS, Richtlinie
 deploy/        Caddy- und Traefik-Beispiele

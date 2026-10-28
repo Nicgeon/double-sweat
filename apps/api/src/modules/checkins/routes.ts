@@ -17,7 +17,7 @@ import {
   openPhoto,
 } from './service.js';
 
-const checkinSchema = z
+export const checkinSchema = z
   .object({
     id: z.string(),
     userId: z.string(),

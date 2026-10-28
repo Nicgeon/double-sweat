@@ -16,12 +16,17 @@ RUN corepack enable
 # Sie landet weder im Image noch im Build-Cache.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/
+COPY apps/web/package.json apps/web/
 RUN --mount=type=secret,id=extra_ca,required=false \
     if [ -f /run/secrets/extra_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/extra_ca; fi; \
     pnpm install --frozen-lockfile
 
 COPY tsconfig.base.json ./
+COPY design design
+COPY apps/web apps/web
 COPY apps/api apps/api
+# Web-Oberfläche (SPA) bauen; die API liefert sie später aus
+RUN pnpm --filter @double-sweat/web build
 # deploy erzeugt ein eigenständiges Verzeichnis mit nur den Produktionsabhängigkeiten (kein Compiler, keine Tests)
 RUN --mount=type=secret,id=extra_ca,required=false \
     if [ -f /run/secrets/extra_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/extra_ca; fi; \
@@ -45,6 +50,8 @@ RUN groupadd --gid 10001 sweat \
 
 WORKDIR /app
 COPY --from=build /out/api/ ./
+COPY --from=build /app/apps/web/build/ ./web/
+ENV WEB_DIR=/app/web
 
 USER 10001:10001
 VOLUME ["/data"]

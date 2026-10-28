@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -28,6 +29,29 @@ describe('Statische Web-Auslieferung', () => {
       expect(res.headers.get('content-type')).toContain('text/html');
       expect(res.headers.get('cache-control')).toBe('no-cache');
     }
+  });
+
+  it('setzt für HTML eine strenge CSP und erlaubt Inline-Skripte nur per Hash', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ds-web-csp-'));
+    const script = 'window.__start = 1;';
+    writeFileSync(
+      join(root, 'index.html'),
+      `<!doctype html><script src="/a.js"></script><script>${script}</script>`,
+    );
+    const app = new Hono();
+    mountWeb(app, root);
+    const csp = (await app.request('/join/ABCD')).headers.get('content-security-policy') ?? '';
+    const hash = createHash('sha256').update(script).digest('base64');
+    expect(csp).toContain(`script-src 'self' 'sha256-${hash}'`);
+    // das Skript mit src bekommt keinen Hash; es gibt weder unsafe-inline noch unsafe-eval noch fremde Quellen
+    expect(csp.match(/sha256-/g)).toHaveLength(1);
+    expect(csp).not.toMatch(/unsafe-eval|https?:|\*/);
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toContain("object-src 'none'");
+    expect(csp).toContain("style-src 'self';");
+    // Stil-Attribute sind erlaubt, <style>-Elemente und Skripte bleiben es nicht
+    expect(csp).toContain("style-src-attr 'unsafe-inline'");
+    expect(csp.replace("style-src-attr 'unsafe-inline'", '')).not.toContain('unsafe-inline');
   });
 
   it('liefert Assets mit passendem Typ, gehashte Dateien dauerhaft cachebar', async () => {

@@ -13,7 +13,6 @@ data
 *.jks
 keystore.properties
 apps/android
-design
 docs
 **/*.log
 **/.DS_Store

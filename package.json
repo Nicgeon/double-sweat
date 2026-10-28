@@ -16,7 +16,9 @@
     "format": "biome format --write .",
     "design:build": "node scripts/design-build.mjs",
     "design:check": "node scripts/design-build.mjs --check && node scripts/check-contrast.mjs",
-    "design:icons": "node scripts/design-icons.mjs"
+    "design:icons": "node scripts/design-icons.mjs",
+    "dev:web": "pnpm --filter @double-sweat/web dev",
+    "test:e2e": "pnpm --filter @double-sweat/web test:e2e"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.3"
