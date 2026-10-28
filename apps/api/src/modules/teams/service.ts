@@ -11,6 +11,7 @@ import {
 import { badRequest, conflict, forbidden, notFound, tooManyRequests } from '../../util/errors.js';
 import { newId } from '../../util/ids.js';
 import { DAY, HOUR } from '../../util/time.js';
+import { photoKeysFor } from '../photos/keys.js';
 
 export const INVITE_TTL_MS = 7 * DAY;
 export const TEAM_SIZE = 2;
@@ -264,9 +265,17 @@ export function getTeamView(ctx: AppContext, userId: string): TeamView | null {
   };
 }
 
-/** Löst das Team auf. Beide Konten bleiben bestehen; Teamdaten verschwinden per Cascade. */
-export function dissolveTeam(ctx: AppContext, userId: string): void {
+/** Löst das Team auf. Beide Konten bleiben bestehen; Teamdaten und Fotos werden gelöscht. */
+export async function dissolveTeam(ctx: AppContext, userId: string): Promise<void> {
   const membership = getMembership(ctx.db, userId);
   if (!membership) throw badRequest('no_team', 'Du bist in keinem Team');
-  ctx.db.delete(teams).where(eq(teams.id, membership.teamId)).run();
+  const keys = ctx.db.transaction(
+    (tx) => {
+      const photoKeys = photoKeysFor(tx, { teamId: membership.teamId });
+      tx.delete(teams).where(eq(teams.id, membership.teamId)).run();
+      return photoKeys;
+    },
+    { behavior: 'immediate' },
+  );
+  await ctx.photos.remove(keys);
 }

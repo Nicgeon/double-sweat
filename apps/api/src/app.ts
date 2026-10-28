@@ -1,4 +1,5 @@
 import { type Hook, OpenAPIHono } from '@hono/zod-openapi';
+import type { Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { cors } from 'hono/cors';
 import type { AppContext } from './context.js';
@@ -11,6 +12,9 @@ import {
 } from './http/middleware.js';
 import type { AppEnv } from './http/types.js';
 import { authRoutes } from './modules/auth/routes.js';
+import { checkinRoutes } from './modules/checkins/routes.js';
+import { dashboardRoutes } from './modules/dashboard/routes.js';
+import { goalRoutes } from './modules/goals/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
 import { mailRoutes } from './modules/mail/routes.js';
 import { meRoutes } from './modules/me/routes.js';
@@ -54,13 +58,18 @@ export function createApp(ctx: AppContext): OpenAPIHono<AppEnv> {
   );
   root.use('*', requestLogger(ctx));
 
-  api.use(
-    '*',
-    bodyLimit({
-      maxSize: 64 * 1024,
-      onError: (c) =>
-        c.json({ error: { code: 'payload_too_large', message: 'Anfrage zu groß' } }, 413),
-    }),
+  const tooLarge = (c: Context) =>
+    c.json({ error: { code: 'payload_too_large', message: 'Anfrage zu groß' } }, 413);
+  const smallBody = bodyLimit({ maxSize: 64 * 1024, onError: tooLarge });
+  // Foto-Uploads dürfen größer sein, alles andere ist reines JSON
+  const uploadBody = bodyLimit({
+    maxSize: ctx.config.maxUploadBytes + 64 * 1024,
+    onError: tooLarge,
+  });
+  api.use('*', (c, next) =>
+    c.req.method === 'POST' && c.req.path === '/api/v1/checkins'
+      ? uploadBody(c, next)
+      : smallBody(c, next),
   );
   api.use('*', authResolver(ctx));
   api.use('*', csrfGuard(ctx));
@@ -70,6 +79,9 @@ export function createApp(ctx: AppContext): OpenAPIHono<AppEnv> {
   api.route('/', mailRoutes(ctx));
   api.route('/', meRoutes(ctx));
   api.route('/', teamRoutes(ctx));
+  api.route('/', goalRoutes(ctx));
+  api.route('/', checkinRoutes(ctx));
+  api.route('/', dashboardRoutes(ctx));
   root.route('/api/v1', api);
 
   root.openAPIRegistry.registerComponent('securitySchemes', 'cookieAuth', {

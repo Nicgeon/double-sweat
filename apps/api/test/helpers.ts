@@ -69,7 +69,6 @@ export interface ClientOptions {
 
 export interface TestResponse {
   status: number;
-  // biome-ignore lint/suspicious/noExplicitAny: Testantworten sind untypisiertes JSON
   body: any;
   headers: Headers;
 }
@@ -98,8 +97,27 @@ export class TestClient {
     body?: unknown,
     extraHeaders: Record<string, string> = {},
   ): Promise<TestResponse> {
-    const headers: Record<string, string> = { ...extraHeaders };
+    const headers = { ...extraHeaders };
     if (body !== undefined) headers['content-type'] = 'application/json';
+    return this.send(method, path, body === undefined ? undefined : JSON.stringify(body), headers);
+  }
+
+  /** Multipart-Upload (Fotos). Der Content-Type samt Boundary wird vom Request selbst gesetzt. */
+  upload(
+    path: string,
+    form: FormData,
+    extraHeaders: Record<string, string> = {},
+  ): Promise<TestResponse> {
+    return this.send('POST', path, form, extraHeaders);
+  }
+
+  private async send(
+    method: string,
+    path: string,
+    body: string | FormData | undefined,
+    extraHeaders: Record<string, string>,
+  ): Promise<TestResponse> {
+    const headers: Record<string, string> = { ...extraHeaders };
     if (this.origin && method !== 'GET' && !('origin' in headers)) headers.origin = this.origin;
     if (this.csrfToken && !('x-csrf-token' in headers)) headers['x-csrf-token'] = this.csrfToken;
     if (this.bearer && !('authorization' in headers))
@@ -108,8 +126,9 @@ export class TestClient {
       headers.cookie = [...this.cookies].map(([k, v]) => `${k}=${v}`).join('; ');
     }
     const res = await this.app.request(
-      `${PUBLIC_URL}/api/v1${path}`,
-      { method, headers, body: body === undefined ? undefined : JSON.stringify(body) },
+      // Die API liefert absolute Pfade (z. B. Foto-URLs) mit Präfix, Tests dürfen beide Formen nutzen
+      path.startsWith('/api/v1/') ? `${PUBLIC_URL}${path}` : `${PUBLIC_URL}/api/v1${path}`,
+      { method, headers, body },
       { incoming: { socket: { remoteAddress: this.ip } } },
     );
     for (const raw of res.headers.getSetCookie()) {
@@ -120,6 +139,14 @@ export class TestClient {
       if (/Max-Age=0|Expires=Thu, 01 Jan 1970/i.test(raw) || value === '')
         this.cookies.delete(name);
       else this.cookies.set(name, value);
+    }
+    const type = res.headers.get('content-type') ?? '';
+    if (type.startsWith('image/')) {
+      return {
+        status: res.status,
+        body: Buffer.from(await res.arrayBuffer()),
+        headers: res.headers,
+      };
     }
     const text = await res.text();
     let parsed: unknown = null;

@@ -1,5 +1,13 @@
 import { sql } from 'drizzle-orm';
-import { check, index, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
+import {
+  check,
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  unique,
+} from 'drizzle-orm/sqlite-core';
 
 // Zeitpunkte: UTC-Millisekunden (integer). Lokale Kalendertage: TEXT 'YYYY-MM-DD'.
 
@@ -118,6 +126,54 @@ export const emailTokens = sqliteTable(
   (t) => [index('email_tokens_user_idx').on(t.userId)],
 );
 
+export const weeklyGoals = sqliteTable(
+  'weekly_goals',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Montag (lokales Datum), ab dem dieses Ziel gilt. */
+    effectiveFrom: text('effective_from').notNull(),
+    days: integer('days').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.effectiveFrom] }),
+    check('weekly_goals_days_range', sql`${t.days} BETWEEN 1 AND 7`),
+  ],
+);
+
+export const checkins = sqliteTable(
+  'checkins',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    teamId: text('team_id')
+      .notNull()
+      .references(() => teams.id, { onDelete: 'cascade' }),
+    /** Vom Server aus Serverzeit und Zeitzone des Nutzers bestimmt, nie vom Client. */
+    localDate: text('local_date').notNull(),
+    weekStart: text('week_start').notNull(),
+    tz: text('tz').notNull(),
+    photoKey: text('photo_key').notNull(),
+    thumbKey: text('thumb_key').notNull(),
+    photoSha256: text('photo_sha256').notNull(),
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+    bytes: integer('bytes').notNull(),
+    note: text('note'),
+    tag: text('tag'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [
+    unique('checkins_user_day').on(t.userId, t.localDate),
+    unique('checkins_team_photo').on(t.teamId, t.photoSha256),
+    index('checkins_team_week_idx').on(t.teamId, t.weekStart),
+  ],
+);
+
 export const rateLimits = sqliteTable('rate_limits', {
   key: text('key').primaryKey(),
   windowStart: integer('window_start').notNull(),
@@ -137,3 +193,4 @@ export type Invite = typeof invites.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type AppTokenRow = typeof appTokens.$inferSelect;
 export type EmailTokenRow = typeof emailTokens.$inferSelect;
+export type Checkin = typeof checkins.$inferSelect;

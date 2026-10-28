@@ -119,7 +119,7 @@ export function teamRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
     async (c) => {
       const { user } = currentAuth(c);
       await verifyReauth(ctx, user, c.req.valid('json').password);
-      dissolveTeam(ctx, user.id);
+      await dissolveTeam(ctx, user.id);
       return c.json({ ok: true as const }, 200);
     },
   );

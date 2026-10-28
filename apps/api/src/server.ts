@@ -5,6 +5,7 @@ import { createContext } from './context.js';
 import { openDatabase } from './db/client.js';
 import { mountWeb } from './http/static.js';
 import { runHousekeeping } from './jobs/housekeeping.js';
+import { createPhotoSweeper } from './jobs/photo-sweeper.js';
 import { startScheduler } from './jobs/scheduler.js';
 
 function main(): void {
@@ -24,7 +25,7 @@ function main(): void {
   const app = createApp(ctx);
   if (config.webDir) mountWeb(app, config.webDir);
 
-  const scheduler = startScheduler(ctx, [runHousekeeping]);
+  const scheduler = startScheduler(ctx, [runHousekeeping, createPhotoSweeper()]);
   const server = serve({ fetch: app.fetch, hostname: config.host, port: config.port }, (info) => {
     ctx.log.info('listening', {
       address: info.address,

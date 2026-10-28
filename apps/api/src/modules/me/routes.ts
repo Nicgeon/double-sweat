@@ -63,6 +63,14 @@ export function meRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
         body: jsonBody(
           z.object({
             displayName: z.string().trim().min(1).max(40).optional(),
+            timezone: z
+              .string()
+              .min(1)
+              .max(64)
+              .optional()
+              .describe(
+                'IANA-Zeitzone. Wirkt ab dem nächsten Wochenstart, sobald es Check-ins gibt.',
+              ),
             reminderTime: z
               .string()
               .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Format HH:MM')

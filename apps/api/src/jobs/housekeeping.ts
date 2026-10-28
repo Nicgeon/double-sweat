@@ -1,6 +1,7 @@
 import { and, isNotNull, lte, or } from 'drizzle-orm';
 import type { AppContext } from '../context.js';
 import { appTokens, emailTokens, invites, sessions } from '../db/schema.js';
+import { promoteDueTimezones } from '../modules/me/timezone.js';
 import { DAY } from '../util/time.js';
 
 /**
@@ -31,4 +32,5 @@ export function runHousekeeping(ctx: AppContext): void {
     )
     .run();
   ctx.limiter.purgeExpired();
+  promoteDueTimezones(ctx);
 }

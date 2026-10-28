@@ -1,6 +1,7 @@
 import type { Config } from './config.js';
 import type { Db } from './db/client.js';
 import { createMailer, type Mailer } from './modules/mail/mailer.js';
+import { createPhotoStorage, type PhotoStorage } from './modules/photos/storage.js';
 import { createPasswordHasher, type PasswordHasher } from './security/passwords.js';
 import { createRateLimiter, type RateLimiter } from './security/ratelimit.js';
 import { type Clock, systemClock } from './util/clock.js';
@@ -12,6 +13,7 @@ export interface AppContext {
   clock: Clock;
   log: Logger;
   mailer: Mailer;
+  photos: PhotoStorage;
   passwords: PasswordHasher;
   limiter: RateLimiter;
   /** Wartezeiten zwischen Mail-Versuchen (Backoff). In Tests auf [0, 0] setzen. */
@@ -28,6 +30,7 @@ export interface ContextOptions {
   clock?: Clock;
   log?: Logger;
   mailer?: Mailer;
+  photos?: PhotoStorage;
   passwords?: PasswordHasher;
   mailRetryDelaysMs?: number[];
 }
@@ -44,6 +47,7 @@ export function createContext(options: ContextOptions): AppContext {
     clock,
     log,
     mailer: options.mailer ?? createMailer(config),
+    photos: options.photos ?? createPhotoStorage(config.photosDir),
     passwords: options.passwords ?? createPasswordHasher(config.argon2),
     limiter: createRateLimiter(db, clock),
     mailRetryDelaysMs: options.mailRetryDelaysMs ?? [1_000, 5_000],
