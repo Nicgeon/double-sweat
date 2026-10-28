@@ -269,6 +269,17 @@ export function getTeamView(ctx: AppContext, userId: string): TeamView | null {
 export async function dissolveTeam(ctx: AppContext, userId: string): Promise<void> {
   const membership = getMembership(ctx.db, userId);
   if (!membership) throw badRequest('no_team', 'Du bist in keinem Team');
+  const actor = ctx.db
+    .select({ name: users.displayName })
+    .from(users)
+    .where(eq(users.id, userId))
+    .get();
+  const partners = ctx.db
+    .select({ userId: memberships.userId })
+    .from(memberships)
+    .where(eq(memberships.teamId, membership.teamId))
+    .all()
+    .filter((m) => m.userId !== userId);
   const keys = ctx.db.transaction(
     (tx) => {
       const photoKeys = photoKeysFor(tx, { teamId: membership.teamId });
@@ -278,4 +289,11 @@ export async function dissolveTeam(ctx: AppContext, userId: string): Promise<voi
     { behavior: 'immediate' },
   );
   await ctx.photos.remove(keys);
+  for (const partner of partners) {
+    ctx.push.notify(partner.userId, {
+      type: 'team_dissolved',
+      title: 'Double Sweat',
+      body: `${actor?.name ?? 'Dein Partner'} hat das Team aufgelöst. Dein Konto bleibt bestehen.`,
+    });
+  }
 }

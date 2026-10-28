@@ -6,7 +6,8 @@ verfehlt, schuldet dem anderen etwas. Kein Statistik-Tracking, Fokus auf gemeins
 
 > **Status: in Entwicklung.** Aktuell lauffähig ist das Backend: Konten und Anmeldung, Team-Einladungen,
 > optionaler Mailversand, Wochenziele, Foto-Check-ins mit Wochenlogik pro Zeitzone, Dashboard, Wetteinsatz mit
-> automatischer Wochenabrechnung, Schulden und Historie. Web-Oberfläche, Push und Android-App folgen.
+> automatischer Wochenabrechnung, Schulden, Historie, Push (Web Push und UnifiedPush), Nudges und Abend-
+> Erinnerung. Web-Oberfläche und Android-App folgen.
 > Diese README wird mit Docker-Setup, Reverse-Proxy-Beispielen und APK-Anleitung vervollständigt.
 
 ## Aufbau
@@ -96,6 +97,25 @@ Ohne SMTP ist die CLI der Weg, ein vergessenes Passwort zurückzusetzen.
   kann sie als eingelöst markieren.
 - Zum Testen eines Wochenwechsels ohne Warten: `DEV_CLOCK_OFFSET_HOURS=168` (eine Woche vor) setzen und den
   Server neu starten. Die Einstellung wird mit `NODE_ENV=production` abgelehnt. Manuell abrechnen: `cli settle`.
+
+## Push, Nudges und Erinnerungen
+
+- **Anbieter** sind austauschbar (`PushProvider`): Web Push (VAPID) für Browser und PWA, UnifiedPush für die
+  Android-App. Beide lassen sich in der `.env` abschalten. Zusätzlich gibt es immer ein **Postfach**
+  (`GET /api/v1/notifications`), das auch ohne Push funktioniert.
+- **Datenschutz:** Web Push läuft technisch über den Push-Dienst des Browser-Herstellers (Mozilla, Google,
+  Apple), der Inhalt ist aber Ende-zu-Ende verschlüsselt (RFC 8291). UnifiedPush mit ntfy ist der vollständig
+  selbst gehostete Weg. Liefert der Verteiler keine Schlüssel, enthält die Nachricht nur einen neutralen Text.
+- **Sicherheit:** Push-Ziele kommen vom Client. Der Server ruft sie deshalb nur über einen gehärteten Client auf:
+  nur https, nur öffentlich auflösende Adressen (auch bei jedem Verbindungsaufbau erneut geprüft, kein
+  DNS-Rebinding), keine Weiterleitungen, Zeit- und Größenlimits. Ein ntfy im eigenen Netz muss in
+  `PUSH_ALLOWED_HOSTS` eingetragen werden.
+- **Nudge:** `POST /api/v1/nudges` stupst den Partner an, höchstens einmal pro Stunde (429 mit `Retry-After`).
+- **Abend-Erinnerung:** Zur persönlichen Uhrzeit (Standard 19:00, in der Zeitzone des Nutzers), wenn das
+  Wochenziel gefährdet ist (heute noch kein Check-in und kein Puffer mehr). Höchstens eine pro Tag; nach einem
+  Neustart wird sie bis 22:00 Uhr nachgeholt.
+- Nicht enthalten: FCM (Firebase). Das Interface ist dafür vorbereitet, der Standard-Build kommt ohne
+  Google-Abhängigkeit aus.
 
 ## Sicherheit in Kürze
 

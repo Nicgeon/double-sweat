@@ -6,6 +6,7 @@ import { openDatabase } from './db/client.js';
 import { mountWeb } from './http/static.js';
 import { runHousekeeping } from './jobs/housekeeping.js';
 import { createPhotoSweeper } from './jobs/photo-sweeper.js';
+import { remindersJob } from './jobs/reminders.js';
 import { startScheduler } from './jobs/scheduler.js';
 import { settleWeeksJob } from './jobs/settle-weeks.js';
 import { systemClock } from './util/clock.js';
@@ -32,7 +33,12 @@ function main(): void {
   const app = createApp(ctx);
   if (config.webDir) mountWeb(app, config.webDir);
 
-  const scheduler = startScheduler(ctx, [runHousekeeping, settleWeeksJob, createPhotoSweeper()]);
+  const scheduler = startScheduler(ctx, [
+    runHousekeeping,
+    settleWeeksJob,
+    remindersJob,
+    createPhotoSweeper(),
+  ]);
   const server = serve({ fetch: app.fetch, hostname: config.host, port: config.port }, (info) => {
     ctx.log.info('listening', {
       address: info.address,

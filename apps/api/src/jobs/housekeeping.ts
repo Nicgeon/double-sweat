@@ -1,6 +1,14 @@
 import { and, isNotNull, lte, or } from 'drizzle-orm';
 import type { AppContext } from '../context.js';
-import { appTokens, emailTokens, invites, sessions } from '../db/schema.js';
+import {
+  appTokens,
+  emailTokens,
+  invites,
+  notifications,
+  nudges,
+  reminderLog,
+  sessions,
+} from '../db/schema.js';
 import { promoteDueTimezones } from '../modules/me/timezone.js';
 import { DAY } from '../util/time.js';
 
@@ -30,6 +38,18 @@ export function runHousekeeping(ctx: AppContext): void {
         and(isNotNull(invites.usedAt), lte(invites.usedAt, now - 30 * DAY)),
       ),
     )
+    .run();
+  ctx.db
+    .delete(notifications)
+    .where(lte(notifications.createdAt, now - 60 * DAY))
+    .run();
+  ctx.db
+    .delete(nudges)
+    .where(lte(nudges.createdAt, now - DAY))
+    .run();
+  ctx.db
+    .delete(reminderLog)
+    .where(lte(reminderLog.sentAt, now - 8 * DAY))
     .run();
   ctx.limiter.purgeExpired();
   promoteDueTimezones(ctx);

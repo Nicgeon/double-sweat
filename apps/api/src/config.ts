@@ -44,6 +44,10 @@ const envSchema = z.object({
   SMTP_URL: z.string().optional(),
   MAIL_FROM: z.string().optional(),
   SMTP_REQUIRE_TLS: bool,
+  WEBPUSH_ENABLED: bool,
+  UNIFIEDPUSH_ENABLED: bool,
+  PUSH_ALLOWED_HOSTS: z.string().default(''),
+  VAPID_SUBJECT: z.string().optional(),
   DEV_CLOCK_OFFSET_HOURS: z.coerce.number().default(0),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'silent']).default('info'),
   ARGON2_MEMORY_KIB: z.coerce.number().int().min(8192).default(19456),
@@ -69,6 +73,13 @@ export interface Config {
   maxUploadBytes: number;
   corsAppOrigins: string[];
   smtp: { url: string; from: string; requireTls: boolean } | null;
+  push: {
+    webPushEnabled: boolean;
+    unifiedPushEnabled: boolean;
+    /** Hosts, die auch private/lokale Adressen und http nutzen dürfen (z. B. ntfy im LAN). */
+    allowedHosts: string[];
+    vapidSubject: string;
+  };
   /** Nur für Entwicklung: verschiebt die Serveruhr, um Wochenwechsel zu testen. In Produktion verboten. */
   devClockOffsetMs: number;
   logLevel: 'debug' | 'info' | 'warn' | 'error' | 'silent';
@@ -126,6 +137,19 @@ export function parseTrustProxy(value: string): BlockList | null {
     }
   }
   return any ? list : null;
+}
+
+/** VAPID verlangt ein mailto:- oder https:-Subjekt. Bei http://localhost greift ein Platzhalter. */
+function vapidSubject(configured: string | undefined, publicUrl: URL): string {
+  if (configured) {
+    if (!/^(mailto:[^\s@]+@[^\s@]+|https:\/\/\S+)$/.test(configured)) {
+      throw new ConfigError(
+        'VAPID_SUBJECT muss mailto:name@example.org oder eine https://-URL sein',
+      );
+    }
+    return configured;
+  }
+  return publicUrl.protocol === 'https:' ? publicUrl.origin : 'mailto:admin@double-sweat.invalid';
 }
 
 export function loadConfig(source: Record<string, string | undefined> = process.env): Config {
@@ -229,6 +253,14 @@ export function loadConfig(source: Record<string, string | undefined> = process.
     maxUploadBytes: Math.floor(env.MAX_UPLOAD_MB * 1024 * 1024),
     corsAppOrigins,
     smtp,
+    push: {
+      webPushEnabled: env.WEBPUSH_ENABLED ?? true,
+      unifiedPushEnabled: env.UNIFIEDPUSH_ENABLED ?? true,
+      allowedHosts: env.PUSH_ALLOWED_HOSTS.split(',')
+        .map((h) => h.trim().toLowerCase())
+        .filter(Boolean),
+      vapidSubject: vapidSubject(env.VAPID_SUBJECT, url),
+    },
     devClockOffsetMs: env.DEV_CLOCK_OFFSET_HOURS * 3_600_000,
     logLevel: env.LOG_LEVEL,
     argon2: {

@@ -61,6 +61,54 @@ export function weekStatus(
   return { needed, status: 'on_track' };
 }
 
+/**
+ * Wochenstand eines Mitglieds in dessen eigener Zeitzone. Auch die Abend-Erinnerung nutzt diese Rechnung,
+ * damit Dashboard und Erinnerung nie auseinanderlaufen.
+ */
+export function buildMemberProgress(
+  ctx: AppContext,
+  user: User,
+  viewerId: string,
+  now: number,
+): MemberProgress {
+  const zone = currentTimezone(ctx, user);
+  const today = localDateAt(now, zone);
+  const weekStart = weekStartOf(today);
+  const done = new Set(
+    ctx.db
+      .select({ localDate: checkins.localDate })
+      .from(checkins)
+      .where(and(eq(checkins.userId, user.id), eq(checkins.weekStart, weekStart)))
+      .all()
+      .map((r) => r.localDate),
+  );
+  const checkedInToday = done.has(today);
+  const { daysLeftInclToday } = positionInWeek(today);
+  const remainingDays = checkedInToday ? daysLeftInclToday - 1 : daysLeftInclToday;
+  const goalDays = goalForWeek(ctx.db, user.id, weekStart);
+  const { needed, status } = weekStatus(goalDays, done.size, remainingDays);
+  return {
+    userId: user.id,
+    displayName: user.displayName,
+    isMe: user.id === viewerId,
+    timezone: zone,
+    weekStart,
+    weekEndsAt: weekEndInstant(weekStart, zone),
+    goalDays,
+    doneDays: done.size,
+    checkedInToday,
+    remainingDays,
+    neededDays: needed,
+    status,
+    days: weekDays(weekStart).map((date) => ({
+      date,
+      checkedIn: done.has(date),
+      isToday: date === today,
+      isFuture: date > today,
+    })),
+  };
+}
+
 export function getDashboard(ctx: AppContext, viewer: User): Dashboard {
   const membership = getMembership(ctx.db, viewer.id);
   if (!membership) throw forbidden('no_team', 'Du bist in keinem Team');
@@ -74,44 +122,9 @@ export function getDashboard(ctx: AppContext, viewer: User): Dashboard {
     .orderBy(memberships.slot)
     .all();
 
-  const members: MemberProgress[] = people.map(({ user }) => {
-    const zone = currentTimezone(ctx, user);
-    const today = localDateAt(now, zone);
-    const weekStart = weekStartOf(today);
-    const done = new Set(
-      ctx.db
-        .select({ localDate: checkins.localDate })
-        .from(checkins)
-        .where(and(eq(checkins.userId, user.id), eq(checkins.weekStart, weekStart)))
-        .all()
-        .map((r) => r.localDate),
-    );
-    const checkedInToday = done.has(today);
-    const { daysLeftInclToday } = positionInWeek(today);
-    const remainingDays = checkedInToday ? daysLeftInclToday - 1 : daysLeftInclToday;
-    const goalDays = goalForWeek(ctx.db, user.id, weekStart);
-    const { needed, status } = weekStatus(goalDays, done.size, remainingDays);
-    return {
-      userId: user.id,
-      displayName: user.displayName,
-      isMe: user.id === viewer.id,
-      timezone: zone,
-      weekStart,
-      weekEndsAt: weekEndInstant(weekStart, zone),
-      goalDays,
-      doneDays: done.size,
-      checkedInToday,
-      remainingDays,
-      neededDays: needed,
-      status,
-      days: weekDays(weekStart).map((date) => ({
-        date,
-        checkedIn: done.has(date),
-        isToday: date === today,
-        isFuture: date > today,
-      })),
-    };
-  });
+  const members: MemberProgress[] = people.map(({ user }) =>
+    buildMemberProgress(ctx, user, viewer.id, now),
+  );
 
   const weeks = [...new Set(members.map((m) => m.weekStart))];
   const mine = members.find((m) => m.isMe) as MemberProgress;

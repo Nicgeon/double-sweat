@@ -240,6 +240,71 @@ export const debts = sqliteTable(
   ],
 );
 
+export const pushSubscriptions = sqliteTable(
+  'push_subscriptions',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    provider: text('provider', { enum: ['webpush', 'unifiedpush'] }).notNull(),
+    endpoint: text('endpoint').notNull().unique(),
+    /** Schlüssel für die Nachrichtenverschlüsselung (RFC 8291). Bei UnifiedPush optional. */
+    p256dh: text('p256dh'),
+    auth: text('auth'),
+    deviceLabel: text('device_label'),
+    createdAt: integer('created_at').notNull(),
+    lastSuccessAt: integer('last_success_at'),
+    failureCount: integer('failure_count').notNull().default(0),
+  },
+  (t) => [index('push_subscriptions_user_idx').on(t.userId)],
+);
+
+export const notifications = sqliteTable(
+  'notifications',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    dataJson: text('data_json'),
+    createdAt: integer('created_at').notNull(),
+    readAt: integer('read_at'),
+  },
+  (t) => [index('notifications_user_idx').on(t.userId, t.createdAt)],
+);
+
+export const nudges = sqliteTable(
+  'nudges',
+  {
+    id: text('id').primaryKey(),
+    fromUser: text('from_user')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    toUser: text('to_user')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [index('nudges_from_idx').on(t.fromUser, t.createdAt)],
+);
+
+export const reminderLog = sqliteTable(
+  'reminder_log',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    localDate: text('local_date').notNull(),
+    kind: text('kind').notNull(),
+    sentAt: integer('sent_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.localDate, t.kind] })],
+);
+
 export const rateLimits = sqliteTable('rate_limits', {
   key: text('key').primaryKey(),
   windowStart: integer('window_start').notNull(),
@@ -263,3 +328,5 @@ export type Checkin = typeof checkins.$inferSelect;
 export type WeekResult = typeof weekResults.$inferSelect;
 export type Bet = typeof bets.$inferSelect;
 export type Debt = typeof debts.$inferSelect;
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+export type NotificationRow = typeof notifications.$inferSelect;
