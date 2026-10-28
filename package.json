@@ -13,7 +13,10 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "lint": "biome check .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "design:build": "node scripts/design-build.mjs",
+    "design:check": "node scripts/design-build.mjs --check && node scripts/check-contrast.mjs",
+    "design:icons": "node scripts/design-icons.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.3"

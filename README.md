@@ -270,17 +270,19 @@ pnpm dev:api
 ```
 
 ```bash
-pnpm test        # Tests (Vitest)
+pnpm test           # Tests (Vitest)
 pnpm typecheck
-pnpm lint        # Biome
+pnpm lint           # Biome
+pnpm design:check   # Designsystem: tokens.css aktuell, Kontraste (WCAG AA) in Hell und Dunkel
 ```
 
 ```
 apps/api       Hono-API (TypeScript), SQLite via Drizzle, Scheduler, CLI
 apps/web       Web-Oberfläche (SvelteKit, PWA)               [folgt]
 apps/android   Capacitor-Wrapper für die Android-App         [folgt]
+design/        Designsystem: Tokens, Schriften, Icons, Logo, Komponenten-CSS, Richtlinie
 deploy/        Caddy- und Traefik-Beispiele
-scripts/       Backup-Skript
+scripts/       Backup-Skript, Design-Werkzeuge
 ```
 
 Branches: `main` (stabil, getestet) und `develop` (Integration). Änderungen laufen über `develop`.

@@ -28,7 +28,12 @@
       "!**/build",
       "!**/.svelte-kit",
       "!**/drizzle/meta",
-      "!**/pnpm-lock.yaml"
+      "!**/pnpm-lock.yaml",
+      "!design/icons",
+      "!design/logo",
+      "!design/tokens.css",
+      "!design/reference",
+      "!design/licenses"
     ]
   },
   "overrides": [
@@ -38,6 +43,19 @@
         "rules": {
           "suspicious": {
             "noExplicitAny": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["design/**/*.css"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDescendingSpecificity": "off"
+          },
+          "complexity": {
+            "noImportantStyles": "off"
           }
         }
       }
