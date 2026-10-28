@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+.svelte-kit/
+coverage/
+data/
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+keystore.properties
+apps/android/android/app/build/
+apps/android/android/.gradle/
+apps/android/android/local.properties
+*.log
+.DS_Store

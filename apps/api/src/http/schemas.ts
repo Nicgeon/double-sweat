@@ -1,0 +1,89 @@
+import { z } from '@hono/zod-openapi';
+
+export const errorSchema = z
+  .object({
+    error: z.object({
+      code: z.string(),
+      message: z.string(),
+      details: z.array(z.object({ path: z.string(), message: z.string() })).optional(),
+    }),
+  })
+  .openapi('Error');
+
+export const okSchema = z.object({ ok: z.literal(true) }).openapi('Ok');
+
+export const userSchema = z
+  .object({
+    id: z.string(),
+    email: z.string(),
+    emailVerified: z.boolean(),
+    displayName: z.string(),
+    timezone: z.string(),
+    pendingTimezone: z.string().nullable(),
+    reminderTime: z.string(),
+  })
+  .openapi('User');
+
+export const teamSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    full: z.boolean(),
+    fullSince: z.number().nullable(),
+    members: z.array(
+      z.object({
+        id: z.string(),
+        displayName: z.string(),
+        slot: z.number(),
+        timezone: z.string(),
+        isMe: z.boolean(),
+      }),
+    ),
+    invite: z.object({ createdAt: z.number(), expiresAt: z.number() }).nullable(),
+  })
+  .openapi('Team');
+
+export const tokensSchema = z
+  .object({
+    accessToken: z.string(),
+    refreshToken: z.string(),
+    expiresIn: z.number().describe('Gültigkeit des Access-Tokens in Sekunden'),
+    refreshExpiresAt: z.number(),
+  })
+  .openapi('Tokens');
+
+export const authResultSchema = z
+  .object({
+    user: userSchema,
+    team: teamSchema.nullable(),
+    csrfToken: z
+      .string()
+      .optional()
+      .describe('Nur bei Cookie-Anmeldung: Wert für den Header X-CSRF-Token'),
+    tokens: tokensSchema.optional().describe('Nur bei App-Anmeldung'),
+  })
+  .openapi('AuthResult');
+
+export const jsonResponse = <T extends z.ZodType>(schema: T, description: string) => ({
+  description,
+  content: { 'application/json': { schema } },
+});
+
+export const jsonBody = <T extends z.ZodType>(schema: T) => ({
+  required: true as const,
+  content: { 'application/json': { schema } },
+});
+
+export const errorResponses = {
+  400: jsonResponse(errorSchema, 'Ungültige Eingabe'),
+  401: jsonResponse(errorSchema, 'Nicht angemeldet'),
+  403: jsonResponse(errorSchema, 'Nicht erlaubt'),
+  404: jsonResponse(errorSchema, 'Nicht gefunden'),
+  409: jsonResponse(errorSchema, 'Konflikt'),
+  429: jsonResponse(errorSchema, 'Zu viele Anfragen (Retry-After beachten)'),
+};
+
+export const protectedSecurity: Record<string, string[]>[] = [
+  { cookieAuth: [] },
+  { bearerAuth: [] },
+];
