@@ -18,6 +18,7 @@
     "@node-rs/argon2": "^2.2.2",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.4",
+    "fflate": "^0.8.3",
     "hono": "^4.13.14",
     "luxon": "^3.7.2",
     "nodemailer": "^10.2.1",

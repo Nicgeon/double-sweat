@@ -253,6 +253,9 @@ kontaktieren.
   Zähler mit gehashten Schlüsseln).
 - Optionale externe Berührungspunkte, alle abschaltbar: dein SMTP-Server (Mail), der Push-Dienst des
   Browser-Herstellers (nur Web Push, Inhalt verschlüsselt), dein ntfy-Server (UnifiedPush).
+- **Datenexport** (`POST /api/v1/me/export`, Passwort nötig): liefert einen Einmal-Link (60 Sekunden gültig, ohne
+  Sitzung nutzbar), der ein ZIP mit `data.json` und allen eigenen Fotos streamt. Enthalten sind nur die eigenen
+  Daten (vom Partner nur der Anzeigename), keine Passwort-Hashes und keine Push-Zugangsdaten.
 - Konto löschen (`DELETE /api/v1/me`, Passwort nötig) entfernt die eigenen Check-ins samt Fotodateien; das Team
   des Partners bleibt bestehen. Team auflösen (`DELETE /api/v1/team`) löscht alle Teamdaten und -fotos.
 

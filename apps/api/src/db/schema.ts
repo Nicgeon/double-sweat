@@ -116,7 +116,7 @@ export const emailTokens = sqliteTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    kind: text('kind', { enum: ['verify', 'reset', 'email_change'] }).notNull(),
+    kind: text('kind', { enum: ['verify', 'reset', 'email_change', 'export'] }).notNull(),
     tokenHash: text('token_hash').notNull().unique(),
     newEmail: text('new_email'),
     createdAt: integer('created_at').notNull(),

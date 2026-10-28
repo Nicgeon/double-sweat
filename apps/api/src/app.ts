@@ -16,6 +16,7 @@ import { betRoutes } from './modules/bets/routes.js';
 import { checkinRoutes } from './modules/checkins/routes.js';
 import { dashboardRoutes } from './modules/dashboard/routes.js';
 import { debtRoutes } from './modules/debts/routes.js';
+import { exportRoutes } from './modules/export/routes.js';
 import { goalRoutes } from './modules/goals/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
 import { historyRoutes } from './modules/history/routes.js';
@@ -94,6 +95,7 @@ export function createApp(ctx: AppContext): OpenAPIHono<AppEnv> {
   api.route('/', pushRoutes(ctx));
   api.route('/', notificationRoutes(ctx));
   api.route('/', nudgeRoutes(ctx));
+  api.route('/', exportRoutes(ctx));
   root.route('/api/v1', api);
 
   root.openAPIRegistry.registerComponent('securitySchemes', 'cookieAuth', {

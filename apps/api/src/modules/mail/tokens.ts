@@ -3,7 +3,7 @@ import type { DbLike } from '../../db/client.js';
 import { type EmailTokenRow, emailTokens } from '../../db/schema.js';
 import { hashToken, randomToken } from '../../security/tokens.js';
 import { newId } from '../../util/ids.js';
-import { HOUR, MINUTE } from '../../util/time.js';
+import { HOUR, MINUTE, SECOND } from '../../util/time.js';
 
 export type EmailTokenKind = EmailTokenRow['kind'];
 
@@ -11,6 +11,8 @@ export const EMAIL_TOKEN_TTL_MS: Record<EmailTokenKind, number> = {
   verify: 24 * HOUR,
   reset: 30 * MINUTE,
   email_change: 24 * HOUR,
+  // Download-Berechtigung des Datenexports, bewusst nur 60 Sekunden gültig
+  export: 60 * SECOND,
 };
 
 /** Erzeugt ein Einmal-Token. Nur der Hash wird gespeichert; ältere offene Tokens gleicher Art verfallen. */

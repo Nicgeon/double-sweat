@@ -66,7 +66,8 @@ export function setBet(ctx: AppContext, user: User, text: string): BetOverview {
   // Der späteste "nächste Montag" aller Mitglieder: Wer in der Zeitzone voraus ist, hat die Woche evtl. schon begonnen
   const effectiveFrom = members
     .map((m) => nextWeekStart(now, currentTimezone(ctx, m.user)))
-    .reduce((latest, week) => (week > latest ? week : latest));
+    .sort()
+    .at(-1) as string;
   ctx.db
     .insert(bets)
     .values({

@@ -141,7 +141,7 @@ export class TestClient {
       else this.cookies.set(name, value);
     }
     const type = res.headers.get('content-type') ?? '';
-    if (type.startsWith('image/')) {
+    if (type.startsWith('image/') || type.startsWith('application/zip')) {
       return {
         status: res.status,
         body: Buffer.from(await res.arrayBuffer()),
