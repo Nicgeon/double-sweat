@@ -53,20 +53,57 @@
   }
 }
 
-/* Partner-Identität: p1 = Ember, Kreis; p2 = Tide, abgerundetes Quadrat. Form UND Farbe, nie nur Farbe. */
+/* Partner-Identität: die FORM gehört zum Slot (p1 Kreis, p2 abgerundetes Quadrat), die FARBE wählt die Person aus
+   der Palette (ds-c-<name>). Ohne Farbklasse gilt der Standard des Slots: p1 Ember, p2 Tide. */
 .ds-p1 {
+  --ds-radius: 50%;
+}
+.ds-p2 {
+  --ds-radius: 30%;
+}
+.ds-p1,
+.ds-c-ember {
   --ds-p: var(--ember);
   --ds-on-p: var(--on-ember);
   --ds-p-ink: var(--ember-ink);
   --ds-p-soft: var(--ember-soft);
-  --ds-radius: 50%;
 }
-.ds-p2 {
+.ds-p2,
+.ds-c-tide {
   --ds-p: var(--tide);
   --ds-on-p: var(--on-tide);
   --ds-p-ink: var(--tide-ink);
   --ds-p-soft: var(--tide-soft);
-  --ds-radius: 30%;
+}
+.ds-c-orchid {
+  --ds-p: var(--orchid);
+  --ds-on-p: var(--on-orchid);
+  --ds-p-ink: var(--orchid-ink);
+  --ds-p-soft: var(--orchid-soft);
+}
+.ds-c-moss {
+  --ds-p: var(--moss);
+  --ds-on-p: var(--on-moss);
+  --ds-p-ink: var(--moss-ink);
+  --ds-p-soft: var(--moss-soft);
+}
+.ds-c-sky {
+  --ds-p: var(--sky);
+  --ds-on-p: var(--on-sky);
+  --ds-p-ink: var(--sky-ink);
+  --ds-p-soft: var(--sky-soft);
+}
+.ds-c-cocoa {
+  --ds-p: var(--cocoa);
+  --ds-on-p: var(--on-cocoa);
+  --ds-p-ink: var(--cocoa-ink);
+  --ds-p-soft: var(--cocoa-soft);
+}
+.ds-c-graphite {
+  --ds-p: var(--graphite);
+  --ds-on-p: var(--on-graphite);
+  --ds-p-ink: var(--graphite-ink);
+  --ds-p-soft: var(--graphite-soft);
 }
 
 /* Fokus: 2 px, 2 px Abstand, an allen Bedienelementen */
@@ -1024,6 +1061,64 @@ textarea.ds-field__input {
 }
 .ds-shutter:focus-visible {
   outline-color: var(--on-scrim);
+}
+
+/* ---------- ColorPicker ---------- */
+.ds-colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.ds-color {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  width: 64px;
+}
+.ds-color__btn {
+  --ds-size: 48px;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--ds-size);
+  height: var(--ds-size);
+  padding: 0;
+  border: 0;
+  border-radius: var(--ds-radius);
+  background: var(--ds-p);
+  color: var(--ds-on-p);
+  cursor: pointer;
+  transition: transform var(--dur-fast) var(--ease-out);
+  -webkit-tap-highlight-color: transparent;
+}
+.ds-color__btn:hover:not(:disabled) {
+  transform: scale(1.06);
+}
+.ds-color__btn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.ds-color__btn[aria-checked="true"] {
+  box-shadow:
+    0 0 0 2px var(--surface),
+    0 0 0 4px var(--ink);
+}
+.ds-color__btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.ds-color__name {
+  font: 500 12px / 16px var(--font-body);
+  color: var(--ink-muted);
+  text-align: center;
+}
+.ds-color__btn[aria-checked="true"] + .ds-color__name {
+  color: var(--ink);
+  font-weight: 700;
 }
 
 /* ---------- Layout-Hilfen ---------- */

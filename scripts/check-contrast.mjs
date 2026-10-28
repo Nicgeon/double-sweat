@@ -50,7 +50,12 @@ const mark = (fg, grounds) => text(fg, grounds, 3, 'Grafik');
 text('ink', GROUNDS);
 text('ink-muted', GROUNDS);
 text('on-action', ['action', 'action-hover']);
-for (const p of ['ember', 'tide', 'done', 'risk', 'alert']) {
+// Jede Farbfamilie X mit on-X, X-ink und X-soft (Identitätsfarben der Palette und Statusfarben) wird geprüft
+const names = new Set(tokens.map((t) => t.name));
+const families = [...names].filter(
+  (n) => names.has(`on-${n}`) && names.has(`${n}-ink`) && names.has(`${n}-soft`),
+);
+for (const p of families) {
   text(`on-${p}`, [p]);
   text(`${p}-ink`, [...GROUNDS, `${p}-soft`]);
   mark(p, ['bg', 'surface']);

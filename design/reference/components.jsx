@@ -5,7 +5,18 @@ import { ICONS } from './icon-data.js';
 const { useState, useEffect, useRef, useId } = React;
 
 const cx = (...a) => a.filter(Boolean).join(' ');
-const pClass = (partner) => (partner === 2 ? 'ds-p2' : 'ds-p1');
+// Form folgt dem Slot (1 Kreis, 2 Quadrat); die Farbe ist frei aus der Palette gewählt (sonst Standard des Slots).
+const pClass = (partner, color) => cx(partner === 2 ? 'ds-p2' : 'ds-p1', color && `ds-c-${color}`);
+
+export const PARTNER_COLORS = [
+  { value: 'ember', label: 'Glut' },
+  { value: 'tide', label: 'Flut' },
+  { value: 'orchid', label: 'Orchidee' },
+  { value: 'moss', label: 'Moos' },
+  { value: 'sky', label: 'Himmel' },
+  { value: 'cocoa', label: 'Kakao' },
+  { value: 'graphite', label: 'Graphit' },
+];
 
 /* ---------- Icon ---------- */
 export function Icon({ name, size = 20, title, className, ...rest }) {
@@ -125,10 +136,10 @@ export function Segmented({ options, value, onChange, label, wrap = false, class
 }
 
 /* ---------- Stepper (Wochenziel) ---------- */
-export function Stepper({ value, min = 1, max = 7, onChange, label, unit = 'Tage', partner = 1 }) {
+export function Stepper({ value, min = 1, max = 7, onChange, label, unit = 'Tage', partner = 1, color }) {
   const set = (v) => onChange && onChange(Math.min(max, Math.max(min, v)));
   return (
-    <div className={cx('ds-stepper', pClass(partner))} role="group" aria-label={label}>
+    <div className={cx('ds-stepper', pClass(partner, color))} role="group" aria-label={label}>
       <div className="ds-stepper__row">
         <Button variant="secondary" size="lg" iconOnly icon="minus" onClick={() => set(value - 1)} disabled={value <= min}>Einen Tag weniger</Button>
         <div className="ds-stepper__value" aria-live="polite">
@@ -163,10 +174,10 @@ export function Toggle({ checked, onChange, label, hint, className }) {
 }
 
 /* ---------- Avatar ---------- */
-export function Avatar({ partner = 1, name = '', size = 'md', className }) {
+export function Avatar({ partner = 1, color, name = '', size = 'md', className }) {
   const initials = name.trim().split(/\s+/).slice(0, 2).map((s) => s[0]).join('').toUpperCase() || '?';
   return (
-    <span className={cx('ds-avatar', pClass(partner), size !== 'md' && `ds-avatar--${size}`, className)} role="img" aria-label={name || undefined}>
+    <span className={cx('ds-avatar', pClass(partner, color), size !== 'md' && `ds-avatar--${size}`, className)} role="img" aria-label={name || undefined}>
       <span aria-hidden="true">{initials}</span>
     </span>
   );
@@ -218,9 +229,9 @@ export function Card({ as: Tag = 'section', title, action, tone, className, chil
 /* ---------- WeekStrip ---------- */
 const DAY_NAMES = { Mo: 'Montag', Di: 'Dienstag', Mi: 'Mittwoch', Do: 'Donnerstag', Fr: 'Freitag', Sa: 'Samstag', So: 'Sonntag' };
 const DAY_STATE = { done: 'eingecheckt', today: 'heute, noch offen', missed: 'kein Check-in', future: 'kommt noch' };
-export function WeekStrip({ days, partner = 1, className }) {
+export function WeekStrip({ days, partner = 1, color, className }) {
   return (
-    <ol className={cx('ds-week', pClass(partner), className)}>
+    <ol className={cx('ds-week', pClass(partner, color), className)}>
       {days.map((d) => (
         <li key={d.label} className={cx('ds-day', `is-${d.state}`)} aria-current={d.state === 'today' ? 'date' : undefined}>
           <span className="ds-day__mark">{d.state === 'done' ? <Icon name="check" size={18} strokeWidth={3} /> : null}</span>
@@ -242,9 +253,9 @@ export function Scoreboard({ weekLabel, streak, lanes, children, className }) {
       </header>
       <div className="ds-board__lanes">
         {lanes.map((l) => (
-          <article key={l.name} className={cx('ds-lane', pClass(l.partner))}>
+          <article key={l.name} className={cx('ds-lane', pClass(l.partner, l.color))}>
             <div className="ds-lane__top">
-              <Avatar partner={l.partner} name={l.name} size="lg" />
+              <Avatar partner={l.partner} color={l.color} name={l.name} size="lg" />
               <div className="ds-lane__who">
                 <span className="ds-lane__name">{l.name}{l.you ? ' (Du)' : ''}</span>
                 <StatusChip status={l.status} />
@@ -255,7 +266,7 @@ export function Scoreboard({ weekLabel, streak, lanes, children, className }) {
                 <span className="ds-sr">{l.done} von {l.goal} Tagen</span>
               </div>
             </div>
-            <WeekStrip days={l.days} partner={l.partner} />
+            <WeekStrip days={l.days} partner={l.partner} color={l.color} />
           </article>
         ))}
       </div>
@@ -265,9 +276,9 @@ export function Scoreboard({ weekLabel, streak, lanes, children, className }) {
 }
 
 /* ---------- PhotoTile ---------- */
-export function PhotoTile({ src, alt, partner = 1, name, dateLabel, tag, tagIcon, empty, className }) {
+export function PhotoTile({ src, alt, partner = 1, color, name, dateLabel, tag, tagIcon, empty, className }) {
   return (
-    <figure className={cx('ds-photo', pClass(partner), className)}>
+    <figure className={cx('ds-photo', pClass(partner, color), className)}>
       {empty ? (
         <div className="ds-photo__empty">
           <Icon name="image" size={28} />
@@ -276,7 +287,7 @@ export function PhotoTile({ src, alt, partner = 1, name, dateLabel, tag, tagIcon
       ) : (
         <img src={src} alt={alt || ''} loading="lazy" />
       )}
-      {name ? <Avatar partner={partner} name={name} size="sm" className="ds-photo__who" /> : null}
+      {name ? <Avatar partner={partner} color={color} name={name} size="sm" className="ds-photo__who" /> : null}
       {dateLabel || tag ? (
         <figcaption className="ds-photo__cap">
           {dateLabel ? <span className="ds-photo__date">{dateLabel}</span> : null}
@@ -402,6 +413,34 @@ export function Sheet({ open, title, onClose, footer, inline = false, children }
         {footer ? <footer className="ds-sheet__foot">{footer}</footer> : null}
       </div>
     </div>
+  );
+}
+
+/* ---------- ColorPicker ---------- */
+export function ColorPicker({ value, onChange, partner = 1, taken = {}, label = 'Deine Farbe', colors = PARTNER_COLORS, className }) {
+  return (
+    <fieldset className={cx('ds-colors', pClass(partner), className)} role="radiogroup" aria-label={label}>
+      {colors.map((c) => {
+        const by = taken[c.value];
+        const on = c.value === value;
+        return (
+          <div key={c.value} className="ds-color">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={on}
+              aria-label={by ? `${c.label}, vergeben von ${by}` : c.label}
+              disabled={Boolean(by)}
+              className={cx('ds-color__btn', `ds-c-${c.value}`)}
+              onClick={() => onChange && onChange(c.value)}
+            >
+              {on ? <Icon name="check" size={24} strokeWidth={3} /> : null}
+            </button>
+            <span className="ds-color__name">{by ? `von ${by}` : c.label}</span>
+          </div>
+        );
+      })}
+    </fieldset>
   );
 }
 
