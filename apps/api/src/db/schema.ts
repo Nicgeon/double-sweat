@@ -174,6 +174,72 @@ export const checkins = sqliteTable(
   ],
 );
 
+export const weekResults = sqliteTable(
+  'week_results',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    teamId: text('team_id')
+      .notNull()
+      .references(() => teams.id, { onDelete: 'cascade' }),
+    weekStart: text('week_start').notNull(),
+    tz: text('tz').notNull(),
+    /** Eingefrorenes Ziel der Woche. Null, wenn kein Ziel gesetzt war (Woche wird dann nicht gewertet). */
+    goalDays: integer('goal_days'),
+    doneDays: integer('done_days').notNull(),
+    /** true/false, oder null, wenn die Woche nicht gewertet wurde. */
+    met: integer('met', { mode: 'boolean' }),
+    settledAt: integer('settled_at').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.weekStart] }),
+    index('week_results_team_week_idx').on(t.teamId, t.weekStart),
+  ],
+);
+
+export const bets = sqliteTable(
+  'bets',
+  {
+    id: text('id').primaryKey(),
+    teamId: text('team_id')
+      .notNull()
+      .references(() => teams.id, { onDelete: 'cascade' }),
+    text: text('text').notNull(),
+    /** Erster Montag (lokales Datum), für den dieser Einsatz gilt. */
+    effectiveFrom: text('effective_from').notNull(),
+    createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [unique('bets_team_effective').on(t.teamId, t.effectiveFrom)],
+);
+
+export const debts = sqliteTable(
+  'debts',
+  {
+    id: text('id').primaryKey(),
+    teamId: text('team_id')
+      .notNull()
+      .references(() => teams.id, { onDelete: 'cascade' }),
+    weekStart: text('week_start').notNull(),
+    debtorId: text('debtor_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    creditorId: text('creditor_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Text des Einsatzes zum Zeitpunkt der Abrechnung (spätere Änderungen wirken nicht zurück). */
+    betText: text('bet_text').notNull(),
+    createdAt: integer('created_at').notNull(),
+    redeemedAt: integer('redeemed_at'),
+    redeemedBy: text('redeemed_by').references(() => users.id, { onDelete: 'set null' }),
+  },
+  (t) => [
+    unique('debts_debtor_week').on(t.debtorId, t.weekStart),
+    index('debts_team_idx').on(t.teamId),
+  ],
+);
+
 export const rateLimits = sqliteTable('rate_limits', {
   key: text('key').primaryKey(),
   windowStart: integer('window_start').notNull(),
@@ -194,3 +260,6 @@ export type SessionRow = typeof sessions.$inferSelect;
 export type AppTokenRow = typeof appTokens.$inferSelect;
 export type EmailTokenRow = typeof emailTokens.$inferSelect;
 export type Checkin = typeof checkins.$inferSelect;
+export type WeekResult = typeof weekResults.$inferSelect;
+export type Bet = typeof bets.$inferSelect;
+export type Debt = typeof debts.$inferSelect;

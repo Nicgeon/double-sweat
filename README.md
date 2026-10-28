@@ -5,9 +5,9 @@ Woche), loggen Workouts per Foto, sehen gegenseitig den Fortschritt und haben ei
 verfehlt, schuldet dem anderen etwas. Kein Statistik-Tracking, Fokus auf gemeinsames Dranbleiben.
 
 > **Status: in Entwicklung.** Aktuell lauffähig ist das Backend: Konten und Anmeldung, Team-Einladungen,
-> optionaler Mailversand, Wochenziele, Foto-Check-ins mit Wochenlogik pro Zeitzone und das Dashboard.
-> Wetteinsatz und Historie, Web-Oberfläche, Push und Android-App folgen. Diese README wird mit Docker-Setup,
-> Reverse-Proxy-Beispielen und APK-Anleitung vervollständigt.
+> optionaler Mailversand, Wochenziele, Foto-Check-ins mit Wochenlogik pro Zeitzone, Dashboard, Wetteinsatz mit
+> automatischer Wochenabrechnung, Schulden und Historie. Web-Oberfläche, Push und Android-App folgen.
+> Diese README wird mit Docker-Setup, Reverse-Proxy-Beispielen und APK-Anleitung vervollständigt.
 
 ## Aufbau
 
@@ -82,6 +82,20 @@ Ohne SMTP ist die CLI der Weg, ein vergessenes Passwort zurückzusetzen.
   dem nächsten Wochenstart (ohne bisherige Check-ins sofort).
 - Fotos werden geprüft (JPEG, PNG, WebP), auf höchstens 1600 px verkleinert und ohne EXIF/GPS als JPEG
   gespeichert. Abrufbar sind sie nur für angemeldete Mitglieder desselben Teams.
+
+## Wetteinsatz und Abrechnung
+
+- Jedes Team hat einen Freitext-Einsatz (`PUT /api/v1/bets`). Eine Änderung gilt erst für Wochen, die bei
+  **keinem** Partner schon begonnen haben. Der Einsatz lässt sich also nicht kurz vor der Abrechnung ändern.
+- Der Wochenabschluss läuft automatisch jede Minute, ist idempotent (pro Nutzer und Woche genau ein Ergebnis)
+  und holt verpasste Wochen nach einem Neustart nach. Jeder Partner wird zum Ende **seiner** Woche abgerechnet.
+- Gewertet wird ab dem ersten Montag, nachdem das Team vollständig ist; ein unvollständiges Team wird nicht
+  abgerechnet. Wer kein Ziel gesetzt hat, wird für die Woche nicht gewertet.
+- Wer das Ziel verfehlt, schuldet dem anderen den Einsatz (verfehlen beide, schuldet jeder dem anderen).
+  Die Schuld speichert den Einsatztext zum Abrechnungszeitpunkt. Nur die Person, der etwas geschuldet wird,
+  kann sie als eingelöst markieren.
+- Zum Testen eines Wochenwechsels ohne Warten: `DEV_CLOCK_OFFSET_HOURS=168` (eine Woche vor) setzen und den
+  Server neu starten. Die Einstellung wird mit `NODE_ENV=production` abgelehnt. Manuell abrechnen: `cli settle`.
 
 ## Sicherheit in Kürze
 

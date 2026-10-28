@@ -1,6 +1,6 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import type { AppContext } from '../../context.js';
-import { checkins, memberships, type User, users } from '../../db/schema.js';
+import { checkins, debts, memberships, type User, users } from '../../db/schema.js';
 import {
   type LocalDate,
   localDateAt,
@@ -10,6 +10,7 @@ import {
   weekStartOf,
 } from '../../domain/weeks.js';
 import { forbidden } from '../../util/errors.js';
+import { betForWeek } from '../bets/service.js';
 import { type CheckinDto, listTeamCheckins } from '../checkins/service.js';
 import { goalForWeek } from '../goals/service.js';
 import { currentTimezone } from '../me/timezone.js';
@@ -38,6 +39,10 @@ export interface MemberProgress {
 
 export interface Dashboard {
   team: { id: string; full: boolean };
+  /** Einsatz der laufenden Woche des Betrachters. */
+  bet: string | null;
+  /** Offene Schulden: wie viele ich schulde und wie viele mir geschuldet werden. */
+  debts: { owe: number; owed: number };
   members: MemberProgress[];
   feed: CheckinDto[];
 }
@@ -109,8 +114,19 @@ export function getDashboard(ctx: AppContext, viewer: User): Dashboard {
   });
 
   const weeks = [...new Set(members.map((m) => m.weekStart))];
+  const mine = members.find((m) => m.isMe) as MemberProgress;
+  const open = ctx.db
+    .select({ debtorId: debts.debtorId, creditorId: debts.creditorId })
+    .from(debts)
+    .where(and(eq(debts.teamId, membership.teamId), isNull(debts.redeemedAt)))
+    .all();
   return {
     team: { id: membership.teamId, full: people.length === 2 },
+    bet: betForWeek(ctx.db, membership.teamId, mine.weekStart),
+    debts: {
+      owe: open.filter((d) => d.debtorId === viewer.id).length,
+      owed: open.filter((d) => d.creditorId === viewer.id).length,
+    },
     members,
     feed: listTeamCheckins(ctx.db, membership.teamId, weeks),
   };

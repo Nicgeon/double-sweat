@@ -44,6 +44,7 @@ const envSchema = z.object({
   SMTP_URL: z.string().optional(),
   MAIL_FROM: z.string().optional(),
   SMTP_REQUIRE_TLS: bool,
+  DEV_CLOCK_OFFSET_HOURS: z.coerce.number().default(0),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'silent']).default('info'),
   ARGON2_MEMORY_KIB: z.coerce.number().int().min(8192).default(19456),
   ARGON2_TIME_COST: z.coerce.number().int().min(1).default(2),
@@ -68,6 +69,8 @@ export interface Config {
   maxUploadBytes: number;
   corsAppOrigins: string[];
   smtp: { url: string; from: string; requireTls: boolean } | null;
+  /** Nur für Entwicklung: verschiebt die Serveruhr, um Wochenwechsel zu testen. In Produktion verboten. */
+  devClockOffsetMs: number;
   logLevel: 'debug' | 'info' | 'warn' | 'error' | 'silent';
   argon2: { memoryKib: number; timeCost: number; parallelism: number };
 }
@@ -200,6 +203,12 @@ export function loadConfig(source: Record<string, string | undefined> = process.
     smtp = { url: env.SMTP_URL, from: env.MAIL_FROM, requireTls: env.SMTP_REQUIRE_TLS ?? true };
   }
 
+  if (env.DEV_CLOCK_OFFSET_HOURS !== 0 && env.NODE_ENV === 'production') {
+    throw new ConfigError(
+      'DEV_CLOCK_OFFSET_HOURS ist nur für Entwicklung und Tests erlaubt (NODE_ENV=production verboten)',
+    );
+  }
+
   const dataDir = isAbsolute(env.DATA_DIR) ? env.DATA_DIR : resolve(env.DATA_DIR);
 
   return {
@@ -220,6 +229,7 @@ export function loadConfig(source: Record<string, string | undefined> = process.
     maxUploadBytes: Math.floor(env.MAX_UPLOAD_MB * 1024 * 1024),
     corsAppOrigins,
     smtp,
+    devClockOffsetMs: env.DEV_CLOCK_OFFSET_HOURS * 3_600_000,
     logLevel: env.LOG_LEVEL,
     argon2: {
       memoryKib: env.ARGON2_MEMORY_KIB,

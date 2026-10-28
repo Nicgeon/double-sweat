@@ -5,7 +5,9 @@ import { backupDatabase, openDatabase } from './db/client.js';
 import { users } from './db/schema.js';
 import { normalizeEmail } from './modules/auth/service.js';
 import { createEmailToken } from './modules/mail/tokens.js';
+import { settleDueWeeks } from './modules/settlement/service.js';
 import { createTeamInvite, createTeamTx } from './modules/teams/service.js';
+import { systemClock } from './util/clock.js';
 
 const USAGE = `Double Sweat CLI
 
@@ -16,6 +18,7 @@ Verwendung: cli <Befehl> [Argumente]
   create-invite <teamId>   Neue Einladung für ein Team mit freiem Platz ausgeben
   mail-test <adresse>      Testmail über SMTP_URL senden
   backup <zieldatei>       Konsistente Kopie der Datenbank erstellen (Fotos separat sichern)
+  settle                   Wochenabschluss sofort ausführen (läuft sonst automatisch jede Minute)
 `;
 
 // Geheimnisse (Links, Codes) gehen auf stdout, Hinweise auf stderr. So bleibt die Ausgabe skriptbar.
@@ -31,7 +34,12 @@ async function run(argv: string[]): Promise<number> {
 
   const config = loadConfig();
   const db = openDatabase(config.dbPath);
-  const ctx = createContext({ config, db });
+  const offset = config.devClockOffsetMs;
+  const ctx = createContext({
+    config,
+    db,
+    clock: offset === 0 ? systemClock : { now: () => Date.now() + offset },
+  });
   try {
     switch (command) {
       case 'reset-password': {
@@ -76,6 +84,13 @@ async function run(argv: string[]): Promise<number> {
           text: 'Der Mailversand funktioniert.',
         });
         info('Testmail gesendet.');
+        return 0;
+      }
+      case 'settle': {
+        const settled = settleDueWeeks(ctx);
+        info(
+          `${settled.length} Wochen abgerechnet, ${settled.filter((s) => s.debtId).length} Schulden angelegt.`,
+        );
         return 0;
       }
       case 'backup': {

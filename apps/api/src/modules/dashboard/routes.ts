@@ -43,6 +43,8 @@ export function dashboardRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
         200: jsonResponse(
           z.object({
             team: z.object({ id: z.string(), full: z.boolean() }),
+            bet: z.string().nullable(),
+            debts: z.object({ owe: z.number(), owed: z.number() }),
             members: z.array(memberSchema),
             feed: z.array(z.object({ id: z.string() }).passthrough()),
           }),

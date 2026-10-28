@@ -12,10 +12,13 @@ import {
 } from './http/middleware.js';
 import type { AppEnv } from './http/types.js';
 import { authRoutes } from './modules/auth/routes.js';
+import { betRoutes } from './modules/bets/routes.js';
 import { checkinRoutes } from './modules/checkins/routes.js';
 import { dashboardRoutes } from './modules/dashboard/routes.js';
+import { debtRoutes } from './modules/debts/routes.js';
 import { goalRoutes } from './modules/goals/routes.js';
 import { healthRoutes } from './modules/health/routes.js';
+import { historyRoutes } from './modules/history/routes.js';
 import { mailRoutes } from './modules/mail/routes.js';
 import { meRoutes } from './modules/me/routes.js';
 import { teamRoutes } from './modules/teams/routes.js';
@@ -82,6 +85,9 @@ export function createApp(ctx: AppContext): OpenAPIHono<AppEnv> {
   api.route('/', goalRoutes(ctx));
   api.route('/', checkinRoutes(ctx));
   api.route('/', dashboardRoutes(ctx));
+  api.route('/', betRoutes(ctx));
+  api.route('/', debtRoutes(ctx));
+  api.route('/', historyRoutes(ctx));
   root.route('/api/v1', api);
 
   root.openAPIRegistry.registerComponent('securitySchemes', 'cookieAuth', {

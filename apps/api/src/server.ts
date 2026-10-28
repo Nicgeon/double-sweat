@@ -7,6 +7,8 @@ import { mountWeb } from './http/static.js';
 import { runHousekeeping } from './jobs/housekeeping.js';
 import { createPhotoSweeper } from './jobs/photo-sweeper.js';
 import { startScheduler } from './jobs/scheduler.js';
+import { settleWeeksJob } from './jobs/settle-weeks.js';
+import { systemClock } from './util/clock.js';
 
 function main(): void {
   let config: ReturnType<typeof loadConfig>;
@@ -21,11 +23,16 @@ function main(): void {
   }
 
   const db = openDatabase(config.dbPath);
-  const ctx = createContext({ config, db });
+  const offset = config.devClockOffsetMs;
+  const clock = offset === 0 ? systemClock : { now: () => Date.now() + offset };
+  const ctx = createContext({ config, db, clock });
+  if (offset !== 0) {
+    ctx.log.warn('dev_clock_offset_active', { hours: offset / 3_600_000 });
+  }
   const app = createApp(ctx);
   if (config.webDir) mountWeb(app, config.webDir);
 
-  const scheduler = startScheduler(ctx, [runHousekeeping, createPhotoSweeper()]);
+  const scheduler = startScheduler(ctx, [runHousekeeping, settleWeeksJob, createPhotoSweeper()]);
   const server = serve({ fetch: app.fetch, hostname: config.host, port: config.port }, (info) => {
     ctx.log.info('listening', {
       address: info.address,
