@@ -1,0 +1,36 @@
+# Double Sweat, ein Container. Konfiguration über .env (Vorlage: .env.example).
+#
+#   cp .env.example .env     # PUBLIC_URL und SETUP_TOKEN setzen
+#   docker compose up -d --build
+#
+# Der Port ist nur lokal (127.0.0.1) erreichbar. HTTPS macht der Reverse-Proxy davor (Kamera und Push brauchen
+# zwingend HTTPS), Beispiele in deploy/. Es darf nur EINE Instanz laufen (SQLite und Scheduler im Prozess).
+services:
+  app:
+    build: .
+    image: double-sweat:local
+    container_name: double-sweat
+    init: true
+    restart: unless-stopped
+    env_file: .env
+    # Container-interne Werte haben Vorrang vor der .env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3000"
+      DATA_DIR: /data
+    ports:
+      - "127.0.0.1:${PORT:-3000}:3000"
+    volumes:
+      - data:/data
+    # Härtung: unveränderliches Dateisystem, keine Zusatzrechte
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  data:

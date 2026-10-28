@@ -1,0 +1,36 @@
+# Zusatz für docker-compose.yml: Caddy als HTTPS-Reverse-Proxy.
+#
+#   echo 'DOMAIN=sweat.example.org' >> .env          # und PUBLIC_URL=https://sweat.example.org
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.caddy.yml up -d --build
+services:
+  app:
+    # Kein Port nach außen: erreichbar nur über Caddy im selben Netz
+    ports: !reset []
+
+  caddy:
+    image: caddy:2
+    container_name: double-sweat-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN in .env setzen}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  caddy_data:
+  caddy_config:

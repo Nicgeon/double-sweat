@@ -18,6 +18,17 @@ describe('Datenbank', () => {
     expect(statSync(join(path, '..')).mode & 0o777).toBe(0o700);
   });
 
+  it('auch die WAL- und SHM-Dateien sind nur für den Besitzer lesbar', () => {
+    const path = join(dir(), 'ds.db');
+    const db = openDatabase(path);
+    db.$client.prepare('CREATE TABLE IF NOT EXISTS probe (x)').run();
+    db.$client.prepare('INSERT INTO probe VALUES (1)').run();
+    for (const file of [path, `${path}-wal`, `${path}-shm`]) {
+      expect(existsSync(file), file).toBe(true);
+      expect(statSync(file).mode & 0o777, file).toBe(0o600);
+    }
+  });
+
   it('wendet Migrationen idempotent an', () => {
     const path = join(dir(), 'ds.db');
     openDatabase(path).$client.close();

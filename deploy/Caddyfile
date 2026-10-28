@@ -1,0 +1,15 @@
+# Caddy holt und erneuert das HTTPS-Zertifikat (Let's Encrypt) automatisch.
+# Voraussetzung: DOMAIN zeigt per DNS auf diesen Server, Ports 80 und 443 sind erreichbar.
+{$DOMAIN} {
+	encode zstd gzip
+
+	# Etwas über MAX_UPLOAD_MB, damit der Server die freundliche Fehlermeldung liefern kann
+	request_body {
+		max_size 20MB
+	}
+
+	reverse_proxy app:3000 {
+		# X-Forwarded-For setzt Caddy; die App vertraut dem Docker-Netz (TRUST_PROXY=loopback,private)
+		header_up X-Real-IP {remote_host}
+	}
+}

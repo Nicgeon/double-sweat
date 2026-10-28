@@ -1,4 +1,4 @@
-import { chmodSync, mkdirSync } from 'node:fs';
+import { chmodSync, closeSync, existsSync, mkdirSync, openSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
@@ -18,6 +18,9 @@ export function openDatabase(path: string): Db {
   if (path !== ':memory:') {
     mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   }
+  // Datei vorab mit 0600 anlegen: SQLite übernimmt deren Rechte für die WAL- und SHM-Dateien, die sonst
+  // mit der Standard-umask (oft 0644) entstehen und aktuelle Daten (u. a. Passwort-Hashes) enthalten.
+  if (path !== ':memory:' && !existsSync(path)) closeSync(openSync(path, 'a', 0o600));
   const sqlite = new Database(path);
   sqlite.pragma('journal_mode = WAL');
   sqlite.pragma('foreign_keys = ON');

@@ -1,0 +1,24 @@
+# Alternative zu Caddy: Labels für einen bereits laufenden Traefik (v3) mit Docker-Provider.
+# Passe Entrypoint ("websecure"), Zertifikats-Resolver ("letsencrypt") und den Netzwerknamen an dein Setup an.
+#
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.traefik.yml up -d --build
+services:
+  app:
+    ports: !reset []
+    networks:
+      - default
+      - traefik
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: traefik
+      traefik.http.routers.double-sweat.rule: Host(`${DOMAIN:?DOMAIN in .env setzen}`)
+      traefik.http.routers.double-sweat.entrypoints: websecure
+      traefik.http.routers.double-sweat.tls.certresolver: letsencrypt
+      traefik.http.services.double-sweat.loadbalancer.server.port: "3000"
+      # Foto-Uploads: etwas über MAX_UPLOAD_MB (Traefik begrenzt standardmäßig nicht, hier zur Sicherheit)
+      traefik.http.middlewares.double-sweat-limit.buffering.maxRequestBodyBytes: "20971520"
+      traefik.http.routers.double-sweat.middlewares: double-sweat-limit
+
+networks:
+  traefik:
+    external: true
