@@ -95,6 +95,7 @@ function collect(ctx: AppContext, userId: string) {
     exportedAt: new Date(ctx.clock.now()).toISOString(),
     profile: {
       displayName: user.displayName,
+      color: user.color,
       email: user.email,
       timezone: user.timezone,
       reminderTime: user.reminderTime,

@@ -1,4 +1,5 @@
 import { z } from '@hono/zod-openapi';
+import { PARTNER_COLORS } from '../domain/colors.js';
 
 export const errorSchema = z
   .object({
@@ -10,6 +11,11 @@ export const errorSchema = z
   })
   .openapi('Error');
 
+export const partnerColorSchema = z
+  .enum(PARTNER_COLORS)
+  .describe('Identitätsfarbe aus der Palette (Tokens in design/tokens.json)')
+  .openapi('PartnerColor');
+
 export const okSchema = z.object({ ok: z.literal(true) }).openapi('Ok');
 
 export const userSchema = z
@@ -18,6 +24,7 @@ export const userSchema = z
     email: z.string(),
     emailVerified: z.boolean(),
     displayName: z.string(),
+    color: partnerColorSchema,
     timezone: z.string(),
     pendingTimezone: z.string().nullable(),
     reminderTime: z.string(),
@@ -34,7 +41,8 @@ export const teamSchema = z
       z.object({
         id: z.string(),
         displayName: z.string(),
-        slot: z.number(),
+        slot: z.number().describe('Platz im Team (1 Kreis, 2 Quadrat)'),
+        color: partnerColorSchema,
         timezone: z.string(),
         isMe: z.boolean(),
       }),

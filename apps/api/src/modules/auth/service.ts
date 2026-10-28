@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { AppContext } from '../../context.js';
 import { invites, type Team, teams, type User, users } from '../../db/schema.js';
+import type { PartnerColor } from '../../domain/colors.js';
 import { keyPart } from '../../security/ratelimit.js';
 import {
   badRequest,
@@ -39,6 +40,7 @@ export interface UserDto {
   email: string;
   emailVerified: boolean;
   displayName: string;
+  color: PartnerColor;
   timezone: string;
   pendingTimezone: string | null;
   reminderTime: string;
@@ -50,6 +52,7 @@ export function toUserDto(user: User): UserDto {
     email: user.email,
     emailVerified: user.emailVerifiedAt !== null,
     displayName: user.displayName,
+    color: user.color,
     timezone: user.timezone,
     pendingTimezone: user.pendingTimezone,
     reminderTime: user.reminderTime,
@@ -127,6 +130,8 @@ export interface RegisterInput {
   inviteCode?: string | undefined;
   setupToken?: string | undefined;
   teamName?: string | undefined;
+  /** Wunschfarbe; ohne Angabe gilt der Standard des Platzes (1 Ember, 2 Tide). */
+  color?: PartnerColor | undefined;
 }
 
 /**
@@ -181,6 +186,7 @@ export async function registerAccount(
         passwordHash,
         passwordChangedAt: now,
         displayName: input.displayName.trim(),
+        color: 'ember',
         timezone: input.timezone,
         pendingTimezone: null,
         pendingFromWeek: null,
@@ -188,14 +194,18 @@ export async function registerAccount(
         createdAt: now,
       };
       tx.insert(users).values(user).run();
-      addMemberTx(tx, team.id, user.id, now);
+      addMemberTx(tx, team.id, user.id, now, { requested: input.color, fresh: true });
       if (invite)
         tx.update(invites)
           .set({ usedBy: user.id, usedAt: now })
           .where(eq(invites.id, invite.id))
           .run();
 
-      return { user, team: tx.select().from(teams).where(eq(teams.id, team.id)).get()! };
+      // addMemberTx kann die Farbe angepasst haben: den gespeicherten Stand zurückgeben
+      return {
+        user: tx.select().from(users).where(eq(users.id, user.id)).get()!,
+        team: tx.select().from(teams).where(eq(teams.id, team.id)).get()!,
+      };
     },
     { behavior: 'immediate' },
   );

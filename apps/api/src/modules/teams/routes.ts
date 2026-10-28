@@ -6,6 +6,7 @@ import {
   jsonBody,
   jsonResponse,
   okSchema,
+  partnerColorSchema,
   protectedSecurity,
   teamSchema,
 } from '../../http/schemas.js';
@@ -39,7 +40,11 @@ export function teamRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
       request: { params: z.object({ code: z.string().min(1).max(64) }) },
       responses: {
         200: jsonResponse(
-          z.object({ inviterName: z.string(), teamName: z.string() }),
+          z.object({
+            inviterName: z.string(),
+            inviterColor: partnerColorSchema.nullable(),
+            teamName: z.string(),
+          }),
           'Einladung gültig',
         ),
         ...errorResponses,
@@ -80,12 +85,22 @@ export function teamRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
       tags,
       summary: 'Einem Team per Einladungscode beitreten (für Konten ohne Team)',
       ...auth,
-      request: { body: jsonBody(z.object({ code: z.string().min(1).max(64) })) },
+      request: {
+        body: jsonBody(
+          z.object({
+            code: z.string().min(1).max(64),
+            color: partnerColorSchema
+              .optional()
+              .describe('Wunschfarbe; Standard ist die bisherige'),
+          }),
+        ),
+      },
       responses: { 200: teamResponse, ...errorResponses },
     }),
     (c) => {
       const { user } = currentAuth(c);
-      joinTeamWithCode(ctx, clientIp(c, ctx.config), user.id, c.req.valid('json').code);
+      const { code, color } = c.req.valid('json');
+      joinTeamWithCode(ctx, clientIp(c, ctx.config), user.id, code, color);
       return c.json({ team: getTeamView(ctx, user.id)! }, 200);
     },
   );

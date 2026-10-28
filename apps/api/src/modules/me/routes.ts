@@ -7,6 +7,7 @@ import {
   jsonBody,
   jsonResponse,
   okSchema,
+  partnerColorSchema,
   protectedSecurity,
   teamSchema,
   userSchema,
@@ -63,6 +64,9 @@ export function meRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
         body: jsonBody(
           z.object({
             displayName: z.string().trim().min(1).max(40).optional(),
+            color: partnerColorSchema
+              .optional()
+              .describe('Im Team nicht die Farbe des Partners (409 color_taken)'),
             timezone: z
               .string()
               .min(1)

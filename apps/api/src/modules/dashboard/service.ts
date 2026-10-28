@@ -1,6 +1,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import type { AppContext } from '../../context.js';
 import { checkins, debts, memberships, type User, users } from '../../db/schema.js';
+import type { PartnerColor } from '../../domain/colors.js';
 import {
   type LocalDate,
   localDateAt,
@@ -21,6 +22,9 @@ export type WeekStatus = 'no_goal' | 'done' | 'on_track' | 'at_risk' | 'unreacha
 export interface MemberProgress {
   userId: string;
   displayName: string;
+  /** Platz im Team: bestimmt die Form (1 Kreis, 2 Quadrat). */
+  slot: number;
+  color: PartnerColor;
   isMe: boolean;
   timezone: string;
   weekStart: LocalDate;
@@ -68,6 +72,7 @@ export function weekStatus(
 export function buildMemberProgress(
   ctx: AppContext,
   user: User,
+  slot: number,
   viewerId: string,
   now: number,
 ): MemberProgress {
@@ -90,6 +95,8 @@ export function buildMemberProgress(
   return {
     userId: user.id,
     displayName: user.displayName,
+    slot,
+    color: user.color,
     isMe: user.id === viewerId,
     timezone: zone,
     weekStart,
@@ -122,8 +129,8 @@ export function getDashboard(ctx: AppContext, viewer: User): Dashboard {
     .orderBy(memberships.slot)
     .all();
 
-  const members: MemberProgress[] = people.map(({ user }) =>
-    buildMemberProgress(ctx, user, viewer.id, now),
+  const members: MemberProgress[] = people.map(({ user, slot }) =>
+    buildMemberProgress(ctx, user, slot, viewer.id, now),
   );
 
   const weeks = [...new Set(members.map((m) => m.weekStart))];

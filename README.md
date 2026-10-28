@@ -126,6 +126,11 @@ curl -X POST https://sweat.example.org/api/v1/teams/invites -H 'authorization: B
 Der Partner registriert sich mit `"inviteCode":"XXXX-XXXX-XXXX-XXXX"` statt `setupToken`. Die Teamgröße ist auf
 genau zwei begrenzt.
 
+Jede Person wählt ihre **Identitätsfarbe** aus sieben Farben (`ember`, `tide`, `orchid`, `moss`, `sky`, `cocoa`,
+`graphite`), bei der Registrierung mit `"color"` oder später mit `PATCH /api/v1/me`. Im Team sind die Farben
+verschieden (sonst `409 color_taken`); ohne Wahl bekommt Platz 1 Ember und Platz 2 Tide. Die Form (Kreis oder
+Quadrat) hängt am Platz im Team und nicht an der Farbe.
+
 Per Server-CLI (im Container: `docker compose exec app cli …`):
 
 | Befehl                       | Zweck                                                                             |

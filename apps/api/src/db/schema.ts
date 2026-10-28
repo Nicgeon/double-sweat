@@ -8,6 +8,7 @@ import {
   text,
   unique,
 } from 'drizzle-orm/sqlite-core';
+import { PARTNER_COLORS } from '../domain/colors.js';
 
 // Zeitpunkte: UTC-Millisekunden (integer). Lokale Kalendertage: TEXT 'YYYY-MM-DD'.
 
@@ -18,6 +19,8 @@ export const users = sqliteTable('users', {
   passwordHash: text('password_hash').notNull(),
   passwordChangedAt: integer('password_changed_at').notNull(),
   displayName: text('display_name').notNull(),
+  /** Identitätsfarbe aus der Palette; im Team verschieden von der des Partners (wird in der Anwendung erzwungen). */
+  color: text('color', { enum: PARTNER_COLORS }).notNull().default('ember'),
   timezone: text('timezone').notNull(),
   pendingTimezone: text('pending_timezone'),
   pendingFromWeek: text('pending_from_week'),

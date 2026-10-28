@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, lt } from 'drizzle-orm';
 import type { AppContext } from '../../context.js';
 import { debts, memberships, type User, users, weekResults } from '../../db/schema.js';
+import type { PartnerColor } from '../../domain/colors.js';
 import {
   computeStreak,
   computeTeamStreak,
@@ -13,6 +14,8 @@ import { getMembership } from '../teams/service.js';
 export interface HistoryMember {
   userId: string;
   displayName: string;
+  slot: number;
+  color: PartnerColor;
   isMe: boolean;
   goalDays: number | null;
   doneDays: number;
@@ -40,7 +43,12 @@ export function getHistory(ctx: AppContext, viewer: User, limit: number, before?
   const teamId = membership.teamId;
 
   const people = ctx.db
-    .select({ id: users.id, displayName: users.displayName })
+    .select({
+      id: users.id,
+      displayName: users.displayName,
+      color: users.color,
+      slot: memberships.slot,
+    })
     .from(memberships)
     .innerJoin(users, eq(users.id, memberships.userId))
     .where(eq(memberships.teamId, teamId))
@@ -85,6 +93,8 @@ export function getHistory(ctx: AppContext, viewer: User, limit: number, before?
       return {
         userId: p.id,
         displayName: p.displayName,
+        slot: p.slot,
+        color: p.color,
         isMe: p.id === viewer.id,
         goalDays: result?.goalDays ?? null,
         doneDays: result?.doneDays ?? 0,

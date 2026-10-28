@@ -2,7 +2,12 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
 import type { AppContext } from '../../context.js';
 import { isLocalDate } from '../../domain/weeks.js';
 import { currentAuth, requireAuth } from '../../http/middleware.js';
-import { errorResponses, jsonResponse, protectedSecurity } from '../../http/schemas.js';
+import {
+  errorResponses,
+  jsonResponse,
+  partnerColorSchema,
+  protectedSecurity,
+} from '../../http/schemas.js';
 import type { AppEnv } from '../../http/types.js';
 import { badRequest } from '../../util/errors.js';
 import { getHistory } from './service.js';
@@ -18,6 +23,8 @@ const historySchema = z
           z.object({
             userId: z.string(),
             displayName: z.string(),
+            slot: z.number(),
+            color: partnerColorSchema,
             isMe: z.boolean(),
             goalDays: z.number().nullable(),
             doneDays: z.number(),

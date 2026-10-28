@@ -29,20 +29,20 @@ export function remindersJob(ctx: AppContext): void {
   for (const team of fullTeams) {
     if (team.fullSince === null) continue;
     const members = ctx.db
-      .select({ user: users })
+      .select({ user: users, slot: memberships.slot })
       .from(memberships)
       .innerJoin(users, eq(users.id, memberships.userId))
       .where(eq(memberships.teamId, team.id))
       .all();
 
-    for (const { user } of members) {
+    for (const { user, slot } of members) {
       const zone = currentTimezone(ctx, user);
       const today = localDateAt(now, zone);
       const start = localInstant(today, user.reminderTime, zone);
       const end = Math.max(localInstant(today, `${LATEST_LOCAL_HOUR}:00`, zone), start + HOUR);
       if (now < start || now > end) continue;
 
-      const progress = buildMemberProgress(ctx, user, user.id, now);
+      const progress = buildMemberProgress(ctx, user, slot, user.id, now);
       // Nur Wochen, die auch gewertet werden (die Beitrittswoche nicht)
       if (progress.weekStart < firstScoredWeek(team.fullSince, zone)) continue;
       if (progress.checkedInToday || progress.status !== 'at_risk') continue;

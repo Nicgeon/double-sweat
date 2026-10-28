@@ -32,7 +32,11 @@ describe('Einladungen', () => {
     const { body } = await anna.post('/teams/invites');
     const preview = await env.client({ ip: '203.0.113.200' }).get(`/invites/${body.code}`);
     expect(preview.status).toBe(200);
-    expect(preview.body).toEqual({ inviterName: 'Anna', teamName: 'Unser Team' });
+    expect(preview.body).toEqual({
+      inviterName: 'Anna',
+      inviterColor: 'ember',
+      teamName: 'Unser Team',
+    });
     expect((await env.client().get('/invites/AAAA-BBBB-CCCC-DDDD')).status).toBe(404);
     expect((await env.client().get('/invites/quatsch')).status).toBe(404);
   });

@@ -1,7 +1,8 @@
-import { and, count, eq, gt, isNull } from 'drizzle-orm';
+import { and, count, eq, gt, isNull, ne } from 'drizzle-orm';
 import type { AppContext } from '../../context.js';
 import type { DbLike } from '../../db/client.js';
 import { type Invite, invites, memberships, type Team, teams, users } from '../../db/schema.js';
+import { type PartnerColor, pickColor } from '../../domain/colors.js';
 import {
   generateInviteCode,
   hashToken,
@@ -54,16 +55,57 @@ export function createTeamTx(db: DbLike, name: string, now: number): Team {
   return team;
 }
 
-/** Fügt einen Nutzer dem Team hinzu. Belegt den freien Platz (slot 1 oder 2); schlägt bei vollem Team fehl. */
-export function addMemberTx(db: DbLike, teamId: string, userId: string, now: number): void {
-  const members = db.select().from(memberships).where(eq(memberships.teamId, teamId)).all();
+export interface JoinColor {
+  /** Ausdrücklich gewählte Farbe; ist sie im Team vergeben, schlägt der Beitritt mit color_taken fehl. */
+  requested?: PartnerColor | undefined;
+  /** true bei einem frisch angelegten Konto: Es gilt der Standard des Platzes statt der Platzhalterfarbe. */
+  fresh?: boolean | undefined;
+}
+
+/**
+ * Fügt einen Nutzer dem Team hinzu. Belegt den freien Platz (slot 1 oder 2); schlägt bei vollem Team fehl.
+ * Setzt dabei die Farbe: gewählt, sonst die bisherige bzw. der Standard des Platzes, nie die des Partners.
+ */
+export function addMemberTx(
+  db: DbLike,
+  teamId: string,
+  userId: string,
+  now: number,
+  color: JoinColor = {},
+): void {
+  const members = db
+    .select({ slot: memberships.slot, color: users.color })
+    .from(memberships)
+    .innerJoin(users, eq(users.id, memberships.userId))
+    .where(eq(memberships.teamId, teamId))
+    .all();
   if (members.length >= TEAM_SIZE)
     throw conflict('team_full', 'Dieses Team ist bereits vollständig');
   const slot = members.some((m) => m.slot === 1) ? 2 : 1;
+  const partnerColor = members[0]?.color ?? null;
+  if (color.requested && color.requested === partnerColor)
+    throw conflict('color_taken', 'Diese Farbe hat dein Partner schon gewählt');
+  const current = db.select({ color: users.color }).from(users).where(eq(users.id, userId)).get();
+  const preferred = color.requested ?? (color.fresh ? null : (current?.color ?? null));
+  const chosen = pickColor(slot, partnerColor, preferred);
+  if (chosen !== current?.color)
+    db.update(users).set({ color: chosen }).where(eq(users.id, userId)).run();
   db.insert(memberships).values({ teamId, userId, slot, joinedAt: now }).run();
   if (members.length + 1 === TEAM_SIZE) {
     db.update(teams).set({ fullSince: now }).where(eq(teams.id, teamId)).run();
   }
+}
+
+/** Farbe der anderen Person im Team (null, wenn es keine gibt). */
+export function partnerColorOf(db: DbLike, teamId: string, userId: string): PartnerColor | null {
+  return (
+    db
+      .select({ color: users.color })
+      .from(memberships)
+      .innerJoin(users, eq(users.id, memberships.userId))
+      .where(and(eq(memberships.teamId, teamId), ne(memberships.userId, userId)))
+      .get()?.color ?? null
+  );
 }
 
 export function findValidInvite(db: DbLike, now: number, code: string): Invite | null {
@@ -94,7 +136,7 @@ export function peekInvite(
   ctx: AppContext,
   ip: string,
   code: string,
-): { inviterName: string; teamName: string } {
+): { inviterName: string; inviterColor: PartnerColor | null; teamName: string } {
   const limit = ctx.limiter.hit(`invite:peek:${ip}`, 30, HOUR);
   if (limit.limited) throw tooManyRequests(limit.retryAfterSec);
   const invite = findValidInvite(ctx.db, ctx.clock.now(), code);
@@ -102,12 +144,16 @@ export function peekInvite(
   const team = ctx.db.select().from(teams).where(eq(teams.id, invite.teamId)).get();
   const inviter = invite.createdBy
     ? ctx.db
-        .select({ name: users.displayName })
+        .select({ name: users.displayName, color: users.color })
         .from(users)
         .where(eq(users.id, invite.createdBy))
         .get()
     : undefined;
-  return { inviterName: inviter?.name ?? 'Dein Partner', teamName: team?.name ?? 'Team' };
+  return {
+    inviterName: inviter?.name ?? 'Dein Partner',
+    inviterColor: inviter?.color ?? null,
+    teamName: team?.name ?? 'Team',
+  };
 }
 
 export interface CreatedInvite {
@@ -173,7 +219,13 @@ export function revokeActiveInvite(ctx: AppContext, userId: string): void {
 }
 
 /** Bestehender Nutzer ohne Team tritt per Code bei. */
-export function joinTeamWithCode(ctx: AppContext, ip: string, userId: string, code: string): Team {
+export function joinTeamWithCode(
+  ctx: AppContext,
+  ip: string,
+  userId: string,
+  code: string,
+  requested?: PartnerColor,
+): Team {
   assertSignupOpen(ctx);
   const limit = ctx.limiter.hit(`invite:join:${ip}`, 15, HOUR);
   if (limit.limited) throw tooManyRequests(limit.retryAfterSec);
@@ -184,7 +236,7 @@ export function joinTeamWithCode(ctx: AppContext, ip: string, userId: string, co
         throw conflict('already_in_team', 'Du bist bereits in einem Team');
       const invite = findValidInvite(tx, now, code);
       if (!invite) throw badRequest('invalid_invite', 'Einladung ungültig oder abgelaufen');
-      addMemberTx(tx, invite.teamId, userId, now);
+      addMemberTx(tx, invite.teamId, userId, now, { requested });
       tx.update(invites)
         .set({ usedBy: userId, usedAt: now })
         .where(eq(invites.id, invite.id))
@@ -222,7 +274,14 @@ export interface TeamView {
   name: string;
   full: boolean;
   fullSince: number | null;
-  members: { id: string; displayName: string; slot: number; timezone: string; isMe: boolean }[];
+  members: {
+    id: string;
+    displayName: string;
+    slot: number;
+    color: PartnerColor;
+    timezone: string;
+    isMe: boolean;
+  }[];
   invite: { createdAt: number; expiresAt: number } | null;
 }
 
@@ -236,6 +295,7 @@ export function getTeamView(ctx: AppContext, userId: string): TeamView | null {
       id: users.id,
       displayName: users.displayName,
       slot: memberships.slot,
+      color: users.color,
       timezone: users.timezone,
     })
     .from(memberships)

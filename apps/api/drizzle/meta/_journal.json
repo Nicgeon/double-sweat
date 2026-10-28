@@ -29,6 +29,13 @@
       "when": 1793198592856,
       "tag": "0003_round_odin",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793216584063,
+      "tag": "0004_classy_scrambler",
+      "breakpoints": true
     }
   ]
 }

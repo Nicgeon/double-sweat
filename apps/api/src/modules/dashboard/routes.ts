@@ -1,13 +1,20 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
 import type { AppContext } from '../../context.js';
 import { currentAuth, requireAuth } from '../../http/middleware.js';
-import { errorResponses, jsonResponse, protectedSecurity } from '../../http/schemas.js';
+import {
+  errorResponses,
+  jsonResponse,
+  partnerColorSchema,
+  protectedSecurity,
+} from '../../http/schemas.js';
 import type { AppEnv } from '../../http/types.js';
 import { getDashboard } from './service.js';
 
 const memberSchema = z.object({
   userId: z.string(),
   displayName: z.string(),
+  slot: z.number().describe('Platz im Team (1 Kreis, 2 Quadrat)'),
+  color: partnerColorSchema,
   isMe: z.boolean(),
   timezone: z.string(),
   weekStart: z.string(),

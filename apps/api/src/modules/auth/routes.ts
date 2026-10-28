@@ -11,6 +11,7 @@ import {
   jsonBody,
   jsonResponse,
   okSchema,
+  partnerColorSchema,
   protectedSecurity,
 } from '../../http/schemas.js';
 import type { AppEnv } from '../../http/types.js';
@@ -81,6 +82,9 @@ export function authRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
               .optional()
               .describe('Nur nötig bei SIGNUP_MODE=token und ohne Einladung'),
             teamName: z.string().trim().min(1).max(60).optional(),
+            color: partnerColorSchema
+              .optional()
+              .describe('Wunschfarbe; ohne Angabe gilt der Standard des Platzes'),
             client: clientField,
             deviceLabel: z.string().max(80).optional(),
           }),
