@@ -311,7 +311,7 @@ export const pushSubscriptions = sqliteTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    provider: text('provider', { enum: ['webpush', 'unifiedpush'] }).notNull(),
+    provider: text('provider', { enum: ['webpush', 'unifiedpush', 'fcm'] }).notNull(),
     endpoint: text('endpoint').notNull().unique(),
     /** Schlüssel für die Nachrichtenverschlüsselung (RFC 8291). Bei UnifiedPush optional. */
     p256dh: text('p256dh'),

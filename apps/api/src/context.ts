@@ -54,7 +54,9 @@ export function createContext(options: ContextOptions): AppContext {
     log,
     mailer: options.mailer ?? createMailer(config),
     photos: options.photos ?? createPhotoStorage(config.photosDir),
-    safeFetch: options.safeFetch ?? createSafeFetch({ allowedHosts: config.push.allowedHosts }),
+    safeFetch:
+      options.safeFetch ??
+      createSafeFetch({ allowedHosts: config.push.allowedHosts, maxResponseBytes: 16_384 }),
     passwords: options.passwords ?? createPasswordHasher(config.argon2),
     limiter: createRateLimiter(db, clock),
     mailRetryDelaysMs: options.mailRetryDelaysMs ?? [1_000, 5_000],

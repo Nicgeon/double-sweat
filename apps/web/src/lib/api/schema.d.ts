@@ -4107,6 +4107,9 @@ export interface paths {
                             unifiedpush: {
                                 enabled: boolean;
                             };
+                            fcm: {
+                                enabled: boolean;
+                            };
                         };
                     };
                 };
@@ -4289,6 +4292,19 @@ export interface paths {
                         endpoint: string;
                         /** @description Falls der Verteiler Schlüssel liefert, wird verschlüsselt gesendet */
                         keys?: {
+                            /** @description Öffentlicher Schlüssel des Empfängers (base64url, 65 Byte) */
+                            p256dh: string;
+                            /** @description Auth-Geheimnis (base64url, 16 Byte) */
+                            auth: string;
+                        };
+                        deviceLabel?: string;
+                    } | {
+                        /** @enum {string} */
+                        provider: "fcm";
+                        /** @description FCM-Registrierungstoken des Geräts */
+                        endpoint: string;
+                        /** @description Pflicht: Nachrichten laufen Ende-zu-Ende verschlüsselt über Google */
+                        keys: {
                             /** @description Öffentlicher Schlüssel des Empfängers (base64url, 65 Byte) */
                             p256dh: string;
                             /** @description Auth-Geheimnis (base64url, 16 Byte) */
@@ -5238,7 +5254,7 @@ export interface components {
         PushSubscription: {
             id: string;
             /** @enum {string} */
-            provider: "webpush" | "unifiedpush";
+            provider: "webpush" | "unifiedpush" | "fcm";
             deviceLabel: string | null;
             createdAt: number;
             lastSuccessAt: number | null;

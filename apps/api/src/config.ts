@@ -1,3 +1,5 @@
+import { createPrivateKey, type KeyObject } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { BlockList, isIP } from 'node:net';
 import { isAbsolute, join, resolve } from 'node:path';
 import { z } from 'zod';
@@ -47,6 +49,9 @@ const envSchema = z.object({
   WEBPUSH_ENABLED: bool,
   UNIFIEDPUSH_ENABLED: bool,
   PUSH_ALLOWED_HOSTS: z.string().default(''),
+  FCM_ENABLED: bool,
+  FCM_SERVICE_ACCOUNT_FILE: z.string().optional(),
+  FCM_API_URL: z.string().default('https://fcm.googleapis.com'),
   VAPID_SUBJECT: z.string().optional(),
   DEV_CLOCK_OFFSET_HOURS: z.coerce.number().default(0),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error', 'silent']).default('info'),
@@ -54,6 +59,16 @@ const envSchema = z.object({
   ARGON2_TIME_COST: z.coerce.number().int().min(1).default(2),
   ARGON2_PARALLELISM: z.coerce.number().int().min(1).default(1),
 });
+
+/** Zugang zu Firebase Cloud Messaging (HTTP v1) aus der Service-Account-Datei. */
+export interface FcmConfig {
+  projectId: string;
+  clientEmail: string;
+  /** Privater Schlüssel des Dienstkontos. Als KeyObject, damit er nirgends versehentlich ausgegeben wird. */
+  privateKey: KeyObject;
+  tokenUri: string;
+  apiUrl: string;
+}
 
 export interface Config {
   env: 'development' | 'test' | 'production';
@@ -79,6 +94,8 @@ export interface Config {
     /** Hosts, die auch private/lokale Adressen und http nutzen dürfen (z. B. ntfy im LAN). */
     allowedHosts: string[];
     vapidSubject: string;
+    /** Firebase Cloud Messaging für Android-Geräte ohne UnifiedPush. null = abgeschaltet. */
+    fcm: FcmConfig | null;
   };
   /** Nur für Entwicklung: verschiebt die Serveruhr, um Wochenwechsel zu testen. In Produktion verboten. */
   devClockOffsetMs: number;
@@ -93,6 +110,53 @@ function compact(env: Record<string, string | undefined>): Record<string, string
     if (value !== undefined && value.trim() !== '') out[key] = value.trim();
   }
   return out;
+}
+
+/** Liest und prüft die Service-Account-Datei von Firebase (Projekteinstellungen, Dienstkonten, neuen Schlüssel erzeugen). */
+function loadFcmConfig(file: string | undefined, apiUrl: string): FcmConfig {
+  if (!file) {
+    throw new ConfigError(
+      'FCM_SERVICE_ACCOUNT_FILE fehlt (Pfad zur JSON-Datei des Firebase-Dienstkontos, wenn FCM_ENABLED=true ist)',
+    );
+  }
+  let raw: string;
+  try {
+    raw = readFileSync(file, 'utf8');
+  } catch {
+    throw new ConfigError(`FCM_SERVICE_ACCOUNT_FILE: Die Datei "${file}" ist nicht lesbar`);
+  }
+  let json: Record<string, unknown>;
+  try {
+    json = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    throw new ConfigError('FCM_SERVICE_ACCOUNT_FILE ist keine gültige JSON-Datei');
+  }
+  const text = (key: string) => (typeof json[key] === 'string' ? (json[key] as string) : '');
+  const projectId = text('project_id');
+  const clientEmail = text('client_email');
+  const tokenUri = text('token_uri') || 'https://oauth2.googleapis.com/token';
+  if (!projectId || !clientEmail || !text('private_key')) {
+    throw new ConfigError(
+      'FCM_SERVICE_ACCOUNT_FILE ist kein Firebase-Dienstkonto (project_id, client_email oder private_key fehlt)',
+    );
+  }
+  let privateKey: KeyObject;
+  try {
+    privateKey = createPrivateKey(text('private_key'));
+  } catch {
+    throw new ConfigError('FCM_SERVICE_ACCOUNT_FILE: Der private Schlüssel ist ungültig');
+  }
+  for (const [name, value] of [
+    ['token_uri', tokenUri],
+    ['FCM_API_URL', apiUrl],
+  ] as const) {
+    try {
+      new URL(value);
+    } catch {
+      throw new ConfigError(`FCM: ${name} ist keine gültige URL`);
+    }
+  }
+  return { projectId, clientEmail, privateKey, tokenUri, apiUrl: apiUrl.replace(/\/+$/, '') };
 }
 
 export function parseTrustProxy(value: string): BlockList | null {
@@ -260,6 +324,7 @@ export function loadConfig(source: Record<string, string | undefined> = process.
         .map((h) => h.trim().toLowerCase())
         .filter(Boolean),
       vapidSubject: vapidSubject(env.VAPID_SUBJECT, url),
+      fcm: env.FCM_ENABLED ? loadFcmConfig(env.FCM_SERVICE_ACCOUNT_FILE, env.FCM_API_URL) : null,
     },
     devClockOffsetMs: env.DEV_CLOCK_OFFSET_HOURS * 3_600_000,
     logLevel: env.LOG_LEVEL,

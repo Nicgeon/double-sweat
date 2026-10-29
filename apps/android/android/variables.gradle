@@ -14,5 +14,7 @@ ext {
     androidxEspressoCoreVersion = '3.7.0'
     cordovaAndroidVersion = '14.0.1'
     unifiedPushConnectorVersion = '3.3.5'
+    firebaseBomVersion = '35.1.0'
+    playServicesBaseVersion = '18.11.1'
     jsonTestVersion = '20250517'
 }

@@ -3,9 +3,10 @@ import type { AppContext } from '../../context.js';
 import type { PushSubscriptionRow } from '../../db/schema.js';
 import { UnsafeUrlError } from '../../security/safe-fetch.js';
 import { badRequest } from '../../util/errors.js';
+import { createFcmProvider } from './fcm.js';
 import { getVapidKeys } from './vapid.js';
 
-export type ProviderId = 'webpush' | 'unifiedpush';
+export type ProviderId = 'webpush' | 'unifiedpush' | 'fcm';
 /** ok = zugestellt, gone = Empfänger existiert nicht mehr, invalid = Anfrage/Ziel abgelehnt, retry = vorübergehend */
 export type SendResult = 'ok' | 'gone' | 'invalid' | 'retry';
 
@@ -170,5 +171,9 @@ export function createUnifiedPushProvider(ctx: AppContext): PushProvider {
 }
 
 export function createProviders(ctx: AppContext): Record<ProviderId, PushProvider> {
-  return { webpush: createWebPushProvider(ctx), unifiedpush: createUnifiedPushProvider(ctx) };
+  return {
+    webpush: createWebPushProvider(ctx),
+    unifiedpush: createUnifiedPushProvider(ctx),
+    fcm: createFcmProvider(ctx),
+  };
 }

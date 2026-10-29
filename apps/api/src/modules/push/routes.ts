@@ -34,12 +34,18 @@ const subscriptionInput = z.discriminatedUnion('provider', [
       .describe('Falls der Verteiler Schlüssel liefert, wird verschlüsselt gesendet'),
     deviceLabel: z.string().max(80).optional(),
   }),
+  z.object({
+    provider: z.literal('fcm'),
+    endpoint: z.string().max(2048).describe('FCM-Registrierungstoken des Geräts'),
+    keys: keysSchema.describe('Pflicht: Nachrichten laufen Ende-zu-Ende verschlüsselt über Google'),
+    deviceLabel: z.string().max(80).optional(),
+  }),
 ]);
 
 const subscriptionSchema = z
   .object({
     id: z.string(),
-    provider: z.enum(['webpush', 'unifiedpush']),
+    provider: z.enum(['webpush', 'unifiedpush', 'fcm']),
     deviceLabel: z.string().nullable(),
     createdAt: z.number(),
     lastSuccessAt: z.number().nullable(),
@@ -64,6 +70,7 @@ export function pushRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
           z.object({
             webpush: z.object({ enabled: z.boolean(), publicKey: z.string().nullable() }),
             unifiedpush: z.object({ enabled: z.boolean() }),
+            fcm: z.object({ enabled: z.boolean() }),
           }),
           'Konfiguration',
         ),

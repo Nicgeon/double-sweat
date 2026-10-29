@@ -3,6 +3,12 @@ import groovy.json.JsonSlurper
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
+// Firebase Cloud Messaging steckt nur im Flavor "fcm". Das Plugin verlangt google-services.json und wird deshalb nur
+// angewendet, wenn dieser Flavor gebaut wird; der Standard-Build (foss) braucht weder die Datei noch Google-Bibliotheken.
+if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('fcm') }) {
+    apply plugin: 'com.google.gms.google-services'
+}
+
 // Version aus apps/android/package.json: versionName = "1.2.3", versionCode = 10203
 def appVersion = new JsonSlurper().parse(file('../../package.json')).version.toString()
 def versionParts = appVersion.split('-')[0].tokenize('.').collect { it.toInteger() }
@@ -56,6 +62,17 @@ android {
         }
     }
 
+    // foss: UnifiedPush, keine Google-Bibliotheken. fcm: zusätzlich Firebase Cloud Messaging (siehe README)
+    flavorDimensions = ['distribution']
+    productFlavors {
+        foss {
+            dimension = 'distribution'
+        }
+        fcm {
+            dimension = 'distribution'
+        }
+    }
+
     buildFeatures {
         buildConfig = true
     }
@@ -91,6 +108,11 @@ dependencies {
     implementation project(':capacitor-cordova-android-plugins')
     // Push über einen frei wählbaren Verteiler (ntfy u. a.), ohne Google-Dienste
     implementation "org.unifiedpush.android:connector:$unifiedPushConnectorVersion"
+    // Nur im Flavor fcm; Nachrichten kommen Ende-zu-Ende verschlüsselt (WebPushCrypto), Google sieht keinen Inhalt
+    fcmImplementation platform("com.google.firebase:firebase-bom:$firebaseBomVersion")
+    fcmImplementation 'com.google.firebase:firebase-messaging'
+    // Prüft, ob die Google Play-Dienste auf dem Gerät vorhanden sind (es gibt auch Geräte ohne)
+    fcmImplementation "com.google.android.gms:play-services-base:$playServicesBaseVersion"
 
     testImplementation "junit:junit:$junitVersion"
     // Auf der JVM sind die org.json-Klassen von Android nur Attrappen

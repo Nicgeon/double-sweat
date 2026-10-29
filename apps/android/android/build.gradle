@@ -10,6 +10,8 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:8.13.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        // Nur der Build mit Firebase (Flavor fcm) wendet es an, der Standard-Build bleibt frei von Google-Diensten
+        classpath 'com.google.gms:google-services:4.5.0'
     }
 }
 

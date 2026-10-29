@@ -18,6 +18,7 @@ import {
 } from '#lib/native/auth-store.ts';
 import { NATIVE } from '#lib/native/flag.ts';
 import type { ServerInfo } from '#lib/native/server-url.ts';
+import { disablePush } from '#lib/util/push.ts';
 import { goto } from '$app/navigation';
 
 /** Anmeldezustand der Web-App (Cookie-Sitzung). Das CSRF-Token liegt nur im Speicher. */
@@ -129,6 +130,8 @@ class Session {
   }
 
   async logout(): Promise<void> {
+    // App: Dieses Gerät soll nach dem Abmelden keine Nachrichten dieses Kontos mehr bekommen
+    if (NATIVE) await disablePush().catch(() => {});
     try {
       await api.POST('/api/v1/auth/logout');
     } finally {

@@ -25,3 +25,6 @@ apps/web/build-native/
 # Android: Signaturschlüssel und fertige APKs
 apps/android/signing/
 apps/android/dist/
+# Android: Firebase-Konfiguration des eigenen Projekts (nur für den fcm-Build)
+apps/android/firebase/
+apps/android/android/app/src/fcm/google-services.json

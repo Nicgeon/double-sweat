@@ -84,7 +84,8 @@ export interface SafeRequest {
 export interface SafeFetch {
   /** Prüft URL und Auflösung, ohne eine Anfrage zu senden (z. B. beim Registrieren einer Subscription). */
   check(url: string): Promise<void>;
-  request(url: string, init?: SafeRequest): Promise<{ status: number }>;
+  /** Gibt Status und (auf maxResponseBytes gekürzten) Antwortkörper zurück. Weiterleitungen werden nicht verfolgt. */
+  request(url: string, init?: SafeRequest): Promise<{ status: number; body: Buffer }>;
 }
 
 const MAX_URL_LENGTH = 2048;
@@ -164,7 +165,7 @@ export function createSafeFetch(options: SafeFetchOptions = {}): SafeFetch {
         );
       };
 
-      return new Promise<{ status: number }>((resolve, reject) => {
+      return new Promise<{ status: number; body: Buffer }>((resolve, reject) => {
         const req = transport.request(
           url,
           {
@@ -177,12 +178,16 @@ export function createSafeFetch(options: SafeFetchOptions = {}): SafeFetch {
           (res) => {
             // Weiterleitungen werden bewusst nicht verfolgt: Der Status wird einfach zurückgegeben.
             let received = 0;
+            const chunks: Buffer[] = [];
             res.on('data', (chunk: Buffer) => {
               received += chunk.length;
               if (received > maxResponseBytes) res.destroy();
+              else chunks.push(chunk);
             });
-            res.on('close', () => resolve({ status: res.statusCode ?? 0 }));
-            res.on('error', () => resolve({ status: res.statusCode ?? 0 }));
+            const done = () =>
+              resolve({ status: res.statusCode ?? 0, body: Buffer.concat(chunks) });
+            res.on('close', done);
+            res.on('error', done);
           },
         );
         req.on('timeout', () => req.destroy(new Error('Zeitüberschreitung')));

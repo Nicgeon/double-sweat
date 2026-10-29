@@ -104,6 +104,7 @@
     }
   }
 
+  const PROVIDER_NAMES: Record<string, string> = { webpush: 'Web Push', unifiedpush: 'UnifiedPush', fcm: 'FCM' };
   let pushChoices = $state<PushDistributor[] | null>(null);
 
   async function togglePush(on: boolean, distributor?: string) {
@@ -122,7 +123,7 @@
             denied: 'Die Erlaubnis wurde abgelehnt. Du kannst sie in den Einstellungen deines Geräts ändern.',
             disabled: 'Dieser Server hat Push ausgeschaltet.',
             no_distributor:
-              'Für Push brauchst du eine UnifiedPush-App, zum Beispiel ntfy. Installiere sie und versuche es noch einmal. Alles erscheint auch unter „Benachrichtigungen“.',
+              'Für Push brauchst du eine UnifiedPush-App, zum Beispiel ntfy, oder die App-Version mit Google-Benachrichtigungen (FCM), falls dein Server sie anbietet. Alles erscheint auch unter „Benachrichtigungen“.',
             unsupported: 'Dieser Browser unterstützt keine Push-Benachrichtigungen (auf dem iPhone nur als installierte App).',
           }[res.status];
         }
@@ -264,16 +265,17 @@
       <Card title="Benachrichtigungen">
         <div class="stack">
           {#if pushSupported()}
-            <Toggle label="Push auf diesem Gerät" hint="{NATIVE ? 'Über deine UnifiedPush-App. ' : ''}Erinnerung am Abend und Anstupser von {partner?.displayName ?? 'deinem Partner'}." bind:checked={pushOn} disabled={pushBusy} onchange={togglePush} />
+            <Toggle label="Push auf diesem Gerät" hint="{NATIVE ? 'Über UnifiedPush oder FCM. ' : ''}Erinnerung am Abend und Anstupser von {partner?.displayName ?? 'deinem Partner'}." bind:checked={pushOn} disabled={pushBusy} onchange={togglePush} />
           {:else}
             <p class="small muted">Push braucht eine HTTPS-Verbindung und einen unterstützten Browser. Alles erscheint auch unter „Benachrichtigungen“.</p>
           {/if}
           {#if pushNote}<Banner tone="info">{pushNote}</Banner>{/if}
           {#if pushChoices}
             <div class="stack">
-              <p>Welche UnifiedPush-App soll die Benachrichtigungen liefern?</p>
+              <p>Wie sollen die Benachrichtigungen ankommen?</p>
               {#each pushChoices as d (d.id)}
                 <Button variant="secondary" onclick={() => togglePush(true, d.id)}>{d.label}</Button>
+                {#if d.hint}<p class="small muted">{d.hint}</p>{/if}
               {/each}
             </div>
           {/if}
@@ -281,7 +283,7 @@
             <ul class="list">
               {#each devices as d (d.id)}
                 <li class="line">
-                  <span>{d.deviceLabel ?? d.provider}<span class="small muted"> · seit {dateAndTime(d.createdAt)}</span></span>
+                  <span>{d.deviceLabel ?? d.provider}<span class="small muted"> · {PROVIDER_NAMES[d.provider] ?? d.provider} · seit {dateAndTime(d.createdAt)}</span></span>
                   <Button variant="ghost" size="sm" icon="trash-2" iconOnly onclick={() => removeDevice(d.id)}>Gerät entfernen</Button>
                 </li>
               {/each}

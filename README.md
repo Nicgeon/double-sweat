@@ -108,6 +108,7 @@ bricht mit einer klaren Meldung ab, wenn etwas fehlt oder ein Platzhalter (z. B.
 | `MAX_UPLOAD_MB`                                                | Größtes Foto (Standard 12).                                                                                                                                                                        |
 | `SMTP_URL`, `MAIL_FROM`, `SMTP_REQUIRE_TLS`                    | Optionaler Mailversand.                                                                                                                                                                            |
 | `WEBPUSH_ENABLED`, `UNIFIEDPUSH_ENABLED`, `PUSH_ALLOWED_HOSTS` | Push-Anbieter und erlaubte lokale Ziele.                                                                                                                                                           |
+| `FCM_ENABLED`, `FCM_SERVICE_ACCOUNT_FILE`                      | Optional: Push über Firebase Cloud Messaging (Dienstkonto-Datei), siehe [Push](#push-benachrichtigungen).                                                                                          |
 | `CORS_APP_ORIGINS`                                             | Origins der Android-App (Standard `https://localhost`).                                                                                                                                            |
 
 Die Daten (Datenbank, Fotos, Schlüssel) liegen im Volume `data` unter `/data`.
@@ -201,7 +202,35 @@ stehen in deren SMTP-Hilfe, Port 465 = `smtps://`, Port 587 = `smtp://` mit STAR
 - Zusätzlich gibt es immer ein **Postfach** (`GET /api/v1/notifications`), das auch ohne Push funktioniert.
 - Nudge: `POST /api/v1/nudges`, höchstens einmal pro Stunde. Abend-Erinnerung: zur persönlichen Uhrzeit
   (Standard 19:00), wenn das Wochenziel gefährdet ist (heute noch kein Check-in und kein Puffer mehr).
-- FCM (Firebase) ist nicht Teil des Standard-Builds; die Anbieter-Schnittstelle ist dafür vorbereitet.
+
+### FCM (Google) für Geräte ohne UnifiedPush
+
+Wer keine UnifiedPush-App (ntfy) auf dem Handy haben möchte, kann Push über Firebase Cloud Messaging bekommen.
+Das ist **optional** und aus: Der Standard-Build der App und der Server kommen ohne Google aus. Voraussetzungen sind
+ein eigenes (kostenloses) Firebase-Projekt und eine App-Version mit FCM, die du selbst baust.
+
+1. In der [Firebase-Konsole](https://console.firebase.google.com/) ein Projekt anlegen (Google Analytics nicht aktivieren).
+2. **Server:** Projekteinstellungen → Dienstkonten → "Neuen privaten Schlüssel generieren". Speichere die JSON-Datei
+   neben der Datenbank als `data/fcm-service-account.json` (`chmod 600`, Besitzer der Container-Nutzer, nie ins
+   Repository). Setze in der `.env` `FCM_ENABLED=true` und `FCM_SERVICE_ACCOUNT_FILE=/data/fcm-service-account.json`,
+   dann `docker compose up -d`. Der Server prüft die Datei beim Start und meldet Fehler sofort. (Die "Firebase Cloud
+   Messaging API (V1)" ist in neuen Projekten aktiv; sonst in der Google Cloud Console einschalten.)
+3. **App:** In den Projekteinstellungen "Android-App hinzufügen" mit dem Paketnamen `app.doublesweat.mobile` (für das
+   Debug-Build zusätzlich `app.doublesweat.mobile.debug`), die `google-services.json` herunterladen und als
+   `apps/android/firebase/google-services.json` speichern (auch sie bleibt außerhalb des Repositorys).
+4. `pnpm android:apk:fcm` baut das signierte APK mit FCM (`pnpm android:debug:fcm` das Test-APK), siehe
+   [Android-App](#android-app). Beide APKs lassen sich nicht über das andere installieren: sie haben denselben Namen
+   und müssen mit demselben Schlüssel signiert sein, sonst vorher deinstallieren.
+5. Auf dem Handy "Mehr → Benachrichtigungen → Push": Ist keine UnifiedPush-App installiert, nutzt die App FCM
+   direkt. Sind beide Wege möglich, fragt sie nach.
+
+**Was Google sieht.** Die Nachrichten sind **Ende-zu-Ende verschlüsselt** (derselbe Standard wie bei Web Push,
+RFC 8291): Das Gerät erzeugt ein Schlüsselpaar und gibt dem Server nur den öffentlichen Teil, der Server
+verschlüsselt, Google transportiert unlesbare Bytes. Google sieht trotzdem, **dass** und **wann** eine Nachricht an
+ein Gerät geht (Metadaten) und kennt das Gerät über das Token. Die App erzeugt das Token erst, wenn du Push
+einschaltest, löscht es beim Ausschalten und beim Abmelden und schaltet die Analyse-Funktionen von Firebase ab.
+Der FCM-Build funktioniert nur auf Geräten mit Google Play-Diensten (nicht auf Geräten ohne Google) und enthält
+zusätzliche Google-Bibliotheken; der Standard-Build enthält keine.
 
 ## Android-App
 
@@ -215,9 +244,10 @@ reichen (`sdkmanager "platforms;android-36" "build-tools;36.0.0"`). Setze `ANDRO
 ```bash
 ./scripts/gen-keystore.sh   # einmalig: Signaturschlüssel erzeugen (apps/android/signing/, nicht im Repository)
 pnpm android:apk            # baut Web, synchronisiert Capacitor, baut und prüft das signierte Release
+pnpm android:apk:fcm        # dasselbe mit Firebase Cloud Messaging (braucht google-services.json, siehe Push)
 ```
 
-Das Ergebnis liegt in `apps/android/dist/double-sweat-<Version>.apk`; das Skript zeigt den Fingerabdruck des
+Das Ergebnis liegt in `apps/android/dist/double-sweat-<Version>.apk` (mit FCM: `…-fcm.apk`); das Skript zeigt den Fingerabdruck des
 Zertifikats. **Sichere `apps/android/signing/` an einem zweiten Ort.** Android nimmt ein Update nur an, wenn es mit
 demselben Schlüssel signiert ist; ohne ihn müsstest du die App deinstallieren und neu einrichten. Wer den Ordner
 hat, kann Updates in deinem Namen signieren.
@@ -237,7 +267,8 @@ etwas tut. (Eigene Schemata kann auch eine fremde App beanspruchen; deshalb gibt
 (so nennt sich die WebView der App). Mehr ist nicht nötig; der Server liefert für die App dieselbe API.
 
 **Push.** Installiere einen UnifiedPush-Verteiler, z. B. **ntfy** (F-Droid oder Play Store), und schalte unter
-"Mehr → Benachrichtigungen" Push ein. Bei mehreren Verteilern fragt die App, welchen sie nehmen soll. Ab
+"Mehr → Benachrichtigungen" Push ein. Bei mehreren Verteilern fragt die App, welchen sie nehmen soll. Wer keinen
+Verteiler möchte, nutzt die App-Version mit **FCM** (siehe [Push](#fcm-google-für-geräte-ohne-unifiedpush)). Ab
 Android 13 erscheint die Frage nach der Erlaubnis für Benachrichtigungen. Läuft ntfy in deinem Heimnetz, trage
 dessen Hostnamen in `PUSH_ALLOWED_HOSTS` des Servers ein. Anstupser, Abend-Erinnerung und Abrechnung bekommen eigene
 Benachrichtigungskanäle, die du in den Android-Einstellungen einzeln einstellst. Ohne Verteiler läuft alles weiter,
@@ -264,7 +295,9 @@ zusammenpassen (App zu alt für den Server oder Server zu alt für die App) und 
   macht die Kamera-App des Geräts.
 - Push-Nachrichten sind, wenn der Verteiler Schlüssel liefert, Ende-zu-Ende verschlüsselt und bleiben minimal;
   sonst enthält die Nachricht nur einen neutralen Text.
-- Kein Google-Dienst, kein Firebase, keine Telemetrie im APK.
+- Der Standard-Build enthält keinen Google-Dienst, kein Firebase und keine Telemetrie. Der optionale FCM-Build
+  (`pnpm android:apk:fcm`) bringt Firebase Cloud Messaging mit, mit abgeschalteter Analyse und nur auf Wunsch
+  erzeugtem Token (siehe [FCM](#fcm-google-für-geräte-ohne-unifiedpush)).
 
 **Automatisch getestet:** Web-Logik der App (Server-Prüfung, Token-Erneuerung samt Wiederholung bei 401,
 Deep-Links) mit Vitest; der Native-Build läuft in Playwright gegen einen echten Server (Server einrichten,
@@ -274,7 +307,8 @@ Fehler; das Release wird beim Bauen mit `apksigner` geprüft.
 
 **Was noch nicht geprüft ist (bitte auf deinem Gerät testen).** Hier gibt es keinen Emulator und kein Handy.
 Ungetestet sind deshalb: Kamera-Ablauf, Safe-Area/Statusleiste auf deinem Handy, Push über ntfy (Anmeldung beim
-Verteiler und Benachrichtigung), Deep-Links aus einem Mail- oder Chat-Programm, Teilen-Menü beim Export,
+Verteiler und Benachrichtigung), Push über FCM mit echten Google-Servern (die Serverseite ist gegen einen
+nachgebauten FCM-Dienst getestet, die Entschlüsselung gegen den Beispielwert aus RFC 8291), Deep-Links aus einem Mail- oder Chat-Programm, Teilen-Menü beim Export,
 Tastatur-Verhalten in den Formularen, Verhalten nach Neustart des Handys. Erst nach diesem Test sollte der Stand
 nach `main`.
 
@@ -375,7 +409,8 @@ kontaktieren.
   Ergebnisse, Einsatz/Schulden, Push-Registrierungen. Es gibt keine IP-Speicherung (nur kurzlebige Rate-Limit-
   Zähler mit gehashten Schlüsseln).
 - Optionale externe Berührungspunkte, alle abschaltbar: dein SMTP-Server (Mail), der Push-Dienst des
-  Browser-Herstellers (nur Web Push, Inhalt verschlüsselt), dein ntfy-Server (UnifiedPush).
+  Browser-Herstellers (nur Web Push, Inhalt verschlüsselt), dein ntfy-Server (UnifiedPush), Google Firebase Cloud
+  Messaging (nur mit FCM-Build und `FCM_ENABLED`, Inhalt Ende-zu-Ende verschlüsselt).
 - **Datenexport** (`POST /api/v1/me/export`, Passwort nötig): liefert einen Einmal-Link (60 Sekunden gültig, ohne
   Sitzung nutzbar), der ein ZIP mit `data.json` und allen eigenen Fotos streamt. Enthalten sind nur die eigenen
   Daten (vom Partner nur der Anzeigename), keine Passwort-Hashes und keine Push-Zugangsdaten.

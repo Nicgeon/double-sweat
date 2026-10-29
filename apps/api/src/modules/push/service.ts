@@ -51,6 +51,7 @@ export interface RegisterInput extends SubscriptionInput {
 export interface PushConfig {
   webpush: { enabled: boolean; publicKey: string | null };
   unifiedpush: { enabled: boolean };
+  fcm: { enabled: boolean };
 }
 
 export interface PushService {
@@ -109,6 +110,7 @@ export function createPushService(ctx: AppContext): PushService {
           publicKey: providers.webpush.isConfigured() ? getVapidKeys(ctx).publicKey : null,
         },
         unifiedpush: { enabled: providers.unifiedpush.isConfigured() },
+        fcm: { enabled: providers.fcm.isConfigured() },
       };
     },
 

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- Nachrichten und Token-Wechsel von Firebase Cloud Messaging (nur in der App erreichbar) -->
+        <service
+            android:name=".push.FcmService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- Datensparsamkeit: Token erst auf Wunsch erzeugen, keine Analyse- und Werbe-Kennungen -->
+        <meta-data android:name="firebase_messaging_auto_init_enabled" android:value="false" />
+        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
+        <meta-data android:name="firebase_analytics_collection_deactivated" android:value="true" />
+        <meta-data android:name="google_analytics_adid_collection_enabled" android:value="false" />
+        <meta-data android:name="google_analytics_default_allow_ad_personalization_signals" android:value="false" />
+        <meta-data android:name="google_analytics_ssaid_collection_enabled" android:value="false" />
+    </application>
+</manifest>

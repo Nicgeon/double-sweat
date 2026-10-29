@@ -14,6 +14,8 @@ export const SecureStore = registerPlugin<SecureStorePlugin>('SecureStore', {
 export interface PushDistributor {
   id: string;
   label: string;
+  /** Erklärung unter dem Namen in der Auswahl (z. B. wohin die Nachrichten laufen) */
+  hint?: string;
 }
 
 export interface PushRegistration {
@@ -38,4 +40,18 @@ export interface UnifiedPushPlugin {
 
 export const UnifiedPush = registerPlugin<UnifiedPushPlugin>('UnifiedPush', {
   web: () => import('./unified-push.web.ts').then((m) => new m.UnifiedPushWeb()),
+});
+
+/** Firebase Cloud Messaging für Geräte ohne UnifiedPush. Nur im Build mit FCM vorhanden (sonst "nicht verfügbar"). */
+export interface FcmPlugin {
+  /** Gibt es FCM in diesem Build und die Google Play-Dienste auf dem Gerät? */
+  isAvailable(): Promise<{ available: boolean }>;
+  /** Holt das Token und erzeugt das Schlüsselpaar für die Ende-zu-Ende-Verschlüsselung (endpoint = FCM-Token). */
+  register(): Promise<PushRegistration>;
+  unregister(): Promise<void>;
+  current(): Promise<{ registration: PushRegistration | null }>;
+}
+
+export const Fcm = registerPlugin<FcmPlugin>('Fcm', {
+  web: () => import('./fcm.web.ts').then((m) => new m.FcmWeb()),
 });

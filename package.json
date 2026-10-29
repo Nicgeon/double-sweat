@@ -22,7 +22,9 @@
     "android:icons": "node scripts/android-icons.mjs",
     "android:debug": "sh scripts/android-build.sh debug",
     "android:apk": "sh scripts/android-build.sh release",
-    "android:test": "sh scripts/android-build.sh test"
+    "android:test": "sh scripts/android-build.sh test",
+    "android:debug:fcm": "sh scripts/android-build.sh debug fcm",
+    "android:apk:fcm": "sh scripts/android-build.sh release fcm"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.3"
