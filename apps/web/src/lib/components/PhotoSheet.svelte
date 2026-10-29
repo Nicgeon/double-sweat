@@ -2,6 +2,7 @@
   import { api, ApiError, type Checkin, unwrap } from '#lib/api/client.ts';
   import { longDate } from '#lib/util/format.ts';
   import { tagMeta } from '#lib/util/tags.ts';
+  import ApiImage from './ApiImage.svelte';
   import Banner from './Banner.svelte';
   import Button from './Button.svelte';
   import Icon from './Icon.svelte';
@@ -31,7 +32,7 @@
 <Sheet open={checkin !== null} title={checkin ? `${checkin.displayName}, ${longDate(checkin.localDate)}` : ''} {onclose}>
   {#if checkin}
     <div class="stack">
-      <img class="viewer" src={checkin.photo.fullUrl} alt="Foto von {checkin.displayName}" width={checkin.photo.width} height={checkin.photo.height} />
+      <ApiImage class="viewer" src={checkin.photo.fullUrl} alt="Foto von {checkin.displayName}" width={checkin.photo.width} height={checkin.photo.height} />
       {#if tag}<p class="row"><Icon name={tag.icon} size={18} /> {tag.label}</p>{/if}
       {#if checkin.note}<p>{checkin.note}</p>{/if}
       {#if error}<Banner tone="error">{error}</Banner>{/if}

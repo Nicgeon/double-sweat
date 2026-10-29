@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
-  import { api, ApiError, type PartnerColor, unwrap } from '#lib/api/client.ts';
+  import { ApiError, type PartnerColor } from '#lib/api/client.ts';
   import Banner from '#lib/components/Banner.svelte';
   import Button from '#lib/components/Button.svelte';
   import ColorPicker from '#lib/components/ColorPicker.svelte';
@@ -26,20 +26,15 @@
     error = null;
     busy = true;
     try {
-      const result = unwrap(
-        await api.POST('/api/v1/auth/register', {
-          body: {
-            email,
-            password,
-            displayName,
-            timezone: browserTimezone(),
-            teamName,
-            color,
-            setupToken: needsToken ? setupToken : undefined,
-          },
-        }),
-      );
-      session.adopt(result);
+      await session.register({
+        email,
+        password,
+        displayName,
+        timezone: browserTimezone(),
+        teamName,
+        color,
+        setupToken: needsToken ? setupToken : undefined,
+      });
       await goto('/', { replaceState: true });
     } catch (err) {
       error = err instanceof ApiError ? err.message : 'Das hat nicht geklappt.';

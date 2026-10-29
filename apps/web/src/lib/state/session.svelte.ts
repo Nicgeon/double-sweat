@@ -1,12 +1,23 @@
 import {
   api,
   type Health,
+  type PartnerColor,
   setCsrfToken,
   setUnauthorizedHandler,
   type Team,
   type User,
   unwrap,
 } from '#lib/api/client.ts';
+import {
+  clearAll,
+  clearTokens,
+  currentAuth,
+  loadAuth,
+  setServer,
+  setTokens,
+} from '#lib/native/auth-store.ts';
+import { NATIVE } from '#lib/native/flag.ts';
+import type { ServerInfo } from '#lib/native/server-url.ts';
 import { goto } from '$app/navigation';
 
 /** Anmeldezustand der Web-App (Cookie-Sitzung). Das CSRF-Token liegt nur im Speicher. */
@@ -18,9 +29,18 @@ class Session {
   mailEnabled = $state(false);
   unread = $state(0);
   unreachable = $state(false);
+  /** App: gespeicherte Serveradresse (null = noch keine eingerichtet) */
+  serverUrl = $state<string | null>(null);
 
   /** Server prüfen und, falls eine Sitzung besteht, Profil laden. */
   async init(): Promise<void> {
+    if (NATIVE) {
+      this.serverUrl = (await loadAuth()).server;
+      if (!this.serverUrl) {
+        this.ready = true;
+        return;
+      }
+    }
     try {
       this.health = unwrap(await api.GET('/api/v1/health'));
       this.unreachable = false;
@@ -33,6 +53,14 @@ class Session {
 
   /** Profil und Team neu laden. Liefert false, wenn niemand angemeldet ist. */
   async refresh(): Promise<boolean> {
+    if (NATIVE) {
+      const { access, refresh } = currentAuth();
+      if (!access && !refresh) {
+        this.user = null;
+        this.team = null;
+        return false;
+      }
+    }
     try {
       const me = unwrap(await api.GET('/api/v1/me'));
       this.user = me.user;
@@ -56,16 +84,78 @@ class Session {
     this.unreachable = false;
   }
 
+  /** Übernimmt das Ergebnis von Anmeldung oder Registrierung (App: inklusive Tokens). */
+  private async adoptAuth(result: {
+    user: User;
+    team?: Team | null;
+    csrfToken?: string;
+    tokens?: {
+      accessToken: string;
+      refreshToken: string;
+      expiresIn: number;
+      refreshExpiresAt: number;
+    };
+  }): Promise<void> {
+    if (NATIVE && result.tokens) await setTokens(result.tokens);
+    this.adopt(result);
+  }
+
   async login(email: string, password: string): Promise<void> {
+    if (NATIVE) {
+      await this.adoptAuth(
+        unwrap(
+          await api.POST('/api/v1/auth/token', {
+            body: { email, password, deviceLabel: 'Android-App' },
+          }),
+        ),
+      );
+      return;
+    }
     this.adopt(unwrap(await api.POST('/api/v1/auth/login', { body: { email, password } })));
+  }
+
+  async register(input: {
+    email: string;
+    password: string;
+    displayName: string;
+    timezone: string;
+    color: PartnerColor;
+    inviteCode?: string;
+    teamName?: string;
+    setupToken?: string;
+  }): Promise<void> {
+    const body = NATIVE ? { ...input, client: 'app' as const, deviceLabel: 'Android-App' } : input;
+    await this.adoptAuth(unwrap(await api.POST('/api/v1/auth/register', { body })));
   }
 
   async logout(): Promise<void> {
     try {
       await api.POST('/api/v1/auth/logout');
     } finally {
+      if (NATIVE) await clearTokens();
       this.clear();
     }
+  }
+
+  /** App: Server einrichten (nach erfolgreicher Prüfung der Adresse). */
+  async useServer(origin: string, info: ServerInfo): Promise<void> {
+    await setServer(origin);
+    this.serverUrl = origin;
+    this.health = { app: 'double-sweat', ...info } as Health;
+    this.clear();
+  }
+
+  /** App: Server wechseln. Meldet am bisherigen Server ab (soweit erreichbar) und vergisst alles. */
+  async forgetServer(): Promise<void> {
+    try {
+      await api.POST('/api/v1/auth/logout');
+    } catch {
+      /* Server nicht erreichbar: Tokens verfallen von selbst */
+    }
+    await clearAll();
+    this.serverUrl = null;
+    this.health = null;
+    this.clear();
   }
 
   clear(): void {

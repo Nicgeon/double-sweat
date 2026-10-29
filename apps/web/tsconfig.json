@@ -7,5 +7,12 @@
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true
   },
-  "exclude": ["build", "e2e/.results", "e2e/screenshots", "node_modules", ".svelte-kit"]
+  "exclude": [
+    "build",
+    "build-native",
+    "e2e/.results",
+    "e2e/screenshots",
+    "node_modules",
+    ".svelte-kit"
+  ]
 }

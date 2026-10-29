@@ -8,7 +8,8 @@
   import Page from '#lib/components/Page.svelte';
   import Segmented from '#lib/components/Segmented.svelte';
   import ShutterButton from '#lib/components/ShutterButton.svelte';
-  import { cameraAvailable, type Facing, frameToJpeg, fileToJpeg, startCamera, stopStream } from '#lib/util/camera.ts';
+  import { NATIVE } from '#lib/native/flag.ts';
+  import { cameraAvailable, type Facing, frameToJpeg, fileToJpeg, startCamera, stopStream, takeNativePhoto } from '#lib/util/camera.ts';
   import { longDate } from '#lib/util/format.ts';
   import { TAGS } from '#lib/util/tags.ts';
 
@@ -49,10 +50,27 @@
     if (photoUrl) URL.revokeObjectURL(photoUrl);
   });
 
+  /** App: Kamera des Geräts; bei Abbruch bleibt die Auswahl (erneut aufnehmen oder Foto auswählen). */
+  async function nativeShoot() {
+    cameraError = null;
+    busy = true;
+    try {
+      const blob = await takeNativePhoto();
+      if (blob) keep(blob);
+      else step = 'file';
+    } finally {
+      busy = false;
+    }
+  }
+
   async function openCamera() {
     cameraError = null;
     cameraReady = false;
     stopStream(stream);
+    if (NATIVE) {
+      await nativeShoot();
+      return;
+    }
     if (!cameraAvailable()) {
       cameraError = 'Die Kamera ist hier nicht verfügbar (sie braucht eine HTTPS-Verbindung).';
       step = 'file';
@@ -153,9 +171,14 @@
       <div class="stack">
         {#if cameraError}<Banner tone="info">{cameraError}</Banner>{/if}
         <p class="lead">Mach ein Foto von deinem Training oder wähle eines aus.</p>
-        <input bind:this={fileInput} class="ds-sr" type="file" accept="image/*" capture="environment" onchange={picked} data-testid="file-input" />
-        <Button size="lg" icon="camera" loading={busy} onclick={() => fileInput?.click()}>Foto aufnehmen oder auswählen</Button>
-        {#if cameraAvailable()}<Button variant="ghost" onclick={openCamera}>Kamera erneut versuchen</Button>{/if}
+        <input bind:this={fileInput} class="ds-sr" type="file" accept="image/*" capture={NATIVE ? undefined : "environment"} onchange={picked} data-testid="file-input" />
+        {#if NATIVE}
+          <Button size="lg" icon="camera" loading={busy} onclick={nativeShoot}>Foto aufnehmen</Button>
+          <Button variant="secondary" icon="image" onclick={() => fileInput?.click()}>Foto auswählen</Button>
+        {:else}
+          <Button size="lg" icon="camera" loading={busy} onclick={() => fileInput?.click()}>Foto aufnehmen oder auswählen</Button>
+          {#if cameraAvailable()}<Button variant="ghost" onclick={openCamera}>Kamera erneut versuchen</Button>{/if}
+        {/if}
       </div>
     {:else if step === 'review'}
       <div class="cols">

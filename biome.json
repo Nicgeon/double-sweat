@@ -26,6 +26,8 @@
       "!**/node_modules",
       "!**/dist",
       "!**/build",
+      "!**/build-native",
+      "!apps/android/android",
       "!**/.svelte-kit",
       "!**/drizzle/meta",
       "!**/pnpm-lock.yaml",

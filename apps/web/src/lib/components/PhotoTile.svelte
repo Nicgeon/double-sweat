@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { PartnerColor } from '#lib/api/client.ts';
   import type { IconName } from '#lib/icons.ts';
+  import ApiImage from './ApiImage.svelte';
   import Avatar from './Avatar.svelte';
   import Icon from './Icon.svelte';
 
@@ -25,7 +26,7 @@
   {#if empty}
     <div class="ds-photo__empty"><Icon name="image" size={28} /><span>{empty}</span></div>
   {:else}
-    <img {src} {alt} loading="lazy" />
+    <ApiImage src={src ?? ''} {alt} />
   {/if}
   {#if name}<Avatar {seat} {color} {name} size="sm" class="ds-photo__who" />{/if}
   {#if dateLabel || tag}

@@ -1,4 +1,6 @@
 import createClient from 'openapi-fetch';
+import { clearTokens, currentAuth, currentServer, setTokens } from '#lib/native/auth-store.ts';
+import { NATIVE } from '#lib/native/flag.ts';
 import type { components, paths } from './schema';
 
 export type Schemas = components['schemas'];
@@ -34,13 +36,85 @@ export const setUnauthorizedHandler = (handler: () => void) => {
   onUnauthorized = handler;
 };
 
+/** Zusätzlich benötigt in der App: aktuelle Zugangsdaten erneuern (Rotation, ein Aufruf gleichzeitig). */
+let refreshing: Promise<boolean> | null = null;
+
+async function refreshTokens(): Promise<boolean> {
+  const { refresh, refreshExpiresAt } = currentAuth();
+  const server = currentServer();
+  if (!refresh || !server || refreshExpiresAt < Date.now()) {
+    await clearTokens();
+    return false;
+  }
+  let res: Response;
+  try {
+    res = await fetch(`${server}/api/v1/auth/refresh`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ refreshToken: refresh }),
+      credentials: 'omit',
+    });
+  } catch {
+    // Netzfehler: Tokens behalten, später erneut versuchen
+    throw new ApiError(0, 'network', 'Der Server ist gerade nicht erreichbar.');
+  }
+  if (!res.ok) {
+    // Abgelaufen, widerrufen oder wiederverwendet: neu anmelden
+    if (res.status === 401 || res.status === 403) await clearTokens();
+    return false;
+  }
+  const body = (await res.json()) as { tokens?: { accessToken: string; refreshToken: string; expiresIn: number; refreshExpiresAt: number } };
+  if (!body.tokens) return false;
+  await setTokens(body.tokens);
+  return true;
+}
+
+const refreshOnce = () => (refreshing ??= refreshTokens().finally(() => (refreshing = null)));
+
+/**
+ * Sendet eine Anfrage an die API. Web: gleicher Ursprung mit Cookie. App: an die gespeicherte Serveradresse,
+ * mit Bearer-Token und einmaligem Erneuern bei Ablauf (der Body wird dafür einmal gepuffert).
+ */
+export async function send(request: Request): Promise<Response> {
+  if (!NATIVE) return fetch(request);
+  const server = currentServer();
+  if (!server) throw new ApiError(0, 'no_server', 'Es ist noch kein Server eingerichtet.');
+  const url = new URL(request.url);
+  const target = `${server}${url.pathname}${url.search}`;
+  const body = ['GET', 'HEAD'].includes(request.method) ? undefined : await request.clone().arrayBuffer();
+  const attempt = () => {
+    const headers = new Headers(request.headers);
+    const { access } = currentAuth();
+    if (access) headers.set('Authorization', `Bearer ${access}`);
+    return fetch(target, { method: request.method, headers, body, credentials: 'omit' });
+  };
+  // Access-Token läuft bald ab (oder fehlt, obwohl ein Refresh-Token da ist): vorher erneuern
+  const auth = currentAuth();
+  if (auth.refresh && (!auth.access || auth.accessExpiresAt - Date.now() < 30_000)) await refreshOnce();
+  let res: Response;
+  try {
+    res = await attempt();
+  } catch {
+    throw new ApiError(0, 'network', 'Der Server ist gerade nicht erreichbar.');
+  }
+  if (res.status === 401 && currentAuth().refresh && (await refreshOnce())) {
+    try {
+      res = await attempt();
+    } catch {
+      throw new ApiError(0, 'network', 'Der Server ist gerade nicht erreichbar.');
+    }
+  }
+  return res;
+}
+
 const client = createClient<paths>({
   baseUrl: '',
   credentials: 'same-origin',
   fetch: async (request) => {
     try {
-      return await fetch(request);
-    } catch {
+      return await send(request);
+    } catch (e) {
+      if (e instanceof ApiError) throw e;
       throw new ApiError(0, 'network', 'Der Server ist gerade nicht erreichbar.');
     }
   },
@@ -48,7 +122,7 @@ const client = createClient<paths>({
 
 client.use({
   onRequest({ request }) {
-    if (csrfToken && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
+    if (!NATIVE && csrfToken && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
       request.headers.set('X-CSRF-Token', csrfToken);
     }
     return request;
@@ -79,20 +153,19 @@ export async function uploadCheckin(photo: Blob, tag: string | null, note: strin
   form.set('photo', photo, 'checkin.jpg');
   if (tag) form.set('tag', tag);
   if (note.trim()) form.set('note', note.trim());
+  const headers: Record<string, string> = !NATIVE && csrfToken ? { 'X-CSRF-Token': csrfToken } : {};
   let response: Response;
   try {
-    response = await fetch('/api/v1/checkins', {
-      method: 'POST',
-      body: form,
-      credentials: 'same-origin',
-      headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
-    });
+    response = await send(
+      new Request('/api/v1/checkins', { method: 'POST', body: form, credentials: 'same-origin', headers }),
+    );
   } catch {
     throw new ApiError(0, 'network', 'Der Server ist gerade nicht erreichbar.');
   }
-  const json = (await response.json().catch(() => null)) as
-    | { checkin?: Checkin; error?: { code?: string; message?: string } }
-    | null;
+  const json = (await response.json().catch(() => null)) as {
+    checkin?: Checkin;
+    error?: { code?: string; message?: string };
+  } | null;
   if (!response.ok || !json?.checkin) {
     throw new ApiError(
       response.status,

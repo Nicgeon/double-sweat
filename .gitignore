@@ -20,3 +20,4 @@ apps/web/build/
 apps/web/e2e/.results/
 apps/web/e2e/screenshots/
 apps/web/src/lib/api/openapi.json
+apps/web/build-native/

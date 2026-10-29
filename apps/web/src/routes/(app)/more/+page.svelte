@@ -16,7 +16,10 @@
   import { session } from '#lib/state/session.svelte.ts';
   import { type ThemeChoice, theme } from '#lib/state/theme.svelte.ts';
   import { dateAndTime, longDate } from '#lib/util/format.ts';
-  import { currentSubscription, describeAgent, deviceLabel, disablePush, enablePush, pushSupported } from '#lib/util/push.ts';
+  import { downloadExport } from '#lib/util/export.ts';
+  import { NATIVE } from '#lib/native/flag.ts';
+  import type { PushDistributor } from '#lib/native/plugins.ts';
+  import { describeAgent, deviceLabel, disablePush, enablePush, PUSH_PROVIDER, pushActive, pushSupported } from '#lib/util/push.ts';
 
   type Device = { id: string; provider: string; deviceLabel: string | null; createdAt: number };
   type Sess = { id: string; kind: string; label: string | null; createdAt: number; lastSeenAt: number; current: boolean };
@@ -68,7 +71,7 @@
   }
   onMount(async () => {
     await loadLists();
-    pushOn = (await currentSubscription()) !== null;
+    pushOn = await pushActive();
   });
 
   async function saveProfile() {
@@ -101,26 +104,32 @@
     }
   }
 
-  async function togglePush(on: boolean) {
+  let pushChoices = $state<PushDistributor[] | null>(null);
+
+  async function togglePush(on: boolean, distributor?: string) {
     pushBusy = true;
     pushNote = null;
+    pushChoices = null;
     try {
       if (on) {
-        const res = await enablePush(deviceLabel());
-        if (res.status !== 'ok') {
+        const res = await enablePush(deviceLabel(), distributor);
+        if (res.status === 'choose') {
           pushOn = false;
-          pushNote =
-            res.status === 'denied'
-              ? 'Die Erlaubnis wurde abgelehnt. Du kannst sie in den Browser-Einstellungen ändern.'
-              : res.status === 'disabled'
-                ? 'Dieser Server hat Web Push ausgeschaltet.'
-                : 'Dieser Browser unterstützt keine Push-Benachrichtigungen (auf dem iPhone nur als installierte App).';
+          pushChoices = res.distributors;
+        } else if (res.status !== 'ok') {
+          pushOn = false;
+          pushNote = {
+            denied: 'Die Erlaubnis wurde abgelehnt. Du kannst sie in den Einstellungen deines Geräts ändern.',
+            disabled: 'Dieser Server hat Push ausgeschaltet.',
+            no_distributor:
+              'Für Push brauchst du eine UnifiedPush-App, zum Beispiel ntfy. Installiere sie und versuche es noch einmal. Alles erscheint auch unter „Benachrichtigungen“.',
+            unsupported: 'Dieser Browser unterstützt keine Push-Benachrichtigungen (auf dem iPhone nur als installierte App).',
+          }[res.status];
         }
       } else {
-        const sub = await currentSubscription();
-        const mine = devices.find((d) => d.provider === 'webpush');
-        if (sub && mine) await api.DELETE('/api/v1/push/subscriptions/{id}', { params: { path: { id: mine.id } } });
         await disablePush();
+        const mine = devices.find((d) => d.provider === PUSH_PROVIDER);
+        if (mine && !NATIVE) await api.DELETE('/api/v1/push/subscriptions/{id}', { params: { path: { id: mine.id } } });
       }
       await loadLists();
     } catch (e) {
@@ -177,8 +186,8 @@
   async function exportData(password: string) {
     const res = unwrap(await api.POST('/api/v1/me/export', { body: { password } }));
     sheet = '';
-    window.location.assign(res.downloadUrl);
-    ok('Der Download startet. Der Link gilt 60 Sekunden.');
+    await downloadExport(res.downloadUrl);
+    ok(NATIVE ? 'Export bereit. Wähle, wohin du ihn speicherst.' : 'Der Download startet. Der Link gilt 60 Sekunden.');
   }
   async function dissolve(password: string) {
     unwrap(await api.DELETE('/api/v1/team', { body: { password } }));
@@ -197,6 +206,10 @@
     } catch (e) {
       fail(e);
     }
+  }
+  async function changeServer() {
+    await session.forgetServer();
+    await goto('/server');
   }
   async function logout() {
     await session.logout();
@@ -251,11 +264,19 @@
       <Card title="Benachrichtigungen">
         <div class="stack">
           {#if pushSupported()}
-            <Toggle label="Push auf diesem Gerät" hint="Erinnerung am Abend und Anstupser von {partner?.displayName ?? 'deinem Partner'}." bind:checked={pushOn} disabled={pushBusy} onchange={togglePush} />
+            <Toggle label="Push auf diesem Gerät" hint="{NATIVE ? 'Über deine UnifiedPush-App. ' : ''}Erinnerung am Abend und Anstupser von {partner?.displayName ?? 'deinem Partner'}." bind:checked={pushOn} disabled={pushBusy} onchange={togglePush} />
           {:else}
             <p class="small muted">Push braucht eine HTTPS-Verbindung und einen unterstützten Browser. Alles erscheint auch unter „Benachrichtigungen“.</p>
           {/if}
           {#if pushNote}<Banner tone="info">{pushNote}</Banner>{/if}
+          {#if pushChoices}
+            <div class="stack">
+              <p>Welche UnifiedPush-App soll die Benachrichtigungen liefern?</p>
+              {#each pushChoices as d (d.id)}
+                <Button variant="secondary" onclick={() => togglePush(true, d.id)}>{d.label}</Button>
+              {/each}
+            </div>
+          {/if}
           {#if devices.length > 0}
             <ul class="list">
               {#each devices as d (d.id)}
@@ -304,6 +325,15 @@
           <Button variant="danger" icon="trash-2" onclick={() => (sheet = 'delete')}>Konto löschen</Button>
         </div>
       </Card>
+
+      {#if NATIVE && session.serverUrl}
+        <Card title="Server">
+          <div class="stack">
+            <div class="line"><span class="muted">Verbunden mit</span><span>{new URL(session.serverUrl).host}</span></div>
+            <Button variant="secondary" icon="refresh-cw" onclick={changeServer}>Server wechseln</Button>
+          </div>
+        </Card>
+      {/if}
 
       <Card title="Geräte und Sitzungen">
         <ul class="list">

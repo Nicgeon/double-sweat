@@ -3,12 +3,21 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vitest/config';
 
 const apiTarget = process.env.API_URL ?? 'http://127.0.0.1:3000';
+// Build für die Android-App: VITE_TARGET=native (eigenes Ausgabeverzeichnis, das Capacitor einbettet)
+const native = process.env.VITE_TARGET === 'native';
 
 export default defineConfig({
   plugins: [
     sveltekit({
       // SPA: eine einzige index.html als Fallback, die API liefert sie aus (same-origin, kein CORS)
-      adapter: adapter({ fallback: 'index.html', strict: false }),
+      adapter: native
+        ? adapter({
+            pages: 'build-native',
+            assets: 'build-native',
+            fallback: 'index.html',
+            strict: false,
+          })
+        : adapter({ fallback: 'index.html', strict: false }),
     }),
   ],
   server: {

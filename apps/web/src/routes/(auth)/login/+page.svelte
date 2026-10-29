@@ -6,6 +6,7 @@
   import Button from '#lib/components/Button.svelte';
   import Field from '#lib/components/Field.svelte';
   import { session } from '#lib/state/session.svelte.ts';
+  import { NATIVE } from '#lib/native/flag.ts';
   import { safeNext } from '#lib/util/next.ts';
 
   let email = $state('');
@@ -39,6 +40,9 @@
 <svelte:head><title>Anmelden · Double Sweat</title></svelte:head>
 
 <h1 class="auth__title">Willkommen zurück.</h1>
+{#if NATIVE && session.serverUrl}
+  <p class="small muted">Server: {new URL(session.serverUrl).host} · <a href="/server">ändern</a></p>
+{/if}
 {#if expired}<Banner tone="info" title="Deine Sitzung ist abgelaufen">Bitte melde dich erneut an.</Banner>{/if}
 {#if error}<Banner tone="error">{error}</Banner>{/if}
 <form class="form" onsubmit={submit}>

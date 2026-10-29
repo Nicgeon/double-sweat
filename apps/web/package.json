@@ -10,7 +10,9 @@
     "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "api:types": "tsx ../api/scripts/dump-openapi.ts src/lib/api/openapi.json && openapi-typescript src/lib/api/openapi.json -o src/lib/api/schema.d.ts"
+    "api:types": "tsx ../api/scripts/dump-openapi.ts src/lib/api/openapi.json && openapi-typescript src/lib/api/openapi.json -o src/lib/api/schema.d.ts",
+    "build:native": "VITE_TARGET=native vite build && node scripts/inject-csp.mjs build-native",
+    "build:native:test": "VITE_TARGET=native VITE_ALLOW_HTTP=true vite build && node scripts/inject-csp.mjs build-native --allow-http"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.11.3",
@@ -27,6 +29,12 @@
     "vitest": "5.0.5"
   },
   "dependencies": {
+    "@capacitor/app": "8.1.2",
+    "@capacitor/camera": "8.2.6",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/file-transfer": "2.0.6",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/share": "8.0.3",
     "openapi-fetch": "0.17.0"
   },
   "imports": {

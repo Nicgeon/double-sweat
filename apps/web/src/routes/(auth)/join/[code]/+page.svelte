@@ -7,6 +7,8 @@
   import Button from '#lib/components/Button.svelte';
   import ColorPicker from '#lib/components/ColorPicker.svelte';
   import Field from '#lib/components/Field.svelte';
+  import { joinLinkFor } from '#lib/native/deeplink.ts';
+  import { NATIVE } from '#lib/native/flag.ts';
   import { PARTNER_COLORS } from '#lib/state/colors.ts';
   import { session } from '#lib/state/session.svelte.ts';
   import { browserTimezone } from '#lib/util/next.ts';
@@ -23,6 +25,8 @@
   let error = $state<string | null>(null);
   let busy = $state(false);
 
+  // Nur auf Android-Geräten anbieten (dort gibt es die App)
+  const inApp = $derived(!NATIVE && typeof navigator !== 'undefined' && /Android/.test(navigator.userAgent));
   const taken = $derived(preview?.inviterColor ? { [preview.inviterColor]: preview.inviterName } : {});
 
   onMount(async () => {
@@ -41,12 +45,14 @@
     error = null;
     busy = true;
     try {
-      const result = unwrap(
-        await api.POST('/api/v1/auth/register', {
-          body: { email, password, displayName, timezone: browserTimezone(), inviteCode: code, color },
-        }),
-      );
-      session.adopt(result);
+      await session.register({
+        email,
+        password,
+        displayName,
+        timezone: browserTimezone(),
+        inviteCode: code,
+        color,
+      });
       await goto('/', { replaceState: true });
     } catch (err) {
       error = err instanceof ApiError ? err.message : 'Das hat nicht geklappt.';
@@ -86,6 +92,9 @@
     Ihr trainiert zu zweit und checkt mit einem Foto ein. Wer sein Wochenziel verfehlt, löst den Einsatz ein.
   </p>
   {#if error}<Banner tone="error">{error}</Banner>{/if}
+  {#if inApp}
+    <Button variant="secondary" icon="smartphone" href={joinLinkFor(location.origin, code)}>In der App öffnen</Button>
+  {/if}
 
   {#if session.user && session.team}
     <Banner tone="info" title="Du bist schon in einem Team">Mit diesem Konto kannst du keinem zweiten Team beitreten.</Banner>

@@ -55,3 +55,29 @@ export async function fileToJpeg(file: File): Promise<Blob> {
     return file;
   }
 }
+
+/**
+ * App: macht ein Foto mit der Kamera des Geräts (Capacitor Camera). Gibt null zurück, wenn die Person abbricht
+ * oder die Erlaubnis verweigert.
+ */
+export async function takeNativePhoto(): Promise<Blob | null> {
+  try {
+    // Im Browser (Tests) gibt es keine Gerätekamera; dort bleibt nur die Fotoauswahl
+    const { Capacitor } = await import('@capacitor/core');
+    if (!Capacitor.isNativePlatform()) return null;
+    const { Camera } = await import('@capacitor/camera');
+    const shot = await Camera.takePhoto({
+      quality: 85,
+      targetWidth: MAX_SIDE,
+      targetHeight: MAX_SIDE,
+      correctOrientation: true,
+      editable: 'no',
+      saveToGallery: false,
+    });
+    if (!shot.webPath) return null;
+    const res = await fetch(shot.webPath);
+    return await res.blob();
+  } catch {
+    return null;
+  }
+}
