@@ -4,6 +4,7 @@ import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 import { weekEndInstant } from '../src/domain/weeks.js';
 import { createPhotoSweeper } from '../src/jobs/photo-sweeper.js';
+import { MAX_CHECKINS_PER_DAY } from '../src/modules/checkins/service.js';
 import { DAY, HOUR } from '../src/util/time.js';
 import {
   jpegWithExif,
@@ -49,30 +50,51 @@ describe('Check-in', () => {
     expect(res.body.checkin).toMatchObject({ note: null, tag: null });
   });
 
-  it('zählt pro Tag höchstens ein Check-in und erlaubt am nächsten Tag wieder einen', async () => {
+  it('erlaubt mehrere Check-ins pro Tag bis zum Limit; der Tag zählt für das Ziel nur einmal', async () => {
     const env = createTestEnv();
     const anna = env.client();
     await anna.registerFounder();
-    expect((await anna.upload('/checkins', photoForm(await noisyJpeg()))).status).toBe(201);
-    const second = await anna.upload('/checkins', photoForm(await noisyJpeg()));
-    expect(second.status).toBe(409);
-    expect(second.body.error.code).toBe('already_checked_in');
-    expect(countFiles(env)).toBe(2); // der abgelehnte Upload hinterlässt keine Dateien
+    for (let i = 0; i < MAX_CHECKINS_PER_DAY; i++) {
+      expect((await anna.upload('/checkins', photoForm(await noisyJpeg()))).status).toBe(201);
+    }
+    const sixth = await anna.upload('/checkins', photoForm(await noisyJpeg()));
+    expect(sixth.status).toBe(409);
+    expect(sixth.body.error.code).toBe('daily_limit');
+    expect(countFiles(env)).toBe(MAX_CHECKINS_PER_DAY * 2); // der abgelehnte Upload hinterlässt keine Dateien
+
+    const me = (await anna.get('/dashboard')).body.members.find((m: { isMe: boolean }) => m.isMe);
+    expect(me).toMatchObject({
+      doneDays: 1,
+      checkinsToday: MAX_CHECKINS_PER_DAY,
+      checkedInToday: true,
+    });
+
     env.clock.advance(DAY);
     expect((await anna.upload('/checkins', photoForm(await noisyJpeg()))).status).toBe(201);
   });
 
-  it('gleichzeitige Uploads am selben Tag: genau einer gewinnt, keine Datei bleibt übrig', async () => {
+  it('gleichzeitige Uploads am selben Tag: das Limit hält, keine Datei bleibt übrig', async () => {
     const env = createTestEnv();
     const anna = env.client();
     await anna.registerFounder();
     const forms = await Promise.all(
-      [noisyJpeg(), noisyJpeg(), noisyJpeg()].map(async (p) => photoForm(await p)),
+      Array.from({ length: MAX_CHECKINS_PER_DAY + 2 }, async () => photoForm(await noisyJpeg())),
     );
     const results = await Promise.all(forms.map((f) => anna.upload('/checkins', f)));
-    expect(results.filter((r) => r.status === 201)).toHaveLength(1);
+    expect(results.filter((r) => r.status === 201)).toHaveLength(MAX_CHECKINS_PER_DAY);
     expect(results.filter((r) => r.status === 409)).toHaveLength(2);
-    expect(countFiles(env)).toBe(2);
+    expect(countFiles(env)).toBe(MAX_CHECKINS_PER_DAY * 2);
+  });
+
+  it('dasselbe Foto lässt sich auch am selben Tag nicht noch einmal verwenden', async () => {
+    const env = createTestEnv();
+    const anna = env.client();
+    await anna.registerFounder();
+    const jpeg = await noisyJpeg();
+    expect((await anna.upload('/checkins', photoForm(jpeg))).status).toBe(201);
+    const again = await anna.upload('/checkins', photoForm(jpeg));
+    expect(again.status).toBe(409);
+    expect(again.body.error.code).toBe('duplicate_photo');
   });
 
   it('bestimmt den Tag allein aus Serverzeit und Zeitzone, nicht aus Clientangaben', async () => {

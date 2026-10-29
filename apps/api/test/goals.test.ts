@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { weekEndInstant } from '../src/domain/weeks.js';
 import { noisyJpeg, photoForm } from './fixtures.js';
-import { createTestEnv, type TestEnv } from './helpers.js';
+import { createCouple, createTestEnv, type TestEnv } from './helpers.js';
 
 // Fake-Uhr startet Montag, 2. März 2026, 10:00 UTC
 
@@ -22,32 +22,68 @@ describe('Wochenziel', () => {
       currentGoal: null,
       nextWeekStart: '2026-03-09',
       nextGoal: null,
+      newGoalStartsNow: true, // das Team ist noch nicht vollständig, die Woche wird nicht gewertet
     });
   });
 
-  it('ein neues Ziel gilt erst ab der kommenden Woche; die laufende Woche bleibt unberührt', async () => {
+  it('das allererste Ziel gilt sofort, solange die laufende Woche nicht gewertet wird', async () => {
     const env = createTestEnv();
     const anna = await founder(env);
     const res = await anna.put('/goals/next', { days: 4 });
     expect(res.status).toBe(200);
-    expect(res.body).toMatchObject({
+    expect(res.body).toEqual({
       currentWeekStart: '2026-03-02',
-      currentGoal: null,
+      currentGoal: 4,
       nextWeekStart: '2026-03-09',
       nextGoal: 4,
+      newGoalStartsNow: false,
     });
+    const me = (await anna.get('/dashboard')).body.members[0];
+    expect(me).toMatchObject({ goalDays: 4, nextGoalDays: 4, status: 'on_track' });
+  });
+
+  it('jede weitere Änderung gilt erst ab der kommenden Woche; die laufende Woche bleibt unberührt', async () => {
+    const env = createTestEnv();
+    const anna = await founder(env);
+    await anna.put('/goals/next', { days: 4 });
+    const res = await anna.put('/goals/next', { days: 2 });
+    expect(res.body).toMatchObject({ currentGoal: 4, nextGoal: 2 });
   });
 
   it('das Ziel der kommenden Woche lässt sich beliebig oft ändern', async () => {
     const env = createTestEnv();
     const anna = await founder(env);
     await anna.put('/goals/next', { days: 4 });
-    const res = await anna.put('/goals/next', { days: 6 });
-    expect(res.body.nextGoal).toBe(6);
+    await anna.put('/goals/next', { days: 6 });
+    const res = await anna.put('/goals/next', { days: 5 });
+    expect(res.body).toMatchObject({ currentGoal: 4, nextGoal: 5 });
     const rows = env.ctx.db.$client.prepare('SELECT COUNT(*) AS n FROM weekly_goals').get() as {
       n: number;
     };
-    expect(rows.n).toBe(1);
+    expect(rows.n).toBe(2); // das sofort gültige erste Ziel und das der kommenden Woche
+  });
+
+  it('in einer gewerteten Woche gilt auch das erste Ziel erst ab der kommenden Woche', async () => {
+    const env = createTestEnv();
+    const { anna } = await createCouple(env); // Team wird Mo 2.3. mittags vollständig, gewertet ab 9.3.
+    env.clock.set(Date.parse('2026-03-10T10:00:00Z')); // Dienstag der ersten gewerteten Woche
+    const res = await anna.put('/goals/next', { days: 3 });
+    expect(res.body).toMatchObject({
+      currentWeekStart: '2026-03-09',
+      currentGoal: null,
+      nextWeekStart: '2026-03-16',
+      nextGoal: 3,
+      newGoalStartsNow: false,
+    });
+    const me = (await anna.get('/dashboard')).body.members.find((m: { isMe: boolean }) => m.isMe);
+    expect(me).toMatchObject({ goalDays: null, nextGoalDays: 3, status: 'no_goal' });
+  });
+
+  it('in der Beitrittswoche eines vollständigen Teams gilt das erste Ziel sofort', async () => {
+    const env = createTestEnv();
+    const { anna } = await createCouple(env);
+    const res = await anna.put('/goals/next', { days: 3 });
+    expect(res.body).toMatchObject({ currentWeekStart: '2026-03-02', currentGoal: 3, nextGoal: 3 });
   });
 
   it('nach dem Wochenwechsel gilt das Ziel, und die nächste Woche erbt es', async () => {
@@ -61,6 +97,7 @@ describe('Wochenziel', () => {
       currentGoal: 4,
       nextWeekStart: '2026-03-16',
       nextGoal: 4,
+      newGoalStartsNow: false,
     });
   });
 
@@ -153,8 +190,11 @@ describe('Zeitzone ändern', () => {
     await anna.patch('/me', { timezone: 'Pacific/Kiritimati' }); // dort wäre es schon Dienstag
     env.clock.set(Date.parse('2026-03-03T01:00:00Z')); // Montag 17:00 in LA, Dienstag 15:00 in Kiritimati
     const again = await anna.upload('/checkins', photoForm(await noisyJpeg()));
-    expect(again.status).toBe(409);
-    expect(again.body.error.code).toBe('already_checked_in');
+    // Der zweite Check-in ist erlaubt, fällt aber auf denselben Tag: Der Zeitzonenwechsel bringt keinen zweiten Tag
+    expect(again.status).toBe(201);
+    expect(again.body.checkin.localDate).toBe('2026-03-02');
+    const me = (await anna.get('/dashboard')).body.members[0];
+    expect(me).toMatchObject({ doneDays: 1, checkinsToday: 2 });
   });
 
   it('lehnt unbekannte Zeitzonen ab', async () => {

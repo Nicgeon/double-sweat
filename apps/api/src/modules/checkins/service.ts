@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, count, desc, eq, inArray } from 'drizzle-orm';
 import type { AppContext } from '../../context.js';
 import type { DbLike } from '../../db/client.js';
 import type { User } from '../../db/schema.js';
@@ -54,12 +54,17 @@ export function toCheckinDto(row: Checkin, displayName: string): CheckinDto {
   };
 }
 
-export function hasCheckinOn(db: DbLike, userId: string, localDate: LocalDate): boolean {
-  return !!db
-    .select({ id: checkins.id })
-    .from(checkins)
-    .where(and(eq(checkins.userId, userId), eq(checkins.localDate, localDate)))
-    .get();
+/** Höchstzahl der Check-ins pro Tag: mehrere Workouts sind erlaubt, aber nicht beliebig viele. */
+export const MAX_CHECKINS_PER_DAY = 5;
+
+export function countCheckinsOn(db: DbLike, userId: string, localDate: LocalDate): number {
+  return (
+    db
+      .select({ n: count() })
+      .from(checkins)
+      .where(and(eq(checkins.userId, userId), eq(checkins.localDate, localDate)))
+      .get()?.n ?? 0
+  );
 }
 
 export interface CheckinInput {
@@ -69,8 +74,8 @@ export interface CheckinInput {
 }
 
 /**
- * Legt den Check-in des heutigen Tages an. Der Tag ergibt sich allein aus Serverzeit und Zeitzone des
- * Nutzers. Pro Tag zählt höchstens ein Check-in (zusätzlich per UNIQUE-Constraint abgesichert).
+ * Legt einen Check-in für den heutigen Tag an. Der Tag ergibt sich allein aus Serverzeit und Zeitzone des
+ * Nutzers. Pro Tag sind bis zu MAX_CHECKINS_PER_DAY Check-ins möglich; für das Wochenziel zählt der Tag nur einmal.
  */
 export async function createCheckin(
   ctx: AppContext,
@@ -90,9 +95,10 @@ export async function createCheckin(
   const zone = currentTimezone(ctx, user);
   const localDate = localDateAt(now, zone);
   const weekStart = weekStartOf(localDate);
-  const alreadyDone = () => conflict('already_checked_in', 'Du hast heute schon eingecheckt');
+  const dayFull = () =>
+    conflict('daily_limit', `Du hast heute schon ${MAX_CHECKINS_PER_DAY} Check-ins gemacht`);
   // Günstige Vorabprüfung, bevor das Bild verarbeitet wird
-  if (hasCheckinOn(ctx.db, user.id, localDate)) throw alreadyDone();
+  if (countCheckinsOn(ctx.db, user.id, localDate) >= MAX_CHECKINS_PER_DAY) throw dayFull();
 
   const photo = await processPhoto(input.photo);
   const id = newId(now);
@@ -105,7 +111,7 @@ export async function createCheckin(
   try {
     const row = ctx.db.transaction(
       (tx) => {
-        if (hasCheckinOn(tx, user.id, localDate)) throw alreadyDone();
+        if (countCheckinsOn(tx, user.id, localDate) >= MAX_CHECKINS_PER_DAY) throw dayFull();
         const duplicate = tx
           .select({ id: checkins.id })
           .from(checkins)

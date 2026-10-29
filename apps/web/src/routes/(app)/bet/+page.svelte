@@ -13,7 +13,7 @@
   import { session } from '#lib/state/session.svelte.ts';
   import { isoWeek, longDate } from '#lib/util/format.ts';
 
-  type Goals = { currentWeekStart: string; currentGoal: number | null; nextWeekStart: string; nextGoal: number | null };
+  type Goals = { currentWeekStart: string; currentGoal: number | null; nextWeekStart: string; nextGoal: number | null; newGoalStartsNow: boolean };
   type Debt = { id: string; weekStart: string; betText: string; redeemedAt: number | null; direction: 'owe' | 'owed'; debtorName: string; creditorName: string };
   let goals = $state<Goals | null>(null);
   let nextGoal = $state(3);
@@ -55,8 +55,12 @@
     error = null;
     notice = null;
     try {
+      const startsNow = goals?.newGoalStartsNow ?? false;
       goals = unwrap(await api.PUT('/api/v1/goals/next', { body: { days: nextGoal } })) as Goals;
-      notice = `Gespeichert. Dein Ziel von ${nextGoal} ${nextGoal === 1 ? 'Tag' : 'Tagen'} gilt ab ${longDate(goals.nextWeekStart)}.`;
+      const days = `${nextGoal} ${nextGoal === 1 ? 'Tag' : 'Tagen'}`;
+      notice = startsNow
+        ? `Gespeichert. Dein Ziel von ${days} gilt ab sofort, auch für diese Woche.`
+        : `Gespeichert. Dein Ziel von ${days} gilt ab ${longDate(goals.nextWeekStart)}.`;
     } catch (e) {
       fail(e);
     } finally {
@@ -111,10 +115,11 @@
         {#if goals}
           <div class="stack">
             <p class="small muted">
-              {goals.currentGoal !== null ? `Diese Woche (KW ${isoWeek(goals.currentWeekStart)}): ${goals.currentGoal} ${goals.currentGoal === 1 ? 'Tag' : 'Tage'}.` : 'Diese Woche ist noch kein Ziel gesetzt.'} Eine Änderung gilt ab nächster Woche.
+              {goals.currentGoal !== null ? `Diese Woche (KW ${isoWeek(goals.currentWeekStart)}): ${goals.currentGoal} ${goals.currentGoal === 1 ? 'Tag' : 'Tage'}.` : 'Diese Woche ist noch kein Ziel gesetzt.'}
+              {goals.newGoalStartsNow ? 'Dein erstes Ziel gilt sofort.' : 'Eine Änderung gilt ab nächster Woche.'}
             </p>
             <Stepper label="Wochenziel von {me?.displayName ?? 'dir'}" bind:value={nextGoal} color={me?.color} partner={me?.slot === 2 ? 2 : 1} />
-            <p class="small muted">Gilt ab {longDate(goals.nextWeekStart)}.</p>
+            <p class="small muted">{goals.newGoalStartsNow ? 'Gilt ab sofort, diese Woche wird noch nicht gewertet.' : `Gilt ab ${longDate(goals.nextWeekStart)}.`}</p>
             {#if notice}<Banner tone="success">{notice}</Banner>{/if}
             <Button loading={savingGoal} onclick={saveGoal}>Ziel speichern</Button>
           </div>

@@ -2821,6 +2821,8 @@ export interface paths {
                                 id: string;
                                 full: boolean;
                             };
+                            /** @description Wie viele Check-ins pro Tag möglich sind */
+                            maxCheckinsPerDay: number;
                             bet: string | null;
                             debts: {
                                 owe: number;
@@ -2837,8 +2839,13 @@ export interface paths {
                                 weekStart: string;
                                 weekEndsAt: number;
                                 goalDays: number | null;
+                                /** @description Ziel ab der kommenden Woche; ist es gesetzt, braucht es keine Aufforderung mehr */
+                                nextGoalDays: number | null;
+                                /** @description Tage mit mindestens einem Check-in */
                                 doneDays: number;
                                 checkedInToday: boolean;
+                                /** @description Check-ins heute (mehrere pro Tag möglich) */
+                                checkinsToday: number;
                                 remainingDays: number;
                                 neededDays: number;
                                 /** @enum {string} */
@@ -4481,6 +4488,8 @@ export interface components {
             nextWeekStart: string;
             /** @description Ziel ab der kommenden Woche, änderbar */
             nextGoal: number | null;
+            /** @description Ein jetzt gespeichertes Ziel gilt sofort (erstes Ziel, laufende Woche wird nicht gewertet) */
+            newGoalStartsNow: boolean;
         };
         Checkin: {
             id: string;

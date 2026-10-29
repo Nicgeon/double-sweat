@@ -153,7 +153,7 @@ describe('Abend-Erinnerung', () => {
     // Künstliches Ziel in der Beitrittswoche, das ohne Schutz am Sonntag eine Erinnerung auslösen würde
     p.env.ctx.db.$client
       .prepare(
-        'INSERT INTO weekly_goals (user_id, effective_from, days, created_at) VALUES (?, ?, ?, ?)',
+        'INSERT OR REPLACE INTO weekly_goals (user_id, effective_from, days, created_at) VALUES (?, ?, ?, ?)',
       )
       .run(annaId, '2026-03-02', 7, 0);
     await run(p, berlin('2026-03-08', '19:00'));

@@ -99,7 +99,7 @@ test('Einladungslink erzeugen, Partner tritt bei, Farben bleiben verschieden', a
   expect(ben.problems).toEqual([]);
 });
 
-test('Check-in mit Fake-Kamera, Foto im Feed, zweiter Check-in am Tag nicht möglich', async ({
+test('Check-in mit Fake-Kamera, Foto im Feed, mehrere Check-ins am Tag zählen als ein Tag', async ({
   browser,
 }, testInfo) => {
   const { annaEmail } = await makeCouple();
@@ -132,9 +132,21 @@ test('Check-in mit Fake-Kamera, Foto im Feed, zweiter Check-in am Tag nicht mög
   await expect(page.getByRole('dialog')).toContainText('Schöne Runde');
   await page.keyboard.press('Escape');
 
-  // Ein Check-in pro Tag
+  // Zweites Workout am selben Tag: erlaubt, der Tag zählt für das Ziel aber nur einmal
   await page.goto('/checkin');
-  await expect(page.getByText('Du hast heute schon eingecheckt')).toBeVisible();
+  await expect(page.getByTestId('camera')).toBeVisible();
+  // Die Fake-Kamera blendet die Uhrzeit sekundengenau ein; zwei Fotos in derselben Sekunde wären identisch
+  // und würde der Server als doppeltes Foto ablehnen.
+  await page.waitForTimeout(1500);
+  await page.getByRole('button', { name: 'Foto aufnehmen' }).click();
+  await expect(page.getByText('Das ist dein 2. Check-in heute')).toBeVisible();
+  await page.getByRole('radio', { name: 'Yoga' }).click();
+  await page.getByRole('button', { name: 'Einchecken' }).click();
+  await expect(page.getByRole('heading', { name: 'Eingecheckt.' })).toBeVisible();
+  await expect(page.getByText('Das war dein 2. Check-in heute')).toBeVisible();
+  await page.getByRole('link', { name: 'Zur Übersicht' }).click();
+  await expect(page.locator('.ds-photo')).toHaveCount(2);
+  await expect(page.locator('.ds-lane').first().locator('.ds-lane__done')).toHaveText('1');
   expect(problems).toEqual([]);
 });
 
@@ -184,7 +196,12 @@ test('Ziel und Einsatz festlegen', async ({ browser }, testInfo) => {
   await plus.click();
   await plus.click();
   await page.getByRole('button', { name: 'Ziel speichern' }).click();
-  await expect(page.getByText(/Dein Ziel von \d Tagen gilt ab/)).toBeVisible();
+  // Das erste Ziel gilt sofort (Beitrittswoche wird nicht gewertet)
+  await expect(page.getByText(/Dein Ziel von \d Tagen gilt ab sofort/)).toBeVisible();
+  await page.goto('/');
+  await expect(page.getByText('Setze dein Wochenziel')).toHaveCount(0);
+  await expect(page.locator('.ds-lane').first()).toContainText('von 5');
+  await page.goto('/bet');
 
   await page.getByRole('button', { name: 'Ändern' }).click();
   await page.getByLabel('Was steht auf dem Spiel?').fill('Wer verliert, kocht am Sonntag');

@@ -10,7 +10,7 @@
   import PhotoTile from '#lib/components/PhotoTile.svelte';
   import Scoreboard from '#lib/components/Scoreboard.svelte';
   import { session } from '#lib/state/session.svelte.ts';
-  import { weekdayDate, weekLabel } from '#lib/util/format.ts';
+  import { addDays, weekdayDate, weekLabel } from '#lib/util/format.ts';
   import { tagMeta } from '#lib/util/tags.ts';
   import { laneOf } from '#lib/util/week.ts';
   import { streakStore } from '#lib/state/streak.svelte.ts';
@@ -84,10 +84,17 @@
       </Banner>
     {/if}
     {#if me && me.goalDays === null}
-      <Banner tone="warning" title="Setze dein Wochenziel">
-        Wie viele Tage pro Woche willst du trainieren?
-        {#snippet action()}<Button variant="secondary" size="sm" href="/bet#ziel">Ziel setzen</Button>{/snippet}
-      </Banner>
+      {#if me.nextGoalDays !== null}
+        <Banner tone="info" title="Dein Ziel gilt ab Montag">
+          {me.nextGoalDays} {me.nextGoalDays === 1 ? 'Tag' : 'Tage'} pro Woche, ab {weekdayDate(addDays(me.weekStart, 7))}. Bis dahin zählt diese Woche ohne Ziel.
+          {#snippet action()}<Button variant="secondary" size="sm" href="/bet#ziel">Ändern</Button>{/snippet}
+        </Banner>
+      {:else}
+        <Banner tone="warning" title="Setze dein Wochenziel">
+          Wie viele Tage pro Woche willst du trainieren?
+          {#snippet action()}<Button variant="secondary" size="sm" href="/bet#ziel">Ziel setzen</Button>{/snippet}
+        </Banner>
+      {/if}
     {/if}
     {#if me && me.goalDays !== null && !me.checkedInToday && me.remainingDays > 0}
       <Banner tone={me.status === 'at_risk' ? 'warning' : 'info'} title={me.status === 'at_risk' ? 'Heute zählt' : 'Heute noch nicht eingecheckt'}>

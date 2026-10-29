@@ -171,7 +171,7 @@ export const checkins = sqliteTable(
     createdAt: integer('created_at').notNull(),
   },
   (t) => [
-    unique('checkins_user_day').on(t.userId, t.localDate),
+    index('checkins_user_day_idx').on(t.userId, t.localDate),
     unique('checkins_team_photo').on(t.teamId, t.photoSha256),
     index('checkins_team_week_idx').on(t.teamId, t.weekStart),
   ],

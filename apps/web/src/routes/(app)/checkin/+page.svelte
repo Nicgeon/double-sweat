@@ -39,7 +39,8 @@
     } catch (e) {
       error = e instanceof ApiError ? e.message : 'Das hat nicht geklappt.';
     }
-    if (dash?.members.find((m) => m.isMe)?.checkedInToday) {
+    const mine = dash?.members.find((m) => m.isMe);
+    if (dash && mine && mine.checkinsToday >= dash.maxCheckinsPerDay) {
       step = 'already';
       return;
     }
@@ -148,6 +149,16 @@
     error = null;
     await openCamera();
   }
+
+  /** Noch ein Workout am selben Tag: zurück zur Kamera, mit dem frischen Stand aus dem Dashboard. */
+  async function another() {
+    photo = null;
+    result = null;
+    tag = null;
+    note = '';
+    error = null;
+    await openCamera();
+  }
 </script>
 
 {#if step === 'camera'}
@@ -165,7 +176,9 @@
     {#if step === 'loading'}
       <p class="muted" role="status">Lädt …</p>
     {:else if step === 'already'}
-      <Banner tone="success" title="Du hast heute schon eingecheckt">Morgen geht es weiter. Ein Check-in pro Tag.</Banner>
+      <Banner tone="success" title="Für heute reicht es">
+        Du hast heute {dash?.maxCheckinsPerDay} Check-ins gemacht, mehr sind pro Tag nicht möglich. Morgen geht es weiter.
+      </Banner>
       <Button href="/">Zur Übersicht</Button>
     {:else if step === 'file'}
       <div class="stack">
@@ -186,7 +199,13 @@
           {#if photoUrl}<img class="preview" src={photoUrl} alt="Dein Foto" />{/if}
         </div>
         <form class="stack" onsubmit={(e) => { e.preventDefault(); void submit(); }}>
-          <p class="muted small">Ein Check-in pro Tag. Das Datum bestimmt der Server.</p>
+          <p class="muted small">
+            {#if me && me.checkinsToday > 0}
+              Das ist dein {me.checkinsToday + 1}. Check-in heute. Für das Wochenziel zählt der Tag nur einmal.
+            {:else}
+              Das Datum bestimmt der Server.
+            {/if}
+          </p>
           <div>
             <p class="ds-field__label">Training</p>
             <Segmented wrap label="Training" options={TAGS.map((t) => ({ value: t.value, label: t.label, icon: t.icon }))} bind:value={tag} />
@@ -209,7 +228,11 @@
           {/if}
         </p>
         {#if me?.goalDays}<Banner tone="success" title="{me.doneDays} von {me.goalDays} Tagen">{result ? longDate(result.localDate) : ''}</Banner>{/if}
+        {#if me && dash && me.checkinsToday > 1}<p class="muted small">Das war dein {me.checkinsToday}. Check-in heute. Für das Wochenziel zählt der Tag nur einmal.</p>{/if}
         <Button size="lg" href="/">Zur Übersicht</Button>
+        {#if me && dash && me.checkinsToday < dash.maxCheckinsPerDay}
+          <Button variant="secondary" icon="camera" onclick={another}>Noch ein Workout eintragen</Button>
+        {/if}
       </div>
     {/if}
   </Page>

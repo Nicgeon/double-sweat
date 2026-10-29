@@ -1,4 +1,4 @@
-import { and, count, eq, isNotNull } from 'drizzle-orm';
+import { and, countDistinct, eq, isNotNull } from 'drizzle-orm';
 import type { AppContext } from '../../context.js';
 import {
   checkins,
@@ -10,7 +10,10 @@ import {
   users,
   weekResults,
 } from '../../db/schema.js';
-import { addWeeks, type LocalDate, weekStartAt, weekStartInstant } from '../../domain/weeks.js';
+import { addWeeks, firstScoredWeek, type LocalDate, weekStartAt } from '../../domain/weeks.js';
+
+export { firstScoredWeek };
+
 import { newId } from '../../util/ids.js';
 import { betForWeek } from '../bets/service.js';
 import { goalForWeek } from '../goals/service.js';
@@ -27,12 +30,6 @@ export interface SettledWeek {
   met: boolean | null;
   debtId: string | null;
   betText: string | null;
-}
-
-/** Erster Wochenstart, der nach der Vervollständigung des Teams beginnt. Frühere Wochen zählen nicht. */
-export function firstScoredWeek(fullSince: number, zone: string): LocalDate {
-  const week = weekStartAt(fullSince, zone);
-  return weekStartInstant(week, zone) >= fullSince ? week : addWeeks(week, 1);
 }
 
 function settleWeek(
@@ -56,7 +53,7 @@ function settleWeek(
       const goalDays = goalForWeek(tx, user.id, weekStart);
       const doneDays =
         tx
-          .select({ n: count() })
+          .select({ n: countDistinct(checkins.localDate) })
           .from(checkins)
           .where(and(eq(checkins.userId, user.id), eq(checkins.weekStart, weekStart)))
           .get()?.n ?? 0;

@@ -83,3 +83,9 @@ export function positionInWeek(today: LocalDate): WeekProgressPosition {
   const dayIndex = calendar(today).weekday - 1;
   return { dayIndex, daysLeftInclToday: 7 - dayIndex };
 }
+
+/** Erster Wochenstart, der nach der Vervollständigung des Teams beginnt. Frühere Wochen zählen nicht. */
+export function firstScoredWeek(fullSince: number, zone: string): LocalDate {
+  const week = weekStartAt(fullSince, zone);
+  return weekStartInstant(week, zone) >= fullSince ? week : addWeeks(week, 1);
+}

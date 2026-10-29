@@ -21,8 +21,13 @@ const memberSchema = z.object({
   weekStart: z.string(),
   weekEndsAt: z.number(),
   goalDays: z.number().nullable(),
-  doneDays: z.number(),
+  nextGoalDays: z
+    .number()
+    .nullable()
+    .describe('Ziel ab der kommenden Woche; ist es gesetzt, braucht es keine Aufforderung mehr'),
+  doneDays: z.number().describe('Tage mit mindestens einem Check-in'),
   checkedInToday: z.boolean(),
+  checkinsToday: z.number().describe('Check-ins heute (mehrere pro Tag möglich)'),
   remainingDays: z.number(),
   neededDays: z.number(),
   status: z.enum(['no_goal', 'done', 'on_track', 'at_risk', 'unreachable']),
@@ -51,6 +56,7 @@ export function dashboardRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
         200: jsonResponse(
           z.object({
             team: z.object({ id: z.string(), full: z.boolean() }),
+            maxCheckinsPerDay: z.number().describe('Wie viele Check-ins pro Tag möglich sind'),
             bet: z.string().nullable(),
             debts: z.object({ owe: z.number(), owed: z.number() }),
             members: z.array(memberSchema),

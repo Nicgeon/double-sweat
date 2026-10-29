@@ -164,6 +164,27 @@ Mit `SMTP_URL` (z. B. `smtps://benutzer:passwort@mail.example.org:465` oder `smt
 Zustellbarkeit liegt bei dir: richte für die Absenderdomain **SPF, DKIM und DMARC** ein, sonst landen die
 Mails im Spam. `cli mail-test` prüft die Verbindung. TLS wird erzwungen (`SMTP_REQUIRE_TLS=true`).
 
+**Beispiel Gmail.** Das geht ohne eigene Domain, die Mails laufen dann aber über Google (siehe
+[Datenschutz](#datenschutz)). Voraussetzung ist ein Google-Konto mit Bestätigung in zwei Schritten; dort legst du
+unter <https://myaccount.google.com/apppasswords> ein **App-Passwort** an (16 Buchstaben, nicht dein normales
+Passwort). Dann in der `.env`:
+
+```bash
+SMTP_URL=smtps://deine.adresse%40gmail.com:abcdefghijklmnop@smtp.gmail.com:465
+MAIL_FROM=Double Sweat <deine.adresse@gmail.com>
+```
+
+- Der Benutzername ist die volle Gmail-Adresse; das `@` steht in der URL als `%40`. Das App-Passwort schreibst du
+  ohne Leerzeichen. Enthält ein Passwort Sonderzeichen, kodiere sie prozentweise (`#` = `%23`, `/` = `%2F`).
+- `MAIL_FROM` sollte die Gmail-Adresse sein; Gmail ersetzt fremde Absender ohnehin.
+- Statt Port 465 geht auch `smtp://…@smtp.gmail.com:587` (STARTTLS).
+- Gmail begrenzt den Versand (einige hundert Mails pro Tag), für zwei Personen mehr als genug.
+- Danach den Container neu starten (`docker compose up -d`) und prüfen:
+  `docker compose exec app cli mail-test deine.adresse@gmail.com`.
+
+Andere Anbieter (Mailbox.org, Posteo, Strato, eigener Server) funktionieren genauso: Host, Port und Benutzer
+stehen in deren SMTP-Hilfe, Port 465 = `smtps://`, Port 587 = `smtp://` mit STARTTLS.
+
 ## Push-Benachrichtigungen
 
 - **UnifiedPush / ntfy** (empfohlen, vollständig selbst hostbar; für die Android-App): Auf dem Handy
@@ -296,9 +317,10 @@ der Android-App).
 - Die Woche läuft von Montag 00:00 bis Montag 00:00 in der **Zeitzone des jeweiligen Nutzers**. Jeder Partner
   hat also seine eigene Woche; Umstellungswochen mit 167 oder 169 Stunden sind berücksichtigt.
 - Das Datum eines Check-ins bestimmt allein der Server aus seiner Uhr und der Zeitzone des Nutzers. Pro Tag
-  zählt höchstens ein Check-in. Eine Zeitzonenänderung gilt ab dem nächsten Wochenstart (ohne bisherige
-  Check-ins sofort).
-- Das Wochenziel (1 bis 7 Tage) ist nur für die **kommende** Woche änderbar.
+  sind bis zu **5 Check-ins** möglich (mehrere Workouts); für das Wochenziel zählt der **Tag** nur einmal.
+  Eine Zeitzonenänderung gilt ab dem nächsten Wochenstart (ohne bisherige Check-ins sofort).
+- Das Wochenziel (1 bis 7 Tage) ist nur für die **kommende** Woche änderbar. Ausnahme: Das allererste Ziel gilt
+  sofort, solange die laufende Woche noch nicht gewertet wird (Team nicht vollständig oder Beitrittswoche).
 - Der Einsatz ist Freitext pro Team; eine Änderung gilt erst für Wochen, die bei **keinem** Partner schon
   begonnen haben. Er lässt sich also nicht kurz vor der Abrechnung ändern.
 - Der Wochenabschluss läuft automatisch jede Minute, ist idempotent (pro Nutzer und Woche genau ein Ergebnis)

@@ -11,6 +11,11 @@ const overviewSchema = z
     currentGoal: z.number().nullable().describe('Ziel der laufenden Woche, eingefroren'),
     nextWeekStart: z.string(),
     nextGoal: z.number().nullable().describe('Ziel ab der kommenden Woche, änderbar'),
+    newGoalStartsNow: z
+      .boolean()
+      .describe(
+        'Ein jetzt gespeichertes Ziel gilt sofort (erstes Ziel, laufende Woche wird nicht gewertet)',
+      ),
   })
   .openapi('GoalOverview');
 

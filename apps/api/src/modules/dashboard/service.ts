@@ -3,6 +3,7 @@ import type { AppContext } from '../../context.js';
 import { checkins, debts, memberships, type User, users } from '../../db/schema.js';
 import type { PartnerColor } from '../../domain/colors.js';
 import {
+  addWeeks,
   type LocalDate,
   localDateAt,
   positionInWeek,
@@ -12,7 +13,7 @@ import {
 } from '../../domain/weeks.js';
 import { forbidden } from '../../util/errors.js';
 import { betForWeek } from '../bets/service.js';
-import { type CheckinDto, listTeamCheckins } from '../checkins/service.js';
+import { type CheckinDto, listTeamCheckins, MAX_CHECKINS_PER_DAY } from '../checkins/service.js';
 import { goalForWeek } from '../goals/service.js';
 import { currentTimezone } from '../me/timezone.js';
 import { getMembership } from '../teams/service.js';
@@ -31,8 +32,13 @@ export interface MemberProgress {
   /** Ende der Woche dieses Mitglieds (exklusiv), in seiner Zeitzone. */
   weekEndsAt: number;
   goalDays: number | null;
+  /** Ziel, das ab der kommenden Woche gilt (null = keins gesetzt). Zeigt, dass ein gerade gesetztes Ziel schon gilt. */
+  nextGoalDays: number | null;
+  /** Tage mit mindestens einem Check-in (mehrere Check-ins am Tag zählen einmal). */
   doneDays: number;
   checkedInToday: boolean;
+  /** Check-ins heute (höchstens MAX_CHECKINS_PER_DAY). */
+  checkinsToday: number;
   /** Tage, an denen noch eingecheckt werden kann (inklusive heute, falls noch nicht erledigt). */
   remainingDays: number;
   /** Fehlende Check-ins bis zum Ziel. */
@@ -43,6 +49,8 @@ export interface MemberProgress {
 
 export interface Dashboard {
   team: { id: string; full: boolean };
+  /** Wie viele Check-ins pro Tag möglich sind. */
+  maxCheckinsPerDay: number;
   /** Einsatz der laufenden Woche des Betrachters. */
   bet: string | null;
   /** Offene Schulden: wie viele ich schulde und wie viele mir geschuldet werden. */
@@ -79,14 +87,13 @@ export function buildMemberProgress(
   const zone = currentTimezone(ctx, user);
   const today = localDateAt(now, zone);
   const weekStart = weekStartOf(today);
-  const done = new Set(
-    ctx.db
-      .select({ localDate: checkins.localDate })
-      .from(checkins)
-      .where(and(eq(checkins.userId, user.id), eq(checkins.weekStart, weekStart)))
-      .all()
-      .map((r) => r.localDate),
-  );
+  const rows = ctx.db
+    .select({ localDate: checkins.localDate })
+    .from(checkins)
+    .where(and(eq(checkins.userId, user.id), eq(checkins.weekStart, weekStart)))
+    .all();
+  const done = new Set(rows.map((r) => r.localDate));
+  const checkinsToday = rows.filter((r) => r.localDate === today).length;
   const checkedInToday = done.has(today);
   const { daysLeftInclToday } = positionInWeek(today);
   const remainingDays = checkedInToday ? daysLeftInclToday - 1 : daysLeftInclToday;
@@ -102,8 +109,10 @@ export function buildMemberProgress(
     weekStart,
     weekEndsAt: weekEndInstant(weekStart, zone),
     goalDays,
+    nextGoalDays: goalForWeek(ctx.db, user.id, addWeeks(weekStart, 1)),
     doneDays: done.size,
     checkedInToday,
+    checkinsToday,
     remainingDays,
     neededDays: needed,
     status,
@@ -142,6 +151,7 @@ export function getDashboard(ctx: AppContext, viewer: User): Dashboard {
     .all();
   return {
     team: { id: membership.teamId, full: people.length === 2 },
+    maxCheckinsPerDay: MAX_CHECKINS_PER_DAY,
     bet: betForWeek(ctx.db, membership.teamId, mine.weekStart),
     debts: {
       owe: open.filter((d) => d.debtorId === viewer.id).length,
