@@ -1,38 +1,29 @@
 package app.doublesweat.mobile.widget
 
 import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
-import android.graphics.Color
-import android.text.SpannableStringBuilder
-import android.text.Spanned
-import android.text.style.ForegroundColorSpan
-import android.view.View
 import android.widget.RemoteViews
-import androidx.core.content.ContextCompat
 import app.doublesweat.mobile.MainActivity
 import app.doublesweat.mobile.R
 
-/** Baut die Ansichten der beiden Widgets aus dem letzten Stand. */
+/** Baut die Ansicht eines Widgets: ein gezeichnetes Bild in der Größe des Widgets, ein Tipp öffnet die App. */
 object WidgetRenderer {
     enum class Kind { SMALL, LARGE }
 
-    // Identitätsfarben des Designsystems (design/tokens.css), hell und dunkel
-    private val LIGHT = mapOf(
-        "ember" to "#e8531f", "tide" to "#2b4bdb", "orchid" to "#9255d7", "moss" to "#5b9924",
-        "sky" to "#1792cc", "cocoa" to "#9f6741", "graphite" to "#637595",
-    )
-    private val DARK = mapOf(
-        "ember" to "#ff7a45", "tide" to "#6e8bff", "orchid" to "#c2a0e9", "moss" to "#73c22d",
-        "sky" to "#4cb9eb", "cocoa" to "#cfa58a", "graphite" to "#a4afc2",
-    )
+    fun render(context: Context, kind: Kind, snapshot: WidgetSnapshot?, options: android.os.Bundle?): RemoteViews {
+        val (wDp, hDp) = sizeOf(context, kind, options)
+        val night =
+            (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val painter = WidgetPainter(context, night, context.resources.displayMetrics.density)
+        painter.emptyText = context.getString(R.string.widget_empty)
+        val bitmap = if (kind == Kind.SMALL) painter.small(snapshot, wDp, hDp) else painter.large(snapshot, wDp, hDp)
 
-    fun render(context: Context, kind: Kind, snapshot: WidgetSnapshot?): RemoteViews {
-        val views = RemoteViews(
-            context.packageName,
-            if (kind == Kind.SMALL) R.layout.widget_small else R.layout.widget_large,
-        )
+        val views = RemoteViews(context.packageName, R.layout.widget_image)
+        views.setImageViewBitmap(R.id.widget_image, bitmap)
+        views.setContentDescription(R.id.widget_image, snapshot?.describe() ?: context.getString(R.string.widget_empty))
         val open = PendingIntent.getActivity(
             context,
             kind.ordinal,
@@ -40,55 +31,17 @@ object WidgetRenderer {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         views.setOnClickPendingIntent(R.id.widget_root, open)
-
-        val empty = snapshot == null || snapshot.lanes.isEmpty()
-        views.setViewVisibility(R.id.widget_empty, if (empty) View.VISIBLE else View.GONE)
-        views.setViewVisibility(R.id.widget_content, if (empty) View.GONE else View.VISIBLE)
-        if (snapshot == null || empty) return views
-
-        when (kind) {
-            Kind.SMALL -> {
-                views.setTextViewText(R.id.small_streak, "🔥 ${snapshot.streak}")
-                views.setTextViewText(R.id.small_streak_label, snapshot.streakText)
-                views.setTextViewText(R.id.small_today, snapshot.todayText)
-                views.setTextColor(
-                    R.id.small_today,
-                    ContextCompat.getColor(context, if (snapshot.todayDone) R.color.widget_ok else R.color.widget_text),
-                )
-            }
-            Kind.LARGE -> {
-                views.setTextViewText(R.id.large_week, snapshot.weekLabel)
-                views.setTextViewText(R.id.large_streak, "🔥 ${snapshot.streakText}")
-                views.setTextViewText(R.id.large_updated, snapshot.updatedLabel)
-                lane(context, views, snapshot.lanes[0], R.id.lane1_name, R.id.lane1_progress, R.id.lane1_dots)
-                val second = snapshot.lanes.getOrNull(1)
-                views.setViewVisibility(R.id.lane2, if (second == null) View.GONE else View.VISIBLE)
-                if (second != null) lane(context, views, second, R.id.lane2_name, R.id.lane2_progress, R.id.lane2_dots)
-            }
-        }
         return views
     }
 
-    private fun lane(context: Context, views: RemoteViews, lane: WidgetLane, name: Int, progress: Int, dots: Int) {
-        views.setTextViewText(name, lane.name)
-        views.setTextViewText(progress, lane.progress)
-        val night =
-            (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        val hex = (if (night) DARK else LIGHT)[lane.color] ?: (if (night) "#a4afc2" else "#637595")
-        val laneColor = Color.parseColor(hex)
-        val faint = ContextCompat.getColor(context, R.color.widget_faint)
-        val text = SpannableStringBuilder()
-        lane.days.forEachIndexed { i, state ->
-            val start = text.length
-            text.append(WidgetSnapshot.symbol(state))
-            if (i < lane.days.size - 1) text.append("  ")
-            text.setSpan(
-                ForegroundColorSpan(if (state == "done" || state == "today") laneColor else faint),
-                start,
-                start + 1,
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
-            )
-        }
-        views.setTextViewText(dots, text)
+    /** Größe des Widgets in dp aus den Optionen des Launchers; ohne Angabe die Standardgröße des Designs. */
+    private fun sizeOf(context: Context, kind: Kind, options: android.os.Bundle?): Pair<Float, Float> {
+        val defaultW = if (kind == Kind.SMALL) WidgetGeometry.DEFAULT_SMALL_W else WidgetGeometry.DEFAULT_LARGE_W
+        if (options == null) return defaultW to WidgetGeometry.DEFAULT_H
+        val landscape = context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+        val w = options.getInt(if (landscape) AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH else AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
+        val h = options.getInt(if (landscape) AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT else AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0)
+        // Obergrenze: das Bild darf nicht größer werden, als der Launcher übertragen kann
+        return (if (w > 0) w.toFloat() else defaultW).coerceIn(100f, 720f) to (if (h > 0) h.toFloat() else WidgetGeometry.DEFAULT_H).coerceIn(80f, 520f)
     }
 }

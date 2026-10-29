@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Double Sweat</string>
-    <string name="title_activity_main">Double Sweat</string>
-    <string name="package_name">app.doublesweat.mobile</string>
-    <string name="custom_url_scheme">doublesweat</string>
+    <string name="app_name" translatable="false">Double Sweat</string>
+    <string name="title_activity_main" translatable="false">Double Sweat</string>
+    <string name="package_name" translatable="false">app.doublesweat.mobile</string>
+    <string name="custom_url_scheme" translatable="false">doublesweat</string>
     <string name="channel_nudge">Nudges</string>
     <string name="channel_reminder">Reminders</string>
     <string name="channel_general">Other notifications</string>

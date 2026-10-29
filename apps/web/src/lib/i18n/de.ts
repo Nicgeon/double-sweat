@@ -480,6 +480,8 @@ export const de = {
   // Widgets (Android)
   'widget.todayDone': 'Heute geschafft',
   'widget.todayOpen': 'Heute noch offen',
+  'widget.todayDoneShort': 'Geschafft',
+  'widget.todayOpenShort': 'Offen',
   'widget.updated': 'Stand {time}',
 
   // Export (Teilen-Menü der App)

@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
+import android.os.Bundle
 import app.doublesweat.mobile.securestore.Vault
 
 /** Speichert den Stand der Widgets (verschlüsselt im [Vault]) und zeichnet sie neu. */
@@ -32,7 +33,7 @@ object WidgetUpdater {
         val snapshot = load(context)
         for ((provider, kind) in PROVIDERS) {
             for (id in manager.getAppWidgetIds(ComponentName(context, provider))) {
-                manager.updateAppWidget(id, WidgetRenderer.render(context, kind, snapshot))
+                manager.updateAppWidget(id, WidgetRenderer.render(context, kind, snapshot, manager.getAppWidgetOptions(id)))
             }
         }
     }
@@ -46,11 +47,16 @@ object WidgetUpdater {
 abstract class BaseWidgetProvider(private val kind: WidgetRenderer.Kind) : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         val snapshot = WidgetUpdater.load(context)
-        for (id in ids) manager.updateAppWidget(id, WidgetRenderer.render(context, kind, snapshot))
+        for (id in ids) manager.updateAppWidget(id, WidgetRenderer.render(context, kind, snapshot, manager.getAppWidgetOptions(id)))
+    }
+
+    /** Größe geändert (Launcher zieht das Widget auf): neu zeichnen, damit das Bild zur Größe passt. */
+    override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, newOptions: Bundle) {
+        manager.updateAppWidget(id, WidgetRenderer.render(context, kind, WidgetUpdater.load(context), newOptions))
     }
 }
 
-/** Klein (2×1): Serie und ob man heute schon eingecheckt hat. */
+/** Klein (2×2): Serie und ob man heute schon eingecheckt hat. */
 class SmallWidgetProvider : BaseWidgetProvider(WidgetRenderer.Kind.SMALL)
 
 /** Groß (4×2): Wochenfortschritt beider Partner mit Wochenleiste. */

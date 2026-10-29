@@ -8,16 +8,18 @@ import org.junit.Test
 class WidgetSnapshotTest {
     private val valid = """{"updatedLabel":"Stand 19:04","weekLabel":"KW 44","streak":3,"streakText":"Wochen in Serie",
         "todayDone":true,"todayText":"Heute geschafft","lanes":[
-        {"name":"Anna","color":"ember","progress":"2 von 3 Tagen","days":["done","done","today","future","future","future","future"]},
-        {"name":"Ben","color":"tide","progress":"kein Ziel","days":["missed","done","today","future","future","future","future"]}]}"""
+        {"name":"Anna (Du)","initials":"A","slot":1,"color":"ember","progress":"2 von 3 Tagen","days":["done","done","today","future","future","future","future"]},
+        {"name":"Ben","initials":"B","slot":2,"color":"tide","progress":"kein Ziel","days":["missed","done","today","future","future","future","future"]}]}"""
 
     @Test
     fun readsAValidSnapshot() {
         val s = WidgetSnapshot.parse(valid)!!
         assertEquals(3, s.streak)
         assertTrue(s.todayDone)
-        assertEquals(listOf("Anna", "Ben"), s.lanes.map { it.name })
+        assertEquals(listOf("Anna (Du)", "Ben"), s.lanes.map { it.name })
         assertEquals("ember", s.lanes[0].color)
+        assertEquals(listOf(1, 2), s.lanes.map { it.slot })
+        assertEquals("A", s.lanes[0].initials)
         assertEquals(7, s.lanes[1].days.size)
     }
 
@@ -48,10 +50,16 @@ class WidgetSnapshotTest {
     }
 
     @Test
-    fun symbolsPerDayState() {
-        assertEquals("●", WidgetSnapshot.symbol("done"))
-        assertEquals("◎", WidgetSnapshot.symbol("today"))
-        assertEquals("○", WidgetSnapshot.symbol("missed"))
-        assertEquals("○", WidgetSnapshot.symbol("future"))
+    fun describesTheWidgetForScreenReaders() {
+        val text = WidgetSnapshot.parse(valid)!!.describe()
+        assertTrue(text.contains("3 Wochen in Serie"))
+        assertTrue(text.contains("Anna (Du): 2 von 3 Tagen"))
+        assertTrue(text.contains("Heute geschafft"))
+    }
+
+    @Test
+    fun slotDefaultsToThePositionAndIgnoresOddValues() {
+        val s = WidgetSnapshot.parse("""{"lanes":[{"name":"A","slot":7,"days":[]},{"name":"B","days":[]}]}""")!!
+        assertEquals(listOf(1, 2), s.lanes.map { it.slot })
     }
 }

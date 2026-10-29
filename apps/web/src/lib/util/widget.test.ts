@@ -52,6 +52,7 @@ describe('Widget-Stand', () => {
     expect(snap.streak).toBe(3);
     expect(snap.streakText).toBe('Wochen in Serie');
     expect(snap.todayText).toBe('Heute noch offen');
+    expect(snap.todayShort).toBe('Offen');
     expect(snap.todayDone).toBe(false);
     expect(snap.weekLabel).toContain('KW 44');
     expect(snap.lanes.map((l) => l.name)).toEqual(['Anna (Du)', 'Ben']);
@@ -67,6 +68,8 @@ describe('Widget-Stand', () => {
     ]);
     expect(snap.lanes[1]?.progress).toBe('kein Ziel');
     expect(snap.lanes[1]?.color).toBe('tide');
+    expect(snap.lanes.map((l) => l.slot)).toEqual([1, 2]);
+    expect(snap.lanes.map((l) => l.initials)).toEqual(['A', 'B']);
   });
 
   it('folgt der Sprache und meldet den heutigen Check-in', () => {

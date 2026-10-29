@@ -472,6 +472,8 @@ export const en: Record<MessageKey, string> = {
   // Widgets (Android)
   'widget.todayDone': 'Done today',
   'widget.todayOpen': 'Still open today',
+  'widget.todayDoneShort': 'Done',
+  'widget.todayOpenShort': 'Open',
   'widget.updated': 'Updated {time}',
 
   // Export (share sheet of the app)

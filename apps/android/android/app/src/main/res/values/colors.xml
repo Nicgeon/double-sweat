@@ -3,10 +3,4 @@
     <!-- Farben des Designsystems (design/tokens.json): ink, bg -->
     <color name="ic_launcher_background">#0e1424</color>
     <color name="splash_background">#f2f4f8</color>
-    <!-- Widgets: Flächen und Schrift (design/tokens.css, hell) -->
-    <color name="widget_bg">#ffffff</color>
-    <color name="widget_text">#0e1424</color>
-    <color name="widget_muted">#475069</color>
-    <color name="widget_faint">#9aa3b8</color>
-    <color name="widget_ok">#44741b</color>
 </resources>

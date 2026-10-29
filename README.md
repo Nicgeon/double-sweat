@@ -288,7 +288,8 @@ zusätzliche Google-Bibliotheken; der Standard-Build enthält keine.
 **Widgets:** Zwei Widgets für den Startbildschirm: _klein_ (2×1: Serie und ob du heute schon eingecheckt hast) und
 _groß_ (4×2: Wochenfortschritt von euch beiden mit Wochenleiste). Sie zeigen den **letzten Stand, den die App beim
 Öffnen geschrieben hat** ("Stand 19:04" unten rechts). Sie holen selbst nichts vom Server und haben keine
-Zugangsdaten; ein Tipp öffnet die App. Beim Abmelden werden sie geleert. Hinzufügen: Startbildschirm lange drücken →
+Zugangsdaten; ein Tipp öffnet die App. Gestaltet nach dem Designsystem (Schriften, Icons, Marker-Formen, Raster
+mit 24-dp-Radius); bei kleinen Rastern fallen zuerst Symbol und Kopfzeile weg, nie wird Text abgeschnitten. Beim Abmelden werden sie geleert. Hinzufügen: Startbildschirm lange drücken →
 Widgets → Double Sweat.
 
 Die App ist ein Capacitor-Wrapper um dieselbe Web-Oberfläche. Die Oberfläche steckt **im APK** (die App lädt

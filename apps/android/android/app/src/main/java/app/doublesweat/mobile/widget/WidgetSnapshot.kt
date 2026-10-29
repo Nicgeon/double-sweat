@@ -5,6 +5,10 @@ import org.json.JSONObject
 /** Eine Person auf dem Widget. Alle Texte kommen fertig übersetzt aus der App (Sprache des Kontos). */
 data class WidgetLane(
     val name: String,
+    /** Buchstaben im Avatar (1 bis 2) */
+    val initials: String,
+    /** Platz im Team: 1 = Kreis, 2 = abgerundetes Quadrat (die Form gehört zum Platz, nicht zum Betrachter) */
+    val slot: Int,
     /** Farb-Kennung des Designsystems (ember, tide, ...) */
     val color: String,
     val progress: String,
@@ -23,8 +27,17 @@ data class WidgetSnapshot(
     val streakText: String,
     val todayDone: Boolean,
     val todayText: String,
+    /** Kurzform für enge Widgets ("Geschafft" / "Offen") */
+    val todayShort: String,
     val lanes: List<WidgetLane>,
 ) {
+    /** Beschreibung für Screenreader (das Widget ist ein Bild). */
+    fun describe(): String = buildString {
+        append(streak).append(' ').append(streakText).append(". ").append(todayText).append('.')
+        for (lane in lanes) append(' ').append(lane.name).append(": ").append(lane.progress).append('.')
+        if (updatedLabel.isNotEmpty()) append(' ').append(updatedLabel).append('.')
+    }
+
     companion object {
         private const val MAX_TEXT = 60
         private val DAY_STATES = setOf("done", "today", "missed", "future")
@@ -40,6 +53,8 @@ data class WidgetSnapshot(
                     val days = l.getJSONArray("days")
                     WidgetLane(
                         name = text(l, "name"),
+                        initials = text(l, "initials").take(2).ifEmpty { "?" },
+                        slot = if (l.optInt("slot", i + 1) == 2) 2 else 1,
                         color = text(l, "color"),
                         progress = text(l, "progress"),
                         days = (0 until 7).map { d ->
@@ -54,6 +69,7 @@ data class WidgetSnapshot(
                     streakText = text(o, "streakText"),
                     todayDone = o.optBoolean("todayDone", false),
                     todayText = text(o, "todayText"),
+                    todayShort = text(o, "todayShort"),
                     lanes = lanes,
                 )
             } catch (e: Exception) {
@@ -64,11 +80,5 @@ data class WidgetSnapshot(
         private fun text(o: JSONObject, key: String): String =
             o.optString(key).filter { !it.isISOControl() }.trim().take(MAX_TEXT)
 
-        /** Zeichen für einen Tag in der Wochenleiste. */
-        fun symbol(state: String): String = when (state) {
-            "done" -> "●"
-            "today" -> "◎"
-            else -> "○"
-        }
     }
 }
