@@ -9,6 +9,16 @@ if (gradle.startParameter.taskNames.any { it.toLowerCase().contains('fcm') }) {
     apply plugin: 'com.google.gms.google-services'
 }
 
+// App-ID des FCM-Builds: die in der google-services.json eingetragene. Firebase verlangt, dass beide übereinstimmen,
+// und so lässt sich jedes im eigenen Firebase-Projekt angelegte Paket verwenden. Debug und Release teilen sich dann
+// die ID (sie lassen sich nicht nebeneinander installieren).
+def fcmApplicationId = null
+def firebaseConfig = file('src/fcm/google-services.json')
+if (firebaseConfig.exists()) {
+    def names = new JsonSlurper().parse(firebaseConfig).client.collect { it.client_info.android_client_info.package_name }
+    fcmApplicationId = names.find { !it.endsWith('.debug') } ?: names[0]
+}
+
 // Version aus apps/android/package.json: versionName = "1.2.3", versionCode = 10203
 def appVersion = new JsonSlurper().parse(file('../../package.json')).version.toString()
 def versionParts = appVersion.split('-')[0].tokenize('.').collect { it.toInteger() }
@@ -85,6 +95,14 @@ android {
     lint {
         abortOnError = true
         warningsAsErrors = false
+    }
+}
+
+androidComponents {
+    onVariants(selector().withFlavor('distribution', 'fcm')) { variant ->
+        if (fcmApplicationId != null) {
+            variant.applicationId.set(fcmApplicationId)
+        }
     }
 }
 

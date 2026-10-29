@@ -38,26 +38,25 @@ sync_web() {
   (cd "$ANDROID" && pnpm exec cap sync android)
 }
 
-# Der Build mit Firebase braucht die google-services.json des eigenen Firebase-Projekts. Sie enthält die Paketnamen
-# der angemeldeten Apps; für das Debug-Build ist das die App-ID mit ".debug".
+# Der Build mit Firebase braucht die google-services.json des eigenen Firebase-Projekts. Die App-ID des Builds ist
+# der darin eingetragene Paketname (Firebase verlangt, dass beide übereinstimmen).
 prepare_fcm() {
   SRC="$ANDROID/firebase/google-services.json"
   if [ ! -f "$SRC" ]; then
     echo "Für den Build mit FCM fehlt apps/android/firebase/google-services.json." >&2
-    echo "Lege in der Firebase-Konsole eine Android-App an (Paketname app.doublesweat.mobile, fürs Debug-Build zusätzlich" >&2
-    echo "app.doublesweat.mobile.debug), lade die Datei herunter und speichere sie dort. Siehe README, Abschnitt FCM." >&2
+    echo "Lege in der Firebase-Konsole eine Android-App an, lade die Datei herunter und speichere sie dort. Siehe README, Abschnitt FCM." >&2
     exit 1
   fi
-  NEED="app.doublesweat.mobile$1"
-  if ! node -e "
+  if ! APP_ID="$(node -e "
     const j = JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8'));
-    const names = (j.client || []).map((c) => c.client_info?.android_client_info?.package_name);
-    process.exit(names.includes(process.argv[2]) ? 0 : 1);
-  " "$SRC" "$NEED"; then
-    echo "In google-services.json ist keine Android-App mit dem Paketnamen $NEED eingetragen." >&2
-    echo "Füge sie in der Firebase-Konsole hinzu und lade die Datei neu herunter." >&2
+    const names = (j.client || []).map((c) => c.client_info?.android_client_info?.package_name).filter(Boolean);
+    if (names.length === 0) process.exit(1);
+    console.log(names.find((n) => !n.endsWith('.debug')) ?? names[0]);
+  " "$SRC")"; then
+    echo "In google-services.json ist keine Android-App eingetragen. Lege sie in der Firebase-Konsole an und lade die Datei neu herunter." >&2
     exit 1
   fi
+  echo "FCM-Build mit der App-ID $APP_ID (aus google-services.json)"
   mkdir -p "$ANDROID/android/app/src/fcm"
   cp "$SRC" "$ANDROID/android/app/src/fcm/google-services.json"
 }
@@ -67,7 +66,7 @@ mkdir -p "$ANDROID/dist"
 
 case "$MODE" in
   debug)
-    [ "$FLAVOR" = fcm ] && prepare_fcm ".debug"
+    [ "$FLAVOR" = fcm ] && prepare_fcm
     sync_web build:native:test
     TASK="assemble${TASK_FLAVOR}Debug"
     (cd "$ANDROID/android" && ./gradlew "$TASK")
@@ -80,7 +79,7 @@ case "$MODE" in
       echo "Es gibt noch keinen Signaturschlüssel. Erzeuge ihn einmalig mit: ./scripts/gen-keystore.sh" >&2
       exit 1
     fi
-    [ "$FLAVOR" = fcm ] && prepare_fcm ""
+    [ "$FLAVOR" = fcm ] && prepare_fcm
     sync_web build:native
     TASK="assemble${TASK_FLAVOR}Release"
     (cd "$ANDROID/android" && ./gradlew "$TASK")

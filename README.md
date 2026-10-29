@@ -215,12 +215,14 @@ ein eigenes (kostenloses) Firebase-Projekt und eine App-Version mit FCM, die du 
    Repository). Setze in der `.env` `FCM_ENABLED=true` und `FCM_SERVICE_ACCOUNT_FILE=/data/fcm-service-account.json`,
    dann `docker compose up -d`. Der Server prüft die Datei beim Start und meldet Fehler sofort. (Die "Firebase Cloud
    Messaging API (V1)" ist in neuen Projekten aktiv; sonst in der Google Cloud Console einschalten.)
-3. **App:** In den Projekteinstellungen "Android-App hinzufügen" mit dem Paketnamen `app.doublesweat.mobile` (für das
-   Debug-Build zusätzlich `app.doublesweat.mobile.debug`), die `google-services.json` herunterladen und als
-   `apps/android/firebase/google-services.json` speichern (auch sie bleibt außerhalb des Repositorys).
+3. **App:** In den Projekteinstellungen "Android-App hinzufügen" mit einem Paketnamen deiner Wahl (zum Beispiel
+   `app.doublesweat.mobile`), die `google-services.json` herunterladen und als
+   `apps/android/firebase/google-services.json` speichern (auch sie bleibt außerhalb des Repositorys). Der FCM-Build
+   übernimmt den Paketnamen aus dieser Datei als App-ID; Debug- und Release-Build teilen sich dieselbe ID.
 4. `pnpm android:apk:fcm` baut das signierte APK mit FCM (`pnpm android:debug:fcm` das Test-APK), siehe
-   [Android-App](#android-app). Beide APKs lassen sich nicht über das andere installieren: sie haben denselben Namen
-   und müssen mit demselben Schlüssel signiert sein, sonst vorher deinstallieren.
+   [Android-App](#android-app). Der Standard-Build und der FCM-Build haben (je nach Paketname) verschiedene App-IDs
+   und sind getrennte Apps. Debug- und Release-Build des FCM-Builds sind verschieden signiert: beim Wechsel zuerst
+   deinstallieren.
 5. Auf dem Handy "Mehr → Benachrichtigungen → Push": Ist keine UnifiedPush-App installiert, nutzt die App FCM
    direkt. Sind beide Wege möglich, fragt sie nach.
 
