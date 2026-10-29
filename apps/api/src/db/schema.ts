@@ -25,6 +25,10 @@ export const users = sqliteTable('users', {
   pendingTimezone: text('pending_timezone'),
   pendingFromWeek: text('pending_from_week'),
   reminderTime: text('reminder_time').notNull().default('19:00'),
+  /** Sprache der Oberfläche, der Mitteilungen und Mails (de oder en). */
+  locale: text('locale', { enum: ['de', 'en'] })
+    .notNull()
+    .default('de'),
   createdAt: integer('created_at').notNull(),
 });
 
@@ -335,6 +339,8 @@ export const notifications = sqliteTable(
     title: text('title').notNull(),
     body: text('body').notNull(),
     dataJson: text('data_json'),
+    /** Parameter der Vorlage: Beim Lesen wird der Text in der aktuellen Sprache neu erzeugt. */
+    paramsJson: text('params_json'),
     createdAt: integer('created_at').notNull(),
     readAt: integer('read_at'),
   },

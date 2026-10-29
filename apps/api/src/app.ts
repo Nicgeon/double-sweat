@@ -11,6 +11,8 @@ import {
   securityHeaders,
 } from './http/middleware.js';
 import type { AppEnv } from './http/types.js';
+import { localizeError } from './i18n/errors.js';
+import { requestLocale } from './i18n/request.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { betRoutes } from './modules/bets/routes.js';
 import { checkinRoutes } from './modules/checkins/routes.js';
@@ -31,28 +33,30 @@ import { teamRoutes } from './modules/teams/routes.js';
 import { APP_VERSION } from './version.js';
 
 // Einheitliches Fehlerformat bei fehlgeschlagener Validierung
-// biome-ignore lint/suspicious/noExplicitAny: Hook-Typ der Bibliothek ist generisch
-const validationHook: Hook<any, AppEnv, any, any> = (result, c) => {
-  if (!result.success) {
-    return c.json(
-      {
-        error: {
-          code: 'validation_error',
-          message: 'Ungültige Eingabe',
-          details: result.error.issues.map((issue) => ({
-            path: issue.path.join('.'),
-            message: issue.message,
-          })),
-        },
-      },
-      400,
-    );
-  }
-};
+const validationHook =
+  // biome-ignore lint/suspicious/noExplicitAny: Hook-Typ der Bibliothek ist generisch
+    (ctx: AppContext): Hook<any, AppEnv, any, any> =>
+    (result, c) => {
+      if (!result.success) {
+        return c.json(
+          {
+            error: {
+              code: 'validation_error',
+              message: localizeError(requestLocale(c, ctx.config), 'Ungültige Eingabe'),
+              details: result.error.issues.map((issue) => ({
+                path: issue.path.join('.'),
+                message: issue.message,
+              })),
+            },
+          },
+          400,
+        );
+      }
+    };
 
 export function createApp(ctx: AppContext): OpenAPIHono<AppEnv> {
-  const root = new OpenAPIHono<AppEnv>({ defaultHook: validationHook });
-  const api = new OpenAPIHono<AppEnv>({ defaultHook: validationHook });
+  const root = new OpenAPIHono<AppEnv>({ defaultHook: validationHook(ctx) });
+  const api = new OpenAPIHono<AppEnv>({ defaultHook: validationHook(ctx) });
 
   root.use('*', securityHeaders(ctx));
   root.use(
@@ -67,8 +71,9 @@ export function createApp(ctx: AppContext): OpenAPIHono<AppEnv> {
   );
   root.use('*', requestLogger(ctx));
 
+  const say = (c: Context, message: string) => localizeError(requestLocale(c, ctx.config), message);
   const tooLarge = (c: Context) =>
-    c.json({ error: { code: 'payload_too_large', message: 'Anfrage zu groß' } }, 413);
+    c.json({ error: { code: 'payload_too_large', message: say(c, 'Anfrage zu groß') } }, 413);
   const smallBody = bodyLimit({ maxSize: 64 * 1024, onError: tooLarge });
   // Foto-Uploads dürfen größer sein, alles andere ist reines JSON
   const uploadBody = bodyLimit({
@@ -124,7 +129,9 @@ export function createApp(ctx: AppContext): OpenAPIHono<AppEnv> {
     servers: [{ url: ctx.config.publicOrigin }],
   });
 
-  root.notFound((c) => c.json({ error: { code: 'not_found', message: 'Nicht gefunden' } }, 404));
+  root.notFound((c) =>
+    c.json({ error: { code: 'not_found', message: say(c, 'Nicht gefunden') } }, 404),
+  );
   root.onError(handleError(ctx));
   return root;
 }

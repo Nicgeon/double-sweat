@@ -12,7 +12,7 @@ describe('Postfach', () => {
     const benId = (await ben.get('/me')).body.user.id as string;
     for (let i = 0; i < count; i++) {
       env.clock.advance(1000);
-      env.ctx.push.notify(benId, { type: 'test', title: `Titel ${i}`, body: `Text ${i}` });
+      env.ctx.push.notify(benId, { type: 'nudge', params: { name: `Nr ${i}` } });
     }
     await env.ctx.idle();
     return { env, anna, ben };
@@ -21,15 +21,16 @@ describe('Postfach', () => {
   it('listet neueste zuerst mit Ungelesen-Zähler', async () => {
     const { ben } = await withMessages(3);
     const { notifications, unreadCount } = (await ben.get('/notifications')).body;
-    expect(notifications.map((n: { title: string }) => n.title)).toEqual([
-      'Titel 2',
-      'Titel 1',
-      'Titel 0',
+    expect(notifications.map((n: { body: string }) => n.body)).toEqual([
+      'Nr 2 stupst dich an: Zeit fürs Training!',
+      'Nr 1 stupst dich an: Zeit fürs Training!',
+      'Nr 0 stupst dich an: Zeit fürs Training!',
     ]);
     expect(unreadCount).toBe(3);
     expect(notifications[0]).toMatchObject({
-      type: 'test',
-      body: 'Text 2',
+      type: 'nudge',
+      title: 'Double Sweat',
+      body: 'Nr 2 stupst dich an: Zeit fürs Training!',
       read: false,
       data: null,
     });
@@ -54,7 +55,10 @@ describe('Postfach', () => {
     expect(first).toHaveLength(2);
     const next = (await ben.get(`/notifications?limit=2&before=${first[1].createdAt}`)).body
       .notifications;
-    expect(next.map((n: { title: string }) => n.title)).toEqual(['Titel 2', 'Titel 1']);
+    expect(next.map((n: { body: string }) => n.body)).toEqual([
+      'Nr 2 stupst dich an: Zeit fürs Training!',
+      'Nr 1 stupst dich an: Zeit fürs Training!',
+    ]);
     expect((await ben.get('/notifications?limit=0')).status).toBe(400);
     expect((await ben.get('/notifications?limit=101')).status).toBe(400);
   });

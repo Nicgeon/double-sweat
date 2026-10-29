@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { AppContext } from '../../context.js';
 import { invites, type Team, teams, type User, users } from '../../db/schema.js';
 import type { PartnerColor } from '../../domain/colors.js';
+import type { Locale } from '../../i18n/locales.js';
 import { keyPart } from '../../security/ratelimit.js';
 import {
   badRequest,
@@ -44,6 +45,7 @@ export interface UserDto {
   timezone: string;
   pendingTimezone: string | null;
   reminderTime: string;
+  locale: Locale;
 }
 
 export function toUserDto(user: User): UserDto {
@@ -56,6 +58,7 @@ export function toUserDto(user: User): UserDto {
     timezone: user.timezone,
     pendingTimezone: user.pendingTimezone,
     reminderTime: user.reminderTime,
+    locale: user.locale,
   };
 }
 
@@ -132,6 +135,8 @@ export interface RegisterInput {
   teamName?: string | undefined;
   /** Wunschfarbe; ohne Angabe gilt der Standard des Platzes (1 Ember, 2 Tide). */
   color?: PartnerColor | undefined;
+  /** Sprache des Kontos; ohne Angabe die Standardsprache des Servers. */
+  locale?: Locale | undefined;
 }
 
 /**
@@ -191,6 +196,7 @@ export async function registerAccount(
         pendingTimezone: null,
         pendingFromWeek: null,
         reminderTime: '19:00',
+        locale: input.locale ?? ctx.config.defaultLocale,
         createdAt: now,
       };
       tx.insert(users).values(user).run();
@@ -220,7 +226,7 @@ export function sendVerification(ctx: AppContext, user: User): void {
   sendMailInBackground(
     ctx,
     'verify',
-    verifyEmailMail(user.email, user.displayName, linkTo(ctx, 'verify', token)),
+    verifyEmailMail(user.locale, user.email, user.displayName, linkTo(ctx, 'verify', token)),
   );
 }
 
@@ -245,5 +251,9 @@ export async function changePassword(
     },
     { behavior: 'immediate' },
   );
-  sendMailInBackground(ctx, 'password-changed', passwordChangedMail(user.email, user.displayName));
+  sendMailInBackground(
+    ctx,
+    'password-changed',
+    passwordChangedMail(user.locale, user.email, user.displayName),
+  );
 }

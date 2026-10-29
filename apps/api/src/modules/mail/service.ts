@@ -37,7 +37,7 @@ export function requestPasswordReset(ctx: AppContext, ip: string, emailRaw: stri
     sendMailInBackground(
       ctx,
       'reset',
-      passwordResetMail(user.email, user.displayName, linkTo(ctx, 'reset', token)),
+      passwordResetMail(user.locale, user.email, user.displayName, linkTo(ctx, 'reset', token)),
     );
   });
 }
@@ -70,7 +70,11 @@ export async function resetPassword(
     },
     { behavior: 'immediate' },
   );
-  sendMailInBackground(ctx, 'password-changed', passwordChangedMail(user.email, user.displayName));
+  sendMailInBackground(
+    ctx,
+    'password-changed',
+    passwordChangedMail(user.locale, user.email, user.displayName),
+  );
 }
 
 /** Löst Bestätigungs- und Adresswechsel-Links ein. */
@@ -99,7 +103,12 @@ export function verifyEmailToken(
           .set({ email: row.newEmail, emailVerifiedAt: now })
           .where(eq(users.id, user.id))
           .run();
-        return { kind: 'email_change' as const, oldEmail: user.email, name: user.displayName };
+        return {
+          kind: 'email_change' as const,
+          oldEmail: user.email,
+          name: user.displayName,
+          locale: user.locale,
+        };
       }
       tx.update(users).set({ emailVerifiedAt: now }).where(eq(users.id, user.id)).run();
       return { kind: 'verify' as const };
@@ -110,7 +119,7 @@ export function verifyEmailToken(
     sendMailInBackground(
       ctx,
       'email-changed',
-      emailChangedNoticeMail(result.oldEmail, result.name),
+      emailChangedNoticeMail(result.locale, result.oldEmail, result.name),
     );
   }
   return { kind: result.kind };
@@ -152,7 +161,12 @@ export async function requestEmailChange(
       sendMailInBackground(
         ctx,
         'email-change',
-        emailChangeConfirmMail(newEmail, user.displayName, linkTo(ctx, 'verify', token)),
+        emailChangeConfirmMail(
+          user.locale,
+          newEmail,
+          user.displayName,
+          linkTo(ctx, 'verify', token),
+        ),
       );
     }
     return { status: 'verification_sent' };

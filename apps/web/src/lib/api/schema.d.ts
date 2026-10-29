@@ -100,6 +100,11 @@ export interface paths {
                         teamName?: string;
                         color?: components["schemas"]["PartnerColor"] & unknown;
                         /**
+                         * @description Sprache des Kontos; ohne Angabe Accept-Language, sonst DEFAULT_LOCALE
+                         * @enum {string}
+                         */
+                        locale?: "de" | "en";
+                        /**
                          * @description web: Session-Cookie, app: Bearer-Tokens
                          * @default web
                          * @enum {string}
@@ -1428,6 +1433,11 @@ export interface paths {
                         /** @description IANA-Zeitzone. Wirkt ab dem nächsten Wochenstart, sobald es Check-ins gibt. */
                         timezone?: string;
                         reminderTime?: string;
+                        /**
+                         * @description Sprache der Oberfläche, Mitteilungen und Mails
+                         * @enum {string}
+                         */
+                        locale?: "de" | "en";
                     };
                 };
             };
@@ -5070,6 +5080,11 @@ export interface components {
             timezone: string;
             pendingTimezone: string | null;
             reminderTime: string;
+            /**
+             * @description Sprache der Oberfläche, Mitteilungen und Mails
+             * @enum {string}
+             */
+            locale: "de" | "en";
         };
         /**
          * @description Identitätsfarbe aus der Palette (Tokens in design/tokens.json)

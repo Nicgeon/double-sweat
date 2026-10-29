@@ -57,11 +57,7 @@ export function remindersJob(ctx: AppContext): void {
       const missing = progress.neededDays;
       ctx.push.notify(user.id, {
         type: 'reminder',
-        title: 'Double Sweat',
-        body:
-          missing === 1
-            ? 'Heute noch trainieren: Dir fehlt noch ein Tag für dein Wochenziel, und es bleibt kein Puffer.'
-            : `Dir fehlen noch ${missing} Tage für dein Wochenziel, und jeder verbleibende Tag zählt. Heute schon trainiert?`,
+        params: { missing },
         data: { weekStart: progress.weekStart, needed: missing },
       });
     }

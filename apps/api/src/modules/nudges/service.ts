@@ -49,8 +49,7 @@ export function sendNudge(ctx: AppContext, user: User): { nextAllowedAt: number 
 
   ctx.push.notify(partner.id, {
     type: 'nudge',
-    title: 'Double Sweat',
-    body: `${user.displayName} stupst dich an: Zeit fürs Training!`,
+    params: { name: user.displayName },
     data: { fromUserId: user.id },
   });
   return { nextAllowedAt: now + NUDGE_INTERVAL_MS };

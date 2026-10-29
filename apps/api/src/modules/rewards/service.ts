@@ -120,8 +120,7 @@ export function setReward(ctx: AppContext, user: User, text: string): RewardOver
   if (partner && value) {
     ctx.push.notify(partner.id, {
       type: 'reward_set',
-      title: 'Double Sweat',
-      body: `${user.displayName} verspricht dir eine Belohnung für dein Wochenziel: „${value}“.`,
+      params: { name: user.displayName, reward: value },
     });
   }
   return getRewardOverview(ctx, user);

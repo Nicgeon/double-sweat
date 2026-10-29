@@ -1,22 +1,23 @@
 import { and, desc, eq, inArray, isNull, lt } from 'drizzle-orm';
 import type { AppContext } from '../../context.js';
 import { type NotificationRow, notifications, type User } from '../../db/schema.js';
+import type { Locale } from '../../i18n/locales.js';
+import {
+  isNotificationType,
+  type NotificationParams,
+  type NotificationType,
+  renderNotification,
+} from '../../i18n/notifications.js';
 import { newId } from '../../util/ids.js';
 
-export type NotificationType =
-  | 'nudge'
-  | 'reminder'
-  | 'debt_created'
-  | 'reward_set'
-  | 'reward_earned'
-  | 'reaction'
-  | 'team_dissolved'
-  | 'test';
+export type { NotificationType };
 
+/** Eine Mitteilung: Art und Parameter. Den Text erzeugt der Server in der Sprache des Empfängers. */
 export interface NotificationInput {
   type: NotificationType;
-  title: string;
-  body: string;
+  /** Werte für die Vorlage (z. B. Name, Einsatz); werden gespeichert, damit der Text später neu erzeugt werden kann. */
+  params?: NotificationParams;
+  /** Zusätzliche Angaben für Clients (IDs, Wochenstart); nicht Teil des Textes. */
   data?: Record<string, string | number | boolean | null>;
 }
 
@@ -30,11 +31,22 @@ export interface NotificationDto {
   read: boolean;
 }
 
-const toDto = (row: NotificationRow): NotificationDto => ({
+/** Text einer gespeicherten Mitteilung: in der aktuellen Sprache neu erzeugt, wenn Parameter vorliegen. */
+function textOf(row: NotificationRow, locale: Locale): { title: string; body: string } {
+  if (row.paramsJson && isNotificationType(row.type)) {
+    try {
+      return renderNotification(locale, row.type, JSON.parse(row.paramsJson) as NotificationParams);
+    } catch {
+      /* gespeicherter Text bleibt */
+    }
+  }
+  return { title: row.title, body: row.body };
+}
+
+const toDto = (row: NotificationRow, locale: Locale): NotificationDto => ({
   id: row.id,
   type: row.type,
-  title: row.title,
-  body: row.body,
+  ...textOf(row, locale),
   data: row.dataJson ? (JSON.parse(row.dataJson) as Record<string, unknown>) : null,
   createdAt: row.createdAt,
   read: row.readAt !== null,
@@ -45,6 +57,7 @@ export function storeNotification(
   ctx: AppContext,
   userId: string,
   input: NotificationInput,
+  text: { title: string; body: string },
 ): string {
   const now = ctx.clock.now();
   const id = newId(now);
@@ -54,9 +67,10 @@ export function storeNotification(
       id,
       userId,
       type: input.type,
-      title: input.title,
-      body: input.body,
+      title: text.title,
+      body: text.body,
       dataJson: input.data ? JSON.stringify(input.data) : null,
+      paramsJson: input.params ? JSON.stringify(input.params) : null,
       createdAt: now,
     })
     .run();
@@ -83,7 +97,7 @@ export function listNotifications(
     .from(notifications)
     .where(and(eq(notifications.userId, user.id), isNull(notifications.readAt)))
     .all().length;
-  return { notifications: rows.map(toDto), unreadCount: unread };
+  return { notifications: rows.map((row) => toDto(row, user.locale)), unreadCount: unread };
 }
 
 /** Markiert eigene Benachrichtigungen als gelesen: bestimmte (ids) oder alle ungelesenen. */

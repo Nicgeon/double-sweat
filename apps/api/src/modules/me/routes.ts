@@ -13,6 +13,7 @@ import {
   userSchema,
 } from '../../http/schemas.js';
 import type { AppEnv } from '../../http/types.js';
+import { LOCALES } from '../../i18n/locales.js';
 import { toUserDto } from '../auth/service.js';
 import { requestEmailChange } from '../mail/service.js';
 import { getTeamView } from '../teams/service.js';
@@ -79,6 +80,10 @@ export function meRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
               .string()
               .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Format HH:MM')
               .optional(),
+            locale: z
+              .enum(LOCALES)
+              .optional()
+              .describe('Sprache der Oberfläche, Mitteilungen und Mails'),
           }),
         ),
       },

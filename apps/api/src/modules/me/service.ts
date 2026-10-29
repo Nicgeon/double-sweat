@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import type { AppContext } from '../../context.js';
 import { memberships, teams, type User, users } from '../../db/schema.js';
 import type { PartnerColor } from '../../domain/colors.js';
+import type { Locale } from '../../i18n/locales.js';
 import { badRequest, conflict } from '../../util/errors.js';
 import { verifyReauth } from '../auth/service.js';
 import { photoKeysFor } from '../photos/keys.js';
@@ -13,12 +14,14 @@ export interface ProfileUpdate {
   timezone?: string | undefined;
   reminderTime?: string | undefined;
   color?: PartnerColor | undefined;
+  locale?: Locale | undefined;
 }
 
 export function updateProfile(ctx: AppContext, user: User, update: ProfileUpdate): User {
-  const set: Partial<Pick<User, 'displayName' | 'reminderTime'>> = {};
+  const set: Partial<Pick<User, 'displayName' | 'reminderTime' | 'locale'>> = {};
   if (update.displayName !== undefined) set.displayName = update.displayName.trim();
   if (update.reminderTime !== undefined) set.reminderTime = update.reminderTime;
+  if (update.locale !== undefined) set.locale = update.locale;
   if (
     Object.keys(set).length === 0 &&
     update.timezone === undefined &&

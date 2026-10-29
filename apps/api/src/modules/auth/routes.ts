@@ -15,6 +15,8 @@ import {
   protectedSecurity,
 } from '../../http/schemas.js';
 import type { AppEnv } from '../../http/types.js';
+import { LOCALES } from '../../i18n/locales.js';
+import { requestLocale } from '../../i18n/request.js';
 import { clientIp } from '../../security/client-ip.js';
 import { notFound } from '../../util/errors.js';
 import { resetPassword } from '../mail/service.js';
@@ -85,6 +87,10 @@ export function authRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
             color: partnerColorSchema
               .optional()
               .describe('Wunschfarbe; ohne Angabe gilt der Standard des Platzes'),
+            locale: z
+              .enum(LOCALES)
+              .optional()
+              .describe('Sprache des Kontos; ohne Angabe Accept-Language, sonst DEFAULT_LOCALE'),
             client: clientField,
             deviceLabel: z.string().max(80).optional(),
           }),
@@ -97,7 +103,8 @@ export function authRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
     }),
     async (c) => {
       const body = c.req.valid('json');
-      const { user } = await registerAccount(ctx, clientIp(c, ctx.config), body);
+      const locale = body.locale ?? requestLocale(c, ctx.config);
+      const { user } = await registerAccount(ctx, clientIp(c, ctx.config), { ...body, locale });
       return c.json(respondWithLogin(c, ctx, user, body.client, body.deviceLabel), 201);
     },
   );

@@ -1,5 +1,6 @@
 import { z } from '@hono/zod-openapi';
 import { PARTNER_COLORS } from '../domain/colors.js';
+import { LOCALES } from '../i18n/locales.js';
 
 export const errorSchema = z
   .object({
@@ -28,6 +29,7 @@ export const userSchema = z
     timezone: z.string(),
     pendingTimezone: z.string().nullable(),
     reminderTime: z.string(),
+    locale: z.enum(LOCALES).describe('Sprache der Oberfläche, Mitteilungen und Mails'),
   })
   .openapi('User');
 

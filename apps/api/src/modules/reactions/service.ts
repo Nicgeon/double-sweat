@@ -15,14 +15,6 @@ export interface ReactionDto {
   displayName: string;
 }
 
-/** Was die Mitteilung an den Partner sagt, je Symbol. */
-const PHRASE: Record<ReactionKind, string> = {
-  flame: 'feuert dich an',
-  applause: 'applaudiert dir',
-  strong: 'findet dich stark',
-  heart: 'ist stolz auf dich',
-};
-
 /** Reaktionen zu mehreren Check-ins auf einmal (für den Feed). */
 export function reactionsFor(db: DbLike, checkinIds: string[]): Map<string, ReactionDto[]> {
   const byCheckin = new Map<string, ReactionDto[]>();
@@ -92,8 +84,7 @@ export function setReaction(
   if (!existing && !ctx.limiter.hit(`reaction-notify:${checkinId}:${user.id}`, 1, HOUR).limited) {
     ctx.push.notify(row.userId, {
       type: 'reaction',
-      title: 'Double Sweat',
-      body: `${user.displayName} ${PHRASE[kind]}.`,
+      params: { name: user.displayName, kind },
       data: { checkinId },
     });
   }

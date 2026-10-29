@@ -1,6 +1,7 @@
 import { and, count, eq } from 'drizzle-orm';
 import type { AppContext } from '../../context.js';
-import { type PushSubscriptionRow, pushSubscriptions, type User } from '../../db/schema.js';
+import { type PushSubscriptionRow, pushSubscriptions, type User, users } from '../../db/schema.js';
+import { renderNotification } from '../../i18n/notifications.js';
 import { badRequest, conflict, notFound, tooManyRequests } from '../../util/errors.js';
 import { newId } from '../../util/ids.js';
 import { HOUR } from '../../util/time.js';
@@ -77,12 +78,16 @@ export function createPushService(ctx: AppContext): PushService {
   const providers = createProviders(ctx);
   const provider = (id: ProviderId): PushProvider => providers[id];
 
-  async function deliver(sub: PushSubscriptionRow, input: NotificationInput): Promise<void> {
+  async function deliver(
+    sub: PushSubscriptionRow,
+    input: NotificationInput,
+    text: { title: string; body: string },
+  ): Promise<void> {
     const p = provider(sub.provider);
     if (!p.isConfigured()) return;
     const result = await p.send(
       sub,
-      { type: input.type, title: input.title, body: input.body, tag: input.type, url: '/' },
+      { type: input.type, title: text.title, body: text.body, tag: input.type, url: '/' },
       DELIVERY[input.type],
     );
     if (result === 'ok') {
@@ -204,7 +209,12 @@ export function createPushService(ctx: AppContext): PushService {
     },
 
     notify(userId, input) {
-      const id = storeNotification(ctx, userId, input);
+      // Sprache des Empfängers: Postfach und Push bekommen denselben Text
+      const locale =
+        ctx.db.select({ locale: users.locale }).from(users).where(eq(users.id, userId)).get()
+          ?.locale ?? ctx.config.defaultLocale;
+      const text = renderNotification(locale, input.type, input.params);
+      const id = storeNotification(ctx, userId, input, text);
       ctx.defer(async () => {
         const subs = ctx.db
           .select()
@@ -213,7 +223,7 @@ export function createPushService(ctx: AppContext): PushService {
           .all();
         for (const sub of subs) {
           try {
-            await deliver(sub, input);
+            await deliver(sub, input, text);
           } catch (error) {
             ctx.log.error('push_delivery_failed', {
               error: error instanceof Error ? error.name : 'unknown',
@@ -227,11 +237,7 @@ export function createPushService(ctx: AppContext): PushService {
     sendTest(user) {
       const limit = ctx.limiter.hit(`push-test:${user.id}`, 5, HOUR);
       if (limit.limited) throw tooManyRequests(limit.retryAfterSec);
-      return this.notify(user.id, {
-        type: 'test',
-        title: 'Double Sweat',
-        body: 'Test erfolgreich: Benachrichtigungen kommen an.',
-      });
+      return this.notify(user.id, { type: 'test' });
     },
   };
 }

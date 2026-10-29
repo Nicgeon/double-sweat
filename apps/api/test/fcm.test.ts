@@ -175,11 +175,7 @@ describe('FCM: Konfiguration', () => {
     const env = fcmEnv();
     expect(JSON.stringify(env.config)).not.toContain('PRIVATE KEY');
     const { ben } = await coupleWithDevice(env);
-    env.ctx.push.notify((await ben.get('/me')).body.user.id, {
-      type: 'test',
-      title: 'Double Sweat',
-      body: 'x',
-    });
+    env.ctx.push.notify((await ben.get('/me')).body.user.id, { type: 'test' });
     await env.ctx.idle();
     expect(env.logs.join('\n')).not.toContain('PRIVATE KEY');
   });
@@ -285,7 +281,7 @@ describe('FCM: Zustellung', () => {
     const { ben } = await coupleWithDevice(env);
     const id = (await ben.get('/me')).body.user.id as string;
     const notify = async () => {
-      env.ctx.push.notify(id, { type: 'reminder', title: 'Double Sweat', body: 'x' });
+      env.ctx.push.notify(id, { type: 'reminder', params: { missing: 2 } });
       await env.ctx.idle();
     };
     await notify();
@@ -307,7 +303,7 @@ describe('FCM: Zustellung', () => {
     const { ben } = await coupleWithDevice(env);
     const id = (await ben.get('/me')).body.user.id as string;
     for (let i = 0; i < 4; i++) {
-      env.ctx.push.notify(id, { type: 'reminder', title: 'Double Sweat', body: `n${i}` });
+      env.ctx.push.notify(id, { type: 'test' });
     }
     await env.ctx.idle();
     expect(google.messages).toHaveLength(4);
@@ -318,11 +314,7 @@ describe('FCM: Zustellung', () => {
     google.sendReplies.push({ status: 401, body: { error: { status: 'UNAUTHENTICATED' } } });
     const env = fcmEnv();
     const { ben } = await coupleWithDevice(env);
-    env.ctx.push.notify((await ben.get('/me')).body.user.id, {
-      type: 'reminder',
-      title: 'D',
-      body: 'x',
-    });
+    env.ctx.push.notify((await ben.get('/me')).body.user.id, { type: 'test' });
     await env.ctx.idle();
     expect(google.tokenRequests).toHaveLength(2);
     expect(google.messages.map((m) => m.authorization)).toEqual([
@@ -349,11 +341,7 @@ describe('FCM: Zustellung', () => {
     });
     const env = fcmEnv();
     const { ben } = await coupleWithDevice(env);
-    env.ctx.push.notify((await ben.get('/me')).body.user.id, {
-      type: 'reminder',
-      title: 'D',
-      body: 'x',
-    });
+    env.ctx.push.notify((await ben.get('/me')).body.user.id, { type: 'test' });
     await env.ctx.idle();
     expect((await ben.get('/push/subscriptions')).body.subscriptions).toEqual([]);
   });
@@ -362,11 +350,7 @@ describe('FCM: Zustellung', () => {
     google.sendReplies.push({ status: 404, body: { error: { status: 'NOT_FOUND' } } });
     const env = fcmEnv();
     const { ben } = await coupleWithDevice(env);
-    env.ctx.push.notify((await ben.get('/me')).body.user.id, {
-      type: 'reminder',
-      title: 'D',
-      body: 'x',
-    });
+    env.ctx.push.notify((await ben.get('/me')).body.user.id, { type: 'test' });
     await env.ctx.idle();
     expect(rows(env)).toEqual([{ failures: 1 }]);
   });
@@ -377,19 +361,11 @@ describe('FCM: Zustellung', () => {
       google.sendReplies.push({ status, body: { error: { status: 'UNAVAILABLE' } } });
       const env = fcmEnv();
       const { ben } = await coupleWithDevice(env);
-      env.ctx.push.notify((await ben.get('/me')).body.user.id, {
-        type: 'reminder',
-        title: 'D',
-        body: 'x',
-      });
+      env.ctx.push.notify((await ben.get('/me')).body.user.id, { type: 'test' });
       await env.ctx.idle();
       expect(rows(env)).toEqual([{ failures: 1 }]);
       // Der nächste Erfolg setzt den Zähler zurück
-      env.ctx.push.notify((await ben.get('/me')).body.user.id, {
-        type: 'reminder',
-        title: 'D',
-        body: 'y',
-      });
+      env.ctx.push.notify((await ben.get('/me')).body.user.id, { type: 'test' });
       await env.ctx.idle();
       expect(rows(env)).toEqual([{ failures: 0 }]);
     },
@@ -403,7 +379,7 @@ describe('FCM: Zustellung', () => {
     const { ben } = await coupleWithDevice(env);
     const id = (await ben.get('/me')).body.user.id as string;
     for (let i = 0; i < MAX_FAILURES; i++) {
-      env.ctx.push.notify(id, { type: 'reminder', title: 'D', body: `n${i}` });
+      env.ctx.push.notify(id, { type: 'test' });
       await env.ctx.idle();
     }
     expect((await ben.get('/push/subscriptions')).body.subscriptions).toEqual([]);
@@ -414,12 +390,12 @@ describe('FCM: Zustellung', () => {
     const env = fcmEnv();
     const { ben } = await coupleWithDevice(env);
     const id = (await ben.get('/me')).body.user.id as string;
-    env.ctx.push.notify(id, { type: 'reminder', title: 'D', body: 'x' });
+    env.ctx.push.notify(id, { type: 'test' });
     await env.ctx.idle();
     expect(google.messages).toHaveLength(0);
     expect(rows(env)).toEqual([{ failures: 1 }]);
     google.tokenReply = { status: 200, expiresIn: 3600 };
-    env.ctx.push.notify(id, { type: 'reminder', title: 'D', body: 'y' });
+    env.ctx.push.notify(id, { type: 'test' });
     await env.ctx.idle();
     expect(google.messages).toHaveLength(1);
     expect(rows(env)).toEqual([{ failures: 0 }]);
@@ -449,10 +425,10 @@ describe('FCM: Aufräumen', () => {
     const env = fcmEnv();
     const { ben } = await coupleWithDevice(env);
     const id = (await ben.get('/me')).body.user.id as string;
-    env.ctx.push.notify(id, { type: 'reminder', title: 'D', body: 'a' });
+    env.ctx.push.notify(id, { type: 'test' });
     await env.ctx.idle();
     env.clock.advance(DAY);
-    env.ctx.push.notify(id, { type: 'reminder', title: 'D', body: 'b' });
+    env.ctx.push.notify(id, { type: 'test' });
     await env.ctx.idle();
     expect(google.tokenRequests).toHaveLength(2);
   });

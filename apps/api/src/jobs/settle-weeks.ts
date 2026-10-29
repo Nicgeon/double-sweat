@@ -22,14 +22,12 @@ export function settleWeeksJob(ctx: AppContext): void {
       const data = { debtId: week.debtId, weekStart: week.weekStart };
       ctx.push.notify(week.userId, {
         type: 'debt_created',
-        title: 'Double Sweat',
-        body: `Ziel verfehlt: Du schuldest ${creditor} diese Woche „${week.betText}“.`,
+        params: { role: 'debtor', other: creditor, bet: week.betText },
         data,
       });
       ctx.push.notify(week.partnerId, {
         type: 'debt_created',
-        title: 'Double Sweat',
-        body: `${debtor} hat das Ziel verfehlt und schuldet dir „${week.betText}“.`,
+        params: { role: 'creditor', other: debtor, bet: week.betText },
         data,
       });
     }
@@ -39,14 +37,12 @@ export function settleWeeksJob(ctx: AppContext): void {
       const data = { rewardClaimId: week.rewardClaimId, weekStart: week.weekStart };
       ctx.push.notify(week.userId, {
         type: 'reward_earned',
-        title: 'Double Sweat',
-        body: `Wochenziel geschafft! Deine Belohnung von ${giver}: „${week.rewardText}“.`,
+        params: { role: 'recipient', other: giver, reward: week.rewardText },
         data,
       });
       ctx.push.notify(week.partnerId, {
         type: 'reward_earned',
-        title: 'Double Sweat',
-        body: `${recipient} hat das Wochenziel geschafft. Deine Belohnung ist fällig: „${week.rewardText}“.`,
+        params: { role: 'giver', other: recipient, reward: week.rewardText },
         data,
       });
     }

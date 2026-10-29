@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { BlockList, isIP } from 'node:net';
 import { isAbsolute, join, resolve } from 'node:path';
 import { z } from 'zod';
+import { LOCALES, type Locale } from './i18n/locales.js';
 
 export const SIGNUP_MODES = ['open', 'token', 'invite-only', 'closed'] as const;
 export type SignupMode = (typeof SIGNUP_MODES)[number];
@@ -43,6 +44,7 @@ const envSchema = z.object({
   TRUST_PROXY: z.string().default('loopback,private'),
   MAX_UPLOAD_MB: z.coerce.number().min(1).max(100).default(12),
   CORS_APP_ORIGINS: z.string().default('https://localhost'),
+  DEFAULT_LOCALE: z.enum(LOCALES).default('de'),
   SMTP_URL: z.string().optional(),
   MAIL_FROM: z.string().optional(),
   SMTP_REQUIRE_TLS: bool,
@@ -87,6 +89,8 @@ export interface Config {
   trustProxy: BlockList | null;
   maxUploadBytes: number;
   corsAppOrigins: string[];
+  /** Sprache für Konten und Anfragen, die keine angeben (z. B. API-Clients ohne Accept-Language). */
+  defaultLocale: Locale;
   smtp: { url: string; from: string; requireTls: boolean } | null;
   push: {
     webPushEnabled: boolean;
@@ -316,6 +320,7 @@ export function loadConfig(source: Record<string, string | undefined> = process.
     trustProxy: parseTrustProxy(env.TRUST_PROXY),
     maxUploadBytes: Math.floor(env.MAX_UPLOAD_MB * 1024 * 1024),
     corsAppOrigins,
+    defaultLocale: env.DEFAULT_LOCALE,
     smtp,
     push: {
       webPushEnabled: env.WEBPUSH_ENABLED ?? true,

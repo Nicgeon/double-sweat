@@ -2,6 +2,8 @@ import type { Context, MiddlewareHandler } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { HTTPException } from 'hono/http-exception';
 import type { AppContext } from '../context.js';
+import { localizeError } from '../i18n/errors.js';
+import { requestLocale } from '../i18n/request.js';
 import { lookupAccessToken } from '../modules/auth/app-tokens.js';
 import { lookupSession } from '../modules/auth/sessions.js';
 import { safeEqual } from '../security/tokens.js';
@@ -117,9 +119,11 @@ export function currentAuth(c: Context<AppEnv>) {
 
 export function handleError(ctx: AppContext) {
   return (error: Error, c: Context): Response => {
+    // Meldungen in der Sprache der Anfrage (Accept-Language); ohne Angabe die Standardsprache des Servers
+    const say = (message: string) => localizeError(requestLocale(c, ctx.config), message);
     if (error instanceof AppError) {
       return c.json(
-        { error: { code: error.code, message: error.message } },
+        { error: { code: error.code, message: say(error.message) } },
         error.status as 400,
         error.headers,
       );
@@ -130,13 +134,13 @@ export function handleError(ctx: AppContext) {
         {
           error: {
             code: status === 413 ? 'payload_too_large' : 'bad_request',
-            message: error.message || 'Fehlerhafte Anfrage',
+            message: say(error.message || 'Fehlerhafte Anfrage'),
           },
         },
         status,
       );
     }
     ctx.log.error('unhandled_error', { error: error.name, message: error.message });
-    return c.json({ error: { code: 'internal_error', message: 'Interner Fehler' } }, 500);
+    return c.json({ error: { code: 'internal_error', message: say('Interner Fehler') } }, 500);
   };
 }

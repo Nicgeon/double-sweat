@@ -352,8 +352,7 @@ export async function dissolveTeam(ctx: AppContext, userId: string): Promise<voi
   for (const partner of partners) {
     ctx.push.notify(partner.userId, {
       type: 'team_dissolved',
-      title: 'Double Sweat',
-      body: `${actor?.name ?? 'Dein Partner'} hat das Team aufgelöst. Dein Konto bleibt bestehen.`,
+      params: actor?.name ? { name: actor.name } : {},
     });
   }
 }
