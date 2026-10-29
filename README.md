@@ -9,7 +9,7 @@ sind optional und im Abschnitt [Datenschutz](#datenschutz) beschrieben.
 
 > **Status: in Entwicklung.** Backend, **Web-Oberfläche** (mobil und Desktop, Hell und Dunkel, als PWA
 > installierbar) und **Android-App** sind gebaut und automatisch getestet: Konten, Anmeldung, Einladung per
-> Link, optionaler Mailversand, Wochenziele, Foto-Check-ins (mehrere pro Tag) mit Wochenlogik pro Zeitzone,
+> Link, optionaler Mailversand, Wochenziele, Foto-Check-ins (mehrere pro Tag, optional mit Selfie) mit Wochenlogik pro Zeitzone,
 > Anzeigetafel, Wetteinsatz mit automatischer Wochenabrechnung, Schulden, Belohnungen, Reaktionen, Verlauf,
 > Push (Web Push und UnifiedPush), Anstupsen und Abend-Erinnerung. **Auf einem echten Gerät ist die App noch nicht ausprobiert**
 > (siehe [Android-App](#android-app), Abschnitt "Was noch nicht geprüft ist").
@@ -39,6 +39,13 @@ Startet die Kamera im Browser nicht, sagt die App, woran es liegt: **blockiert**
 bzw. Seiteneinstellungen des Browsers), **belegt** (meist hat eine andere App sie offen, etwa die Windows-Kamera-App
 oder ein Videoanruf: schließen und "Kamera erneut versuchen") oder **keine Kamera gefunden**. Die Fotoauswahl
 funktioniert immer als Ausweg.
+
+**Selfie (freiwillig):** Zu jedem Check-in kann man ein zweites Bild von der Frontkamera mitschicken, als kleines
+Bild im Foto (wie bei BeReal). Im Browser schaltet man in der Kamera das Selfie-Symbol ein: nach dem Foto der
+Rückkamera folgt nach zwei Sekunden Vorlauf automatisch die Frontkamera. Alternativ fügt man in der Vorschau ein
+Selfie hinzu, ersetzt oder entfernt es. In der Android-App und ohne Live-Kamera läuft das Selfie über die
+Gerätekamera bzw. die Fotoauswahl. Ohne Selfie ändert sich nichts: ein Foto genügt. Das Selfie wird wie das Foto
+verarbeitet (ohne EXIF/GPS) und zählt nicht für die Duplikat-Prüfung.
 
 ```bash
 git clone https://github.com/Nicgeon/double-sweat.git
@@ -106,7 +113,7 @@ bricht mit einer klaren Meldung ab, wenn etwas fehlt oder ein Platzhalter (z. B.
 | `SETUP_TOKEN`                                                  | Geheimnis zum Gründen eines Teams bei `SIGNUP_MODE=token`.                                                                                                                                         |
 | `MAX_TEAMS`                                                    | Höchstzahl an Teams (0 = unbegrenzt).                                                                                                                                                              |
 | `TRUST_PROXY`                                                  | Welchen Proxys `X-Forwarded-For` geglaubt wird.                                                                                                                                                    |
-| `MAX_UPLOAD_MB`                                                | Größtes Foto (Standard 12).                                                                                                                                                                        |
+| `MAX_UPLOAD_MB`                                                | Größtes Bild, Foto wie Selfie (Standard 12).                                                                                                                                                       |
 | `DEFAULT_LOCALE`                                               | Standardsprache für neue Konten, wenn der Browser keine unterstützte Sprache meldet: `de` (Standard) oder `en`. Siehe [Sprachen](#sprachen).                                                       |
 | `SMTP_URL`, `MAIL_FROM`, `SMTP_REQUIRE_TLS`                    | Optionaler Mailversand.                                                                                                                                                                            |
 | `WEBPUSH_ENABLED`, `UNIFIEDPUSH_ENABLED`, `PUSH_ALLOWED_HOSTS` | Push-Anbieter und erlaubte lokale Ziele.                                                                                                                                                           |
@@ -329,8 +336,8 @@ zusammenpassen (App zu alt für den Server oder Server zu alt für die App) und 
   Refresh-Token noch einmal benutzt, widerruft der Server die ganze Sitzung (Diebstahl-Erkennung).
 - Nur HTTPS, nur Zertifikate, denen das System traut (keine nachinstallierten Zertifizierungsstellen); kein
   Klartext im Release. Die Seite des APK läuft unter einer strengen Content-Security-Policy ohne `unsafe-eval`.
-- Berechtigungen: Internet und Benachrichtigungen. Die **Kamera** braucht keine eigene Berechtigung, das Foto
-  macht die Kamera-App des Geräts.
+- Berechtigungen: Internet und Benachrichtigungen. Die **Kamera** braucht keine eigene Berechtigung, Foto und
+  Selfie macht die Kamera-App des Geräts (für das Selfie wählst du dort die Frontkamera).
 - Push-Nachrichten sind, wenn der Verteiler Schlüssel liefert, Ende-zu-Ende verschlüsselt und bleiben minimal;
   sonst enthält die Nachricht nur einen neutralen Text.
 - Der Standard-Build enthält keinen Google-Dienst, kein Firebase und keine Telemetrie. Der optionale FCM-Build
@@ -429,7 +436,8 @@ der Android-App).
 - **Einladungen:** 80 Bit Zufall, einmalig, 7 Tage gültig, nur als Hash gespeichert; die Teamgröße von zwei ist
   auch auf Datenbankebene erzwungen.
 - **Fotos:** Format wird an den Bytes erkannt (nicht am Dateinamen), Pixel-Limit gegen Dekompressions-Bomben,
-  Neu-Kodierung als JPEG ohne EXIF/GPS, serverseitige Dateinamen, Abruf nur für Mitglieder desselben Teams.
+  Neu-Kodierung als JPEG ohne EXIF/GPS, serverseitige Dateinamen, Abruf nur für Mitglieder desselben Teams. Das
+  optionale Selfie läuft durch dieselbe Verarbeitung; `MAX_UPLOAD_MB` gilt je Bild.
 - **SSRF:** Push-Ziele kommen vom Client; der Server ruft sie nur über einen gehärteten Client auf (nur https,
   nur öffentliche Adressen bei jedem Verbindungsaufbau erneut geprüft, keine Weiterleitungen, Zeit- und
   Größenlimits).
@@ -443,7 +451,7 @@ kontaktieren.
 ## Datenschutz
 
 - Keine Telemetrie, keine Tracker, keine externen Schriften oder Skripte.
-- Gespeichert werden nur: Konto (E-Mail, Name, Zeitzone), Check-ins mit Foto und optionaler Notiz, Ziele,
+- Gespeichert werden nur: Konto (E-Mail, Name, Zeitzone), Check-ins mit Foto, optionalem Selfie und optionaler Notiz, Ziele,
   Ergebnisse, Einsatz/Schulden, Push-Registrierungen. Es gibt keine IP-Speicherung (nur kurzlebige Rate-Limit-
   Zähler mit gehashten Schlüsseln).
 - Optionale externe Berührungspunkte, alle abschaltbar: dein SMTP-Server (Mail), der Push-Dienst des

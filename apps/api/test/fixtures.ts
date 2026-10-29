@@ -57,3 +57,14 @@ export function photoForm(
   for (const [key, value] of Object.entries(fields)) form.set(key, value);
   return form;
 }
+
+/** Hängt ein Selfie (Feld `selfie`) an ein Foto-Formular. */
+export function withSelfie(
+  form: FormData,
+  selfie: Buffer,
+  filename = 'selfie.jpg',
+  type = 'image/jpeg',
+): FormData {
+  form.set('selfie', new File([new Uint8Array(selfie)], filename, { type }));
+  return form;
+}

@@ -75,11 +75,13 @@ function collect(ctx: AppContext, userId: string) {
     .where(eq(checkins.userId, userId))
     .orderBy(checkins.localDate)
     .all();
-  const photos: PhotoEntry[] = checkinRows.map((c) => ({
-    key: c.photoKey,
-    name: `photos/${c.localDate}_${c.id}.jpg`,
-    createdAt: c.createdAt,
-  }));
+  const photoName = (c: (typeof checkinRows)[number]) => `photos/${c.localDate}_${c.id}.jpg`;
+  const selfieName = (c: (typeof checkinRows)[number]) =>
+    `photos/${c.localDate}_${c.id}.selfie.jpg`;
+  const photos: PhotoEntry[] = checkinRows.flatMap((c) => [
+    { key: c.photoKey, name: photoName(c), createdAt: c.createdAt },
+    ...(c.selfieKey ? [{ key: c.selfieKey, name: selfieName(c), createdAt: c.createdAt }] : []),
+  ]);
 
   const partnerRow = membership
     ? ctx.db
@@ -116,7 +118,7 @@ function collect(ctx: AppContext, userId: string) {
       .where(eq(weeklyGoals.userId, userId))
       .orderBy(weeklyGoals.effectiveFrom)
       .all(),
-    checkins: checkinRows.map((c, i) => ({
+    checkins: checkinRows.map((c) => ({
       id: c.id,
       localDate: c.localDate,
       weekStart: c.weekStart,
@@ -124,7 +126,8 @@ function collect(ctx: AppContext, userId: string) {
       tag: c.tag,
       note: c.note,
       createdAt: new Date(c.createdAt).toISOString(),
-      photo: photos[i]?.name ?? null,
+      photo: photoName(c),
+      selfie: c.selfieKey ? selfieName(c) : null,
     })),
     weekResults: ctx.db
       .select({

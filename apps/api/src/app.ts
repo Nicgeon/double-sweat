@@ -77,7 +77,8 @@ export function createApp(ctx: AppContext): OpenAPIHono<AppEnv> {
   const smallBody = bodyLimit({ maxSize: 64 * 1024, onError: tooLarge });
   // Foto-Uploads dürfen größer sein, alles andere ist reines JSON
   const uploadBody = bodyLimit({
-    maxSize: ctx.config.maxUploadBytes + 64 * 1024,
+    // Foto und optionales Selfie, je höchstens maxUploadBytes (die Route prüft jedes Bild einzeln)
+    maxSize: 2 * ctx.config.maxUploadBytes + 64 * 1024,
     onError: tooLarge,
   });
   api.use('*', (c, next) =>

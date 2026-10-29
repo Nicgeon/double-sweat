@@ -57,6 +57,13 @@
       "when": 1793269872584,
       "tag": "0007_locale",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1793277103098,
+      "tag": "0008_selfie",
+      "breakpoints": true
     }
   ]
 }

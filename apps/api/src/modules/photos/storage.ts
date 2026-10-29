@@ -3,8 +3,9 @@ import { createReadStream } from 'node:fs';
 import { mkdir, readdir, rename, rm, stat, unlink, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
 
-// Schlüssel entstehen ausschließlich serverseitig: <teamId>/<jahr-monat>/<checkinId>[.thumb].jpg
-const KEY_PATTERN = /^[0-9A-Z]{26}\/\d{4}-\d{2}\/[0-9A-Z]{26}(\.thumb)?\.jpg$/;
+// Schlüssel entstehen ausschließlich serverseitig: <teamId>/<jahr-monat>/<checkinId>[.thumb|.selfie|.selfie.thumb].jpg
+const KEY_PATTERN =
+  /^[0-9A-Z]{26}\/\d{4}-\d{2}\/[0-9A-Z]{26}(\.thumb|\.selfie|\.selfie\.thumb)?\.jpg$/;
 
 export interface PhotoStorage {
   write(key: string, data: Buffer): Promise<void>;

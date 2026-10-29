@@ -165,6 +165,11 @@ export const checkins = sqliteTable(
     tz: text('tz').notNull(),
     photoKey: text('photo_key').notNull(),
     thumbKey: text('thumb_key').notNull(),
+    /** Optionales Selfie zum Check-in (Frontkamera); alle vier Spalten sind gemeinsam gesetzt oder gemeinsam leer. */
+    selfieKey: text('selfie_key'),
+    selfieThumbKey: text('selfie_thumb_key'),
+    selfieWidth: integer('selfie_width'),
+    selfieHeight: integer('selfie_height'),
     photoSha256: text('photo_sha256').notNull(),
     width: integer('width').notNull(),
     height: integer('height').notNull(),

@@ -9,6 +9,9 @@
   type Props = {
     src?: string;
     alt?: string;
+    /** Optionales Selfie zum Foto: kleines Bild unten rechts. */
+    selfieSrc?: string;
+    selfieAlt?: string;
     seat?: number;
     color?: PartnerColor;
     name?: string;
@@ -20,7 +23,7 @@
     empty?: string;
     onclick?: () => void;
   };
-  let { src, alt = '', seat = 1, color, name, dateLabel, tag, tagIcon, reaction, empty, onclick }: Props = $props();
+  let { src, alt = '', selfieSrc, selfieAlt = '', seat = 1, color, name, dateLabel, tag, tagIcon, reaction, empty, onclick }: Props = $props();
 </script>
 
 
@@ -31,6 +34,7 @@
   {:else}
     <ApiImage src={src ?? ''} {alt} />
   {/if}
+  {#if selfieSrc && !empty}<ApiImage class="selfie-inset" src={selfieSrc} alt={selfieAlt} />{/if}
   {#if name}<Avatar {seat} {color} {name} size="sm" class="ds-photo__who" />{/if}
   {#if reaction}<span class="ds-photo__react" title={reaction.label}><Icon name={reaction.icon} size={18} /><span class="ds-sr">{reaction.label}</span></span>{/if}
   {#if dateLabel || tag}

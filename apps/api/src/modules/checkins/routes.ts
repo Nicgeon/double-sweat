@@ -5,7 +5,7 @@ import { isLocalDate, localDateAt, weekStartOf } from '../../domain/weeks.js';
 import { currentAuth, requireAuth } from '../../http/middleware.js';
 import { errorResponses, jsonResponse, okSchema, protectedSecurity } from '../../http/schemas.js';
 import type { AppEnv } from '../../http/types.js';
-import { badRequest } from '../../util/errors.js';
+import { AppError, badRequest } from '../../util/errors.js';
 import { currentTimezone } from '../me/timezone.js';
 import { reactionSchema } from '../reactions/routes.js';
 import {
@@ -16,7 +16,15 @@ import {
   listWeekCheckins,
   NOTE_MAX_LENGTH,
   openPhoto,
+  PHOTO_VARIANTS,
 } from './service.js';
+
+const imageSchema = z.object({
+  thumbUrl: z.string(),
+  fullUrl: z.string(),
+  width: z.number(),
+  height: z.number(),
+});
 
 export const checkinSchema = z
   .object({
@@ -29,12 +37,10 @@ export const checkinSchema = z
     note: z.string().nullable(),
     createdAt: z.number(),
     reactions: z.array(reactionSchema).describe('Reaktion des Partners (höchstens eine)'),
-    photo: z.object({
-      thumbUrl: z.string(),
-      fullUrl: z.string(),
-      width: z.number(),
-      height: z.number(),
-    }),
+    photo: imageSchema,
+    selfie: imageSchema
+      .nullable()
+      .describe('Optionales Selfie der Frontkamera zum selben Check-in'),
   })
   .openapi('Checkin');
 
@@ -52,7 +58,8 @@ export function checkinRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
         'Check-in mit Foto für heute (bis zu 5 pro Tag, für das Wochenziel zählt der Tag einmal)',
       description:
         'Der Tag ergibt sich aus Serverzeit und der Zeitzone des Nutzers. Das Foto wird geprüft (JPEG, PNG oder WebP), ' +
-        'auf höchstens 1600 px verkleinert und ohne Metadaten (EXIF/GPS) als JPEG gespeichert.',
+        'auf höchstens 1600 px verkleinert und ohne Metadaten (EXIF/GPS) als JPEG gespeichert. ' +
+        'Optional kann ein Selfie der Frontkamera (`selfie`) mitgeschickt werden; es wird genauso verarbeitet.',
       ...auth,
       request: {
         body: {
@@ -61,6 +68,7 @@ export function checkinRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
             'multipart/form-data': {
               schema: z.object({
                 photo: z.instanceof(File).openapi({ type: 'string', format: 'binary' }),
+                selfie: z.instanceof(File).openapi({ type: 'string', format: 'binary' }).optional(),
                 note: z.string().max(NOTE_MAX_LENGTH).optional(),
                 tag: z.enum(CHECKIN_TAGS).optional(),
               }),
@@ -75,9 +83,15 @@ export function checkinRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
     }),
     async (c) => {
       const { user } = currentAuth(c);
-      const { photo, note, tag } = c.req.valid('form');
+      const { photo, selfie, note, tag } = c.req.valid('form');
+      // Das Größenlimit gilt je Bild; die Gesamtgrenze der Anfrage ist entsprechend größer
+      for (const file of [photo, selfie]) {
+        if (file && file.size > ctx.config.maxUploadBytes)
+          throw new AppError(413, 'payload_too_large', 'Anfrage zu groß');
+      }
       const checkin = await createCheckin(ctx, user, {
         photo: Buffer.from(await photo.arrayBuffer()),
+        selfie: selfie ? Buffer.from(await selfie.arrayBuffer()) : undefined,
         note,
         tag,
       });
@@ -138,12 +152,12 @@ export function checkinRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
       method: 'get',
       path: '/photos/{checkinId}/{variant}',
       tags,
-      summary: 'Foto eines Check-ins (nur für Mitglieder desselben Teams)',
+      summary: 'Foto oder Selfie eines Check-ins (nur für Mitglieder desselben Teams)',
       ...auth,
       request: {
         params: z.object({
           checkinId: z.string().min(1).max(40),
-          variant: z.enum(['thumb', 'full']),
+          variant: z.enum(PHOTO_VARIANTS),
         }),
       },
       responses: {

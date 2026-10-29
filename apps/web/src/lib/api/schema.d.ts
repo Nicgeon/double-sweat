@@ -2529,7 +2529,7 @@ export interface paths {
         put?: never;
         /**
          * Check-in mit Foto für heute (bis zu 5 pro Tag, für das Wochenziel zählt der Tag einmal)
-         * @description Der Tag ergibt sich aus Serverzeit und der Zeitzone des Nutzers. Das Foto wird geprüft (JPEG, PNG oder WebP), auf höchstens 1600 px verkleinert und ohne Metadaten (EXIF/GPS) als JPEG gespeichert.
+         * @description Der Tag ergibt sich aus Serverzeit und der Zeitzone des Nutzers. Das Foto wird geprüft (JPEG, PNG oder WebP), auf höchstens 1600 px verkleinert und ohne Metadaten (EXIF/GPS) als JPEG gespeichert. Optional kann ein Selfie der Frontkamera (`selfie`) mitgeschickt werden; es wird genauso verarbeitet.
          */
         post: {
             parameters: {
@@ -2543,6 +2543,8 @@ export interface paths {
                     "multipart/form-data": {
                         /** Format: binary */
                         photo: string;
+                        /** Format: binary */
+                        selfie?: string;
                         note?: string;
                         /** @enum {string} */
                         tag?: "kraft" | "cardio" | "laufen" | "rad" | "schwimmen" | "yoga" | "sonstiges";
@@ -2722,14 +2724,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Foto eines Check-ins (nur für Mitglieder desselben Teams) */
+        /** Foto oder Selfie eines Check-ins (nur für Mitglieder desselben Teams) */
         get: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
                     checkinId: string;
-                    variant: "thumb" | "full";
+                    variant: "thumb" | "full" | "selfie-thumb" | "selfie-full";
                 };
                 cookie?: never;
             };
@@ -5165,6 +5167,13 @@ export interface components {
                 width: number;
                 height: number;
             };
+            /** @description Optionales Selfie der Frontkamera zum selben Check-in */
+            selfie: {
+                thumbUrl: string;
+                fullUrl: string;
+                width: number;
+                height: number;
+            } | null;
         };
         Reaction: {
             /** @enum {string} */

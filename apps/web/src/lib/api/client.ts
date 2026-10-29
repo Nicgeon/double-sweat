@@ -151,9 +151,15 @@ export function unwrap<T>({ data, error, response }: Result<T>): T {
 export const api = client;
 
 /** Foto-Upload (multipart): openapi-fetch serialisiert FormData nicht, daher direkt über fetch. */
-export async function uploadCheckin(photo: Blob, tag: string | null, note: string): Promise<Checkin> {
+export async function uploadCheckin(
+  photo: Blob,
+  tag: string | null,
+  note: string,
+  selfie: Blob | null = null,
+): Promise<Checkin> {
   const form = new FormData();
   form.set('photo', photo, 'checkin.jpg');
+  if (selfie) form.set('selfie', selfie, 'selfie.jpg');
   if (tag) form.set('tag', tag);
   if (note.trim()) form.set('note', note.trim());
   const headers: Record<string, string> = {

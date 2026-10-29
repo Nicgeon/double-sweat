@@ -159,6 +159,8 @@
                 <PhotoTile
                   src={c.photo.thumbUrl}
                   alt={t('photo.of', { name: c.displayName })}
+                  selfieSrc={c.selfie?.thumbUrl}
+                  selfieAlt={t('photo.selfieOf', { name: c.displayName })}
                   seat={m?.slot ?? 1}
                   color={m?.color}
                   name={c.displayName}

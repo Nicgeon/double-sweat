@@ -8,6 +8,7 @@ import { badRequest, conflict, forbidden, notFound, tooManyRequests } from '../.
 import { newId } from '../../util/ids.js';
 import { HOUR } from '../../util/time.js';
 import { currentTimezone } from '../me/timezone.js';
+import { checkinFileKeys } from '../photos/keys.js';
 import { processPhoto } from '../photos/pipeline.js';
 import { type ReactionDto, reactionsFor } from '../reactions/service.js';
 import { getMembership } from '../teams/service.js';
@@ -36,6 +37,8 @@ export interface CheckinDto {
   /** Reaktionen des Partners (höchstens eine, eigene Check-ins kann man nicht bewerten). */
   reactions: ReactionDto[];
   photo: { thumbUrl: string; fullUrl: string; width: number; height: number };
+  /** Optionales Selfie (Frontkamera) zum selben Check-in. */
+  selfie: { thumbUrl: string; fullUrl: string; width: number; height: number } | null;
 }
 
 export function toCheckinDto(
@@ -59,6 +62,15 @@ export function toCheckinDto(
       width: row.width,
       height: row.height,
     },
+    selfie:
+      row.selfieKey && row.selfieWidth !== null && row.selfieHeight !== null
+        ? {
+            thumbUrl: `/api/v1/photos/${row.id}/selfie-thumb`,
+            fullUrl: `/api/v1/photos/${row.id}/selfie-full`,
+            width: row.selfieWidth,
+            height: row.selfieHeight,
+          }
+        : null,
   };
 }
 
@@ -77,6 +89,8 @@ export function countCheckinsOn(db: DbLike, userId: string, localDate: LocalDate
 
 export interface CheckinInput {
   photo: Buffer;
+  /** Optional: Selfie der Frontkamera. Wird wie das Foto geprüft und neu kodiert. */
+  selfie?: Buffer | undefined;
   note?: string | undefined;
   tag?: CheckinTag | undefined;
 }
@@ -109,12 +123,30 @@ export async function createCheckin(
   if (countCheckinsOn(ctx.db, user.id, localDate) >= MAX_CHECKINS_PER_DAY) throw dayFull();
 
   const photo = await processPhoto(input.photo);
+  // Das Selfie ist freiwillig; ist es unbrauchbar, scheitert der Upload mit der Meldung zum Bild (kein stilles Weglassen)
+  const selfie = input.selfie ? await processPhoto(input.selfie) : null;
   const id = newId(now);
   const folder = `${membership.teamId}/${localDate.slice(0, 7)}`;
   const photoKey = `${folder}/${id}.jpg`;
   const thumbKey = `${folder}/${id}.thumb.jpg`;
-  await ctx.photos.write(photoKey, photo.full);
-  await ctx.photos.write(thumbKey, photo.thumb);
+  const selfieKey = selfie ? `${folder}/${id}.selfie.jpg` : null;
+  const selfieThumbKey = selfie ? `${folder}/${id}.selfie.thumb.jpg` : null;
+  const written = [
+    photoKey,
+    thumbKey,
+    ...(selfieKey && selfieThumbKey ? [selfieKey, selfieThumbKey] : []),
+  ];
+  try {
+    await ctx.photos.write(photoKey, photo.full);
+    await ctx.photos.write(thumbKey, photo.thumb);
+    if (selfie && selfieKey && selfieThumbKey) {
+      await ctx.photos.write(selfieKey, selfie.full);
+      await ctx.photos.write(selfieThumbKey, selfie.thumb);
+    }
+  } catch (error) {
+    await ctx.photos.remove(written);
+    throw error;
+  }
 
   try {
     const row = ctx.db.transaction(
@@ -140,7 +172,11 @@ export async function createCheckin(
           photoSha256: photo.sha256,
           width: photo.width,
           height: photo.height,
-          bytes: photo.full.length,
+          bytes: photo.full.length + (selfie?.full.length ?? 0),
+          selfieKey,
+          selfieThumbKey,
+          selfieWidth: selfie?.width ?? null,
+          selfieHeight: selfie?.height ?? null,
           note,
           tag: input.tag ?? null,
           createdAt: now,
@@ -152,7 +188,7 @@ export async function createCheckin(
     );
     return toCheckinDto(row, user.displayName);
   } catch (error) {
-    await ctx.photos.remove([photoKey, thumbKey]);
+    await ctx.photos.remove(written);
     throw error;
   }
 }
@@ -197,15 +233,18 @@ export async function deleteCheckin(ctx: AppContext, user: User, id: string): Pr
     );
   }
   ctx.db.delete(checkins).where(eq(checkins.id, id)).run();
-  await ctx.photos.remove([row.photoKey, row.thumbKey]);
+  await ctx.photos.remove(checkinFileKeys(row));
 }
+
+export const PHOTO_VARIANTS = ['thumb', 'full', 'selfie-thumb', 'selfie-full'] as const;
+export type PhotoVariant = (typeof PHOTO_VARIANTS)[number];
 
 /** Foto für ein Teammitglied öffnen. Fremde Teams und unbekannte IDs liefern beide "nicht gefunden". */
 export async function openPhoto(
   ctx: AppContext,
   user: User,
   checkinId: string,
-  variant: 'thumb' | 'full',
+  variant: PhotoVariant,
 ) {
   const membership = getMembership(ctx.db, user.id);
   if (!membership) throw notFound();
@@ -215,8 +254,15 @@ export async function openPhoto(
     .where(and(eq(checkins.id, checkinId), eq(checkins.teamId, membership.teamId)))
     .get();
   if (!row) throw notFound();
+  const key = {
+    thumb: row.thumbKey,
+    full: row.photoKey,
+    'selfie-thumb': row.selfieThumbKey,
+    'selfie-full': row.selfieKey,
+  }[variant];
+  if (!key) throw notFound();
   try {
-    return await ctx.photos.open(variant === 'thumb' ? row.thumbKey : row.photoKey);
+    return await ctx.photos.open(key);
   } catch {
     throw notFound();
   }

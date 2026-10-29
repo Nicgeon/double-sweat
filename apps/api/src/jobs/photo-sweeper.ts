@@ -1,5 +1,6 @@
 import type { AppContext } from '../context.js';
 import { checkins } from '../db/schema.js';
+import { checkinFileKeys } from '../modules/photos/keys.js';
 import { HOUR } from '../util/time.js';
 
 const SWEEP_INTERVAL_MS = HOUR;
@@ -17,10 +18,15 @@ export function createPhotoSweeper() {
     if (now - last < SWEEP_INTERVAL_MS) return;
     last = now;
     const rows = ctx.db
-      .select({ photoKey: checkins.photoKey, thumbKey: checkins.thumbKey })
+      .select({
+        photoKey: checkins.photoKey,
+        thumbKey: checkins.thumbKey,
+        selfieKey: checkins.selfieKey,
+        selfieThumbKey: checkins.selfieThumbKey,
+      })
       .from(checkins)
       .all();
-    const known = new Set(rows.flatMap((r) => [r.photoKey, r.thumbKey]));
+    const known = new Set(rows.flatMap(checkinFileKeys));
     const removed = await ctx.photos.sweepOrphans(known, now, GRACE_MS);
     if (removed > 0) ctx.log.info('orphan_photos_removed', { count: removed });
   };

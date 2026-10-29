@@ -24,6 +24,14 @@
   let busy = $state(false);
   const tag = $derived(tagMeta(checkin?.tag));
   let reacting = $state<ReactionKind | null>(null);
+  /** Antippen des kleinen Bildes tauscht Foto und Selfie. */
+  let selfieLarge = $state(false);
+  $effect(() => {
+    void checkin?.id;
+    selfieLarge = false;
+  });
+  const big = $derived(selfieLarge && checkin?.selfie ? checkin.selfie : checkin?.photo);
+  const small = $derived(selfieLarge ? checkin?.photo : checkin?.selfie);
   /** Meine Reaktion (auf Check-ins des Partners) bzw. die des Partners (auf meine). */
   const mineKind = $derived(checkin?.reactions.find((r) => r.userId === session.user?.id)?.kind ?? null);
   const fromPartner = $derived(checkin?.reactions.find((r) => r.userId !== session.user?.id));
@@ -65,7 +73,14 @@
 <Sheet open={checkin !== null} title={checkin ? `${checkin.displayName}, ${longDate(checkin.localDate)}` : ''} {onclose}>
   {#if checkin}
     <div class="stack">
-      <ApiImage class="viewer" src={checkin.photo.fullUrl} alt={t('photo.of', { name: checkin.displayName })} width={checkin.photo.width} height={checkin.photo.height} />
+      <div class="viewer-wrap">
+        {#if big}<ApiImage class="viewer" src={big.fullUrl} alt={selfieLarge ? t('photo.selfieOf', { name: checkin.displayName }) : t('photo.of', { name: checkin.displayName })} width={big.width} height={big.height} />{/if}
+        {#if small}
+          <button type="button" class="selfie-inset" aria-label={selfieLarge ? t('photo.showPhoto') : t('photo.showSelfie')} onclick={() => (selfieLarge = !selfieLarge)} data-testid="selfie-swap">
+            <ApiImage src={small.thumbUrl} alt="" />
+          </button>
+        {/if}
+      </div>
       {#if tag}<p class="row"><Icon name={tag.icon} size={18} /> {tag.label}</p>{/if}
       {#if checkin.note}<p>{checkin.note}</p>{/if}
       {#if !mine}
