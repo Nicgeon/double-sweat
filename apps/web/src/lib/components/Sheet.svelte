@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '#lib/i18n/index.svelte.ts';
   import type { Snippet } from 'svelte';
   import Button from './Button.svelte';
 
@@ -55,7 +56,7 @@
       <span class="ds-sheet__grip" aria-hidden="true"></span>
       <header class="ds-sheet__head">
         <h2 class="ds-sheet__title" id={titleId}>{title}</h2>
-        <Button variant="ghost" iconOnly icon="x" onclick={onclose}>Schließen</Button>
+        <Button variant="ghost" iconOnly icon="x" onclick={onclose}>{t('common.close')}</Button>
       </header>
       <div class="ds-sheet__body">{@render children()}</div>
       {#if footer}<footer class="ds-sheet__foot">{@render footer()}</footer>{/if}

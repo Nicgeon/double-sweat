@@ -46,11 +46,13 @@ object Notifier {
             Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
+        // Unlesbare Nachrichten zeigen den Standardtext in der Sprache des Geräts
+        val body = if (payload.body == PushPayload.DEFAULT_BODY) context.getString(R.string.push_default_body) else payload.body
         val notification = NotificationCompat.Builder(context, channelOf(payload.type))
             .setSmallIcon(R.drawable.ic_stat_sweat)
             .setContentTitle(payload.title)
-            .setContentText(payload.body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(payload.body))
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setContentIntent(open)
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_SOCIAL)

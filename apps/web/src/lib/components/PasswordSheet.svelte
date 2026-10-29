@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '#lib/i18n/index.svelte.ts';
   import type { Snippet } from 'svelte';
   import { ApiError } from '#lib/api/client.ts';
   import Banner from './Banner.svelte';
@@ -34,7 +35,7 @@
     try {
       await onconfirm(password);
     } catch (e) {
-      error = e instanceof ApiError ? e.message : 'Das hat nicht geklappt.';
+      error = e instanceof ApiError ? e.message : t('common.failed');
     } finally {
       busy = false;
     }
@@ -44,11 +45,11 @@
 <Sheet {open} {title} {onclose}>
   <form class="form" onsubmit={(e) => { e.preventDefault(); void submit(); }}>
     {@render children?.()}
-    <Field label="Dein Passwort" type="password" bind:value={password} autocomplete="current-password" hint="Zur Sicherheit fragen wir hier noch einmal danach." required />
+    <Field label={t('password.label')} type="password" bind:value={password} autocomplete="current-password" hint={t('password.hint')} required />
     {#if error}<Banner tone="error">{error}</Banner>{/if}
   </form>
   {#snippet footer()}
-    <Button variant="ghost" onclick={onclose}>Abbrechen</Button>
+    <Button variant="ghost" onclick={onclose}>{t('common.cancel')}</Button>
     <Button variant={danger ? 'danger' : 'primary'} loading={busy} onclick={submit}>{confirmLabel}</Button>
   {/snippet}
 </Sheet>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '#lib/i18n/index.svelte.ts';
   import Button from './Button.svelte';
   import Icon from './Icon.svelte';
   import StatusChip from './StatusChip.svelte';
@@ -15,7 +16,7 @@
     onreceive?: () => void;
   };
   let { recipientName, giverName, viewerIsRecipient, reward, week, received = false, busy = false, onreceive }: Props = $props();
-  const title = $derived(viewerIsRecipient ? `Belohnung von ${giverName}` : `Deine Belohnung für ${recipientName}`);
+  const title = $derived(viewerIsRecipient ? t('reward.fromGiver', { name: giverName }) : t('reward.forRecipient', { name: recipientName }));
 </script>
 
 <li class="ds-debt {received ? 'is-redeemed' : ''}">
@@ -25,10 +26,10 @@
     <span class="ds-debt__sub">{reward} · {week}</span>
   </div>
   {#if received}
-    <StatusChip status="done">Erhalten</StatusChip>
+    <StatusChip status="done">{t('reward.received')}</StatusChip>
   {:else if viewerIsRecipient}
-    <Button variant="secondary" size="sm" icon="check" loading={busy} onclick={onreceive}>Erhalten</Button>
+    <Button variant="secondary" size="sm" icon="check" loading={busy} onclick={onreceive}>{t('reward.received')}</Button>
   {:else}
-    <StatusChip status="open">Fällig</StatusChip>
+    <StatusChip status="open">{t('reward.due')}</StatusChip>
   {/if}
 </li>

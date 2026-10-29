@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '#lib/i18n/index.svelte.ts';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import Logo from '#lib/components/Logo.svelte';
@@ -25,13 +26,13 @@
     if (NATIVE && session.user) void syncPush().catch(() => {});
   });
 
-  const items: NavItem[] = [
-    { id: 'start', label: 'Start', icon: 'house', href: '/' },
-    { id: 'history', label: 'Verlauf', icon: 'history', href: '/history' },
-    { id: 'checkin', label: 'Check-in', icon: 'camera', href: '/checkin', primary: true },
-    { id: 'bet', label: 'Einsatz', icon: 'gift', href: '/bet' },
-    { id: 'more', label: 'Mehr', icon: 'settings', href: '/more' },
-  ];
+  const items: NavItem[] = $derived([
+    { id: 'start', label: t('nav.start'), icon: 'house', href: '/' },
+    { id: 'history', label: t('nav.history'), icon: 'history', href: '/history' },
+    { id: 'checkin', label: t('nav.checkin'), icon: 'camera', href: '/checkin', primary: true },
+    { id: 'bet', label: t('nav.bet'), icon: 'gift', href: '/bet' },
+    { id: 'more', label: t('nav.more'), icon: 'settings', href: '/more' },
+  ]);
   const current = $derived.by(() => {
     const path = page.url.pathname;
     if (path === '/') return 'start';

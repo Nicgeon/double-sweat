@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, tn } from '#lib/i18n/index.svelte.ts';
   import { onMount } from 'svelte';
   import { api, ApiError, type Checkin, type Dashboard, unwrap } from '#lib/api/client.ts';
   import Banner from '#lib/components/Banner.svelte';
@@ -28,7 +29,7 @@
       data = unwrap(await api.GET('/api/v1/dashboard'));
       error = null;
     } catch (e) {
-      error = e instanceof ApiError ? e.message : 'Das hat nicht geklappt.';
+      error = e instanceof ApiError ? e.message : t('common.failed');
     }
   }
   onMount(() => {
@@ -51,13 +52,13 @@
     nudgeMessage = null;
     try {
       unwrap(await api.POST('/api/v1/nudges'));
-      nudgeMessage = { tone: 'success', text: `${partner.displayName} wurde angestupst.` };
+      nudgeMessage = { tone: 'success', text: t('home.nudged', { name: partner.displayName }) };
     } catch (e) {
       if (e instanceof ApiError && e.status === 429) {
         const min = Math.max(1, Math.ceil((e.retryAfterSec ?? 3600) / 60));
-        nudgeMessage = { tone: 'info', text: `Du kannst ${partner.displayName} in ${min} Min. wieder anstupsen.` };
+        nudgeMessage = { tone: 'info', text: t('home.nudgeWait', { name: partner.displayName, n: min }) };
       } else {
-        nudgeMessage = { tone: 'info', text: e instanceof ApiError ? e.message : 'Das hat nicht geklappt.' };
+        nudgeMessage = { tone: 'info', text: e instanceof ApiError ? e.message : t('common.failed') };
       }
     } finally {
       nudging = false;
@@ -65,48 +66,48 @@
   }
 </script>
 
-<Page title="Diese Woche">
+<Page title={t('home.title')}>
   {#snippet actions()}
-    <Button variant="ghost" iconOnly icon={session.unread > 0 ? 'bell-ring' : 'bell'} href="/notifications">Benachrichtigungen{session.unread > 0 ? `, ${session.unread} neu` : ''}</Button>
+    <Button variant="ghost" iconOnly icon={session.unread > 0 ? 'bell-ring' : 'bell'} href="/notifications">{session.unread > 0 ? t('home.notificationsNew', { n: session.unread }) : t('home.notifications')}</Button>
   {/snippet}
 
   {#if error && !data}
-    <Banner tone="error" title="Das hat nicht geklappt">
+    <Banner tone="error" title={t('common.failedTitle')}>
       {error}
-      {#snippet action()}<Button variant="secondary" size="sm" onclick={load}>Erneut versuchen</Button>{/snippet}
+      {#snippet action()}<Button variant="secondary" size="sm" onclick={load}>{t('common.retry')}</Button>{/snippet}
     </Banner>
   {:else if !data}
-    <p class="muted" role="status">Lädt …</p>
+    <p class="muted" role="status">{t('common.loading')}</p>
   {:else}
     {#if !data.team.full}
-      <Banner tone="info" title="Dein Partner fehlt noch">
-        Lade ihn mit einem Link ein. Gewertet wird ab dem ersten Montag, wenn ihr zu zweit seid.
-        {#snippet action()}<Button variant="secondary" size="sm" icon="send" onclick={() => (inviteOpen = true)}>Einladen</Button>{/snippet}
+      <Banner tone="info" title={t('home.partnerMissingTitle')}>
+        {t('home.partnerMissingBody')}
+        {#snippet action()}<Button variant="secondary" size="sm" icon="send" onclick={() => (inviteOpen = true)}>{t('home.invite')}</Button>{/snippet}
       </Banner>
     {/if}
     {#if me && me.goalDays === null}
       {#if me.nextGoalDays !== null}
-        <Banner tone="info" title="Dein Ziel gilt ab Montag">
-          {me.nextGoalDays} {me.nextGoalDays === 1 ? 'Tag' : 'Tage'} pro Woche, ab {weekdayDate(addDays(me.weekStart, 7))}. Bis dahin zählt diese Woche ohne Ziel.
-          {#snippet action()}<Button variant="secondary" size="sm" href="/bet#ziel">Ändern</Button>{/snippet}
+        <Banner tone="info" title={t('home.goalNextTitle')}>
+          {tn('home.goalNextBody', me.nextGoalDays, { date: weekdayDate(addDays(me.weekStart, 7)) })}
+          {#snippet action()}<Button variant="secondary" size="sm" href="/bet#ziel">{t('common.change')}</Button>{/snippet}
         </Banner>
       {:else}
-        <Banner tone="warning" title="Setze dein Wochenziel">
-          Wie viele Tage pro Woche willst du trainieren?
-          {#snippet action()}<Button variant="secondary" size="sm" href="/bet#ziel">Ziel setzen</Button>{/snippet}
+        <Banner tone="warning" title={t('home.goalSetTitle')}>
+          {t('home.goalSetBody')}
+          {#snippet action()}<Button variant="secondary" size="sm" href="/bet#ziel">{t('home.goalSet')}</Button>{/snippet}
         </Banner>
       {/if}
     {/if}
     {#if data.rewards.earned > 0}
-      <Banner tone="success" title="Belohnung verdient">
-        Du hast dein Wochenziel geschafft. {partner ? `${partner.displayName} schuldet dir etwas.` : ''}
-        {#snippet action()}<Button variant="secondary" size="sm" href="/bet#belohnung">Ansehen</Button>{/snippet}
+      <Banner tone="success" title={t('home.rewardEarnedTitle')}>
+        {t('home.rewardEarnedBody')} {partner ? t('home.rewardEarnedPartner', { name: partner.displayName }) : ''}
+        {#snippet action()}<Button variant="secondary" size="sm" href="/bet#belohnung">{t('home.view')}</Button>{/snippet}
       </Banner>
     {/if}
     {#if me && me.goalDays !== null && !me.checkedInToday && me.remainingDays > 0}
-      <Banner tone={me.status === 'at_risk' ? 'warning' : 'info'} title={me.status === 'at_risk' ? 'Heute zählt' : 'Heute noch nicht eingecheckt'}>
-        {#if me.neededDays > 0}Noch {me.neededDays} {me.neededDays === 1 ? 'Check-in' : 'Check-ins'} bis zum Wochenziel.{/if}
-        {#snippet action()}<Button size="sm" icon="camera" href="/checkin">Einchecken</Button>{/snippet}
+      <Banner tone={me.status === 'at_risk' ? 'warning' : 'info'} title={me.status === 'at_risk' ? t('home.todayRiskTitle') : t('home.todayOpenTitle')}>
+        {#if me.neededDays > 0}{tn('home.needed', me.neededDays)}{/if}
+        {#snippet action()}<Button size="sm" icon="camera" href="/checkin">{t('home.checkin')}</Button>{/snippet}
       </Banner>
     {/if}
 
@@ -114,56 +115,56 @@
       <div class="stack">
         <Scoreboard weekLabel={me ? weekLabel(me.weekStart) : ''} streak={streakStore.team} {lanes}>
           {#if canNudge && partner}
-            <Button variant="secondary" icon="hand" fullWidth loading={nudging} onclick={nudge}>{partner.displayName} anstupsen</Button>
+            <Button variant="secondary" icon="hand" fullWidth loading={nudging} onclick={nudge}>{t('home.nudge', { name: partner.displayName })}</Button>
           {/if}
           {#if nudgeMessage}<Banner tone={nudgeMessage.tone}>{nudgeMessage.text}</Banner>{/if}
         </Scoreboard>
       </div>
 
       <div class="stack">
-        <Card title="Einsatz">
-          {#snippet action()}<Button variant="ghost" size="sm" href="/bet">Ändern</Button>{/snippet}
-          <p>{data.bet ?? 'Noch kein Einsatz festgelegt.'}</p>
+        <Card title={t('home.betCard')}>
+          {#snippet action()}<Button variant="ghost" size="sm" href="/bet">{t('common.change')}</Button>{/snippet}
+          <p>{data.bet ?? t('home.betNone')}</p>
           {#if data.debts.owe > 0 || data.debts.owed > 0}
             <p class="small muted">
-              {#if data.debts.owe > 0}Du schuldest {data.debts.owe}.{/if}
-              {#if data.debts.owed > 0}Dir werden {data.debts.owed} geschuldet.{/if}
+              {#if data.debts.owe > 0}{t('home.debtsOwe', { n: data.debts.owe })}{/if}
+              {#if data.debts.owed > 0}{t('home.debtsOwed', { n: data.debts.owed })}{/if}
             </p>
           {/if}
         </Card>
 
         {#if partner}
-          <Card title="Belohnung">
-            {#snippet action()}<Button variant="ghost" size="sm" href="/bet#belohnung">Ändern</Button>{/snippet}
-            <p>{data.reward ? `Wenn du dein Wochenziel schaffst: ${data.reward}` : `${partner.displayName} hat dir noch keine Belohnung versprochen.`}</p>
+          <Card title={t('home.rewardCard')}>
+            {#snippet action()}<Button variant="ghost" size="sm" href="/bet#belohnung">{t('common.change')}</Button>{/snippet}
+            <p>{data.reward ? t('home.rewardIf', { reward: data.reward }) : t('home.rewardNone', { name: partner.displayName })}</p>
             {#if data.rewards.earned > 0 || data.rewards.toGive > 0}
               <p class="small muted">
-                {#if data.rewards.earned > 0}Du hast dir {data.rewards.earned} {data.rewards.earned === 1 ? 'Belohnung' : 'Belohnungen'} verdient.{/if}
-                {#if data.rewards.toGive > 0}Du schuldest {data.rewards.toGive}.{/if}
+                {#if data.rewards.earned > 0}{tn('home.rewardsEarned', data.rewards.earned)}{/if}
+                {#if data.rewards.toGive > 0}{t('home.rewardsToGive', { n: data.rewards.toGive })}{/if}
               </p>
             {/if}
           </Card>
         {/if}
 
         <section aria-labelledby="feed-title" class="stack">
-          <h2 class="ds-card__title" id="feed-title">Fotos dieser Woche</h2>
+          <h2 class="ds-card__title" id="feed-title">{t('home.feedTitle')}</h2>
           {#if data.feed.length === 0}
-            <p class="muted">Noch kein Foto diese Woche.</p>
+            <p class="muted">{t('home.feedEmpty')}</p>
           {:else}
             <div class="grid-photos">
               {#each data.feed as c (c.id)}
                 {@const m = memberById.get(c.userId)}
-                {@const t = tagMeta(c.tag)}
+                {@const tg = tagMeta(c.tag)}
                 {@const r = reactionMeta(c.reactions[0]?.kind)}
                 <PhotoTile
                   src={c.photo.thumbUrl}
-                  alt="Foto von {c.displayName}"
+                  alt={t('photo.of', { name: c.displayName })}
                   seat={m?.slot ?? 1}
                   color={m?.color}
                   name={c.displayName}
                   dateLabel={weekdayDate(c.localDate)}
-                  tag={t?.label}
-                  tagIcon={t?.icon}
+                  tag={tg?.label}
+                  tagIcon={tg?.icon}
                   reaction={r && c.reactions[0] ? { icon: r.icon, label: `${c.reactions[0].displayName}: ${r.label}` } : undefined}
                   onclick={() => (viewing = c)}
                 />

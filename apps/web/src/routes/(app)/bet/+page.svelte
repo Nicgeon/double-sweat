@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, tn } from '#lib/i18n/index.svelte.ts';
   import { onMount } from 'svelte';
   import { api, ApiError, unwrap } from '#lib/api/client.ts';
   import Banner from '#lib/components/Banner.svelte';
@@ -12,7 +13,7 @@
   import Sheet from '#lib/components/Sheet.svelte';
   import Stepper from '#lib/components/Stepper.svelte';
   import { session } from '#lib/state/session.svelte.ts';
-  import { isoWeek, longDate } from '#lib/util/format.ts';
+  import { longDate, weekNumber } from '#lib/util/format.ts';
 
   type Goals = { currentWeekStart: string; currentGoal: number | null; nextWeekStart: string; nextGoal: number | null; newGoalStartsNow: boolean };
   type Debt = { id: string; weekStart: string; betText: string; redeemedAt: number | null; direction: 'owe' | 'owed'; debtorName: string; creditorName: string };
@@ -39,7 +40,7 @@
   let redeeming = $state<string | null>(null);
 
   const me = $derived(session.me);
-  const fail = (e: unknown) => (error = e instanceof ApiError ? e.message : 'Das hat nicht geklappt.');
+  const fail = (e: unknown) => (error = e instanceof ApiError ? e.message : t('common.failed'));
 
   async function loadDebts() {
     try {
@@ -68,10 +69,9 @@
     try {
       const startsNow = goals?.newGoalStartsNow ?? false;
       goals = unwrap(await api.PUT('/api/v1/goals/next', { body: { days: nextGoal } })) as Goals;
-      const days = `${nextGoal} ${nextGoal === 1 ? 'Tag' : 'Tagen'}`;
       notice = startsNow
-        ? `Gespeichert. Dein Ziel von ${days} gilt ab sofort, auch für diese Woche.`
-        : `Gespeichert. Dein Ziel von ${days} gilt ab ${longDate(goals.nextWeekStart)}.`;
+        ? tn('goal.savedNow', nextGoal)
+        : tn('goal.savedFrom', nextGoal, { date: longDate(goals.nextWeekStart) });
     } catch (e) {
       fail(e);
     } finally {
@@ -145,49 +145,49 @@
   }
 </script>
 
-<Page title="Einsatz">
+<Page title={t('bet.title')}>
   {#if error}<Banner tone="error">{error}</Banner>{/if}
   <div class="cols">
     <div class="stack">
-      <Card title="Einsatz">
-        {#snippet action()}<Button variant="ghost" size="sm" icon="send" onclick={openBet}>Ändern</Button>{/snippet}
-        <p>{bet?.current || 'Noch kein Einsatz festgelegt.'}</p>
+      <Card title={t('bet.title')}>
+        {#snippet action()}<Button variant="ghost" size="sm" icon="send" onclick={openBet}>{t('common.change')}</Button>{/snippet}
+        <p>{bet?.current || t('bet.none')}</p>
         {#if bet?.upcoming}
-          <p class="small muted">Ab {longDate(bet.upcoming.effectiveFrom)}: {bet.upcoming.text}</p>
+          <p class="small muted">{t('bet.from', { date: longDate(bet.upcoming.effectiveFrom), text: bet.upcoming.text })}</p>
         {/if}
-        <p class="small muted">Wer sein Wochenziel verfehlt, schuldet dem anderen den Einsatz. Eine Änderung gilt erst für Wochen, die noch bei niemandem begonnen haben.</p>
+        <p class="small muted">{t('bet.rule')}</p>
       </Card>
 
-      <Card title="Dein Wochenziel" id="ziel">
+      <Card title={t('goal.card')} id="ziel">
         {#if goals}
           <div class="stack">
             <p class="small muted">
-              {goals.currentGoal !== null ? `Diese Woche (KW ${isoWeek(goals.currentWeekStart)}): ${goals.currentGoal} ${goals.currentGoal === 1 ? 'Tag' : 'Tage'}.` : 'Diese Woche ist noch kein Ziel gesetzt.'}
-              {goals.newGoalStartsNow ? 'Dein erstes Ziel gilt sofort.' : 'Eine Änderung gilt ab nächster Woche.'}
+              {goals.currentGoal !== null ? tn('goal.thisWeek', goals.currentGoal, { week: weekNumber(goals.currentWeekStart) }) : t('goal.noneThisWeek')}
+              {goals.newGoalStartsNow ? t('goal.startsNow') : t('goal.startsNextWeek')}
             </p>
-            <Stepper label="Wochenziel von {me?.displayName ?? 'dir'}" bind:value={nextGoal} color={me?.color} partner={me?.slot === 2 ? 2 : 1} />
-            <p class="small muted">{goals.newGoalStartsNow ? 'Gilt ab sofort, diese Woche wird noch nicht gewertet.' : `Gilt ab ${longDate(goals.nextWeekStart)}.`}</p>
+            <Stepper label={me ? t('goal.stepperOf', { name: me.displayName }) : t('goal.stepperOfYou')} bind:value={nextGoal} color={me?.color} partner={me?.slot === 2 ? 2 : 1} />
+            <p class="small muted">{goals.newGoalStartsNow ? t('goal.noteNow') : t('goal.noteFrom', { date: longDate(goals.nextWeekStart) })}</p>
             {#if notice}<Banner tone="success">{notice}</Banner>{/if}
-            <Button loading={savingGoal} onclick={saveGoal}>Ziel speichern</Button>
+            <Button loading={savingGoal} onclick={saveGoal}>{t('goal.save')}</Button>
           </div>
         {/if}
       </Card>
 
-      <Card title="Belohnung" id="belohnung">
-        {#snippet action()}<Button variant="ghost" size="sm" icon="gift" disabled={!rewards?.partner} onclick={openReward}>Ändern</Button>{/snippet}
+      <Card title={t('reward.card')} id="belohnung">
+        {#snippet action()}<Button variant="ghost" size="sm" icon="gift" disabled={!rewards?.partner} onclick={openReward}>{t('common.change')}</Button>{/snippet}
         <div class="stack">
           {#if rewards?.partner}
-            <p><strong>Du für {rewards.partner.displayName}:</strong> {rewards.mine.current || 'Noch nichts versprochen.'}</p>
+            <p><strong>{t('reward.youFor', { name: rewards.partner.displayName })}</strong> {rewards.mine.current || t('reward.nothingPromised')}</p>
             {#if rewards.mine.upcoming}
-              <p class="small muted">Ab {longDate(rewards.mine.upcoming.effectiveFrom)}: {rewards.mine.upcoming.text ?? 'keine Belohnung'}</p>
+              <p class="small muted">{t('bet.from', { date: longDate(rewards.mine.upcoming.effectiveFrom), text: rewards.mine.upcoming.text ?? t('reward.noReward') })}</p>
             {/if}
-            <p><strong>{rewards.partner.displayName} für dich:</strong> {rewards.partner.current || 'Noch nichts versprochen.'}</p>
+            <p><strong>{t('reward.forYou', { name: rewards.partner.displayName })}</strong> {rewards.partner.current || t('reward.nothingPromised')}</p>
             {#if rewards.partner.upcoming}
-              <p class="small muted">Ab {longDate(rewards.partner.upcoming.effectiveFrom)}: {rewards.partner.upcoming.text ?? 'keine Belohnung'}</p>
+              <p class="small muted">{t('bet.from', { date: longDate(rewards.partner.upcoming.effectiveFrom), text: rewards.partner.upcoming.text ?? t('reward.noReward') })}</p>
             {/if}
-            <p class="small muted">Wer sein Wochenziel schafft, bekommt, was der andere versprochen hat. Eine Änderung gilt erst für Wochen, die noch bei niemandem begonnen haben.</p>
+            <p class="small muted">{t('reward.rule')}</p>
           {:else}
-            <p class="muted">Sobald dein Partner dabei ist, könnt ihr einander Belohnungen versprechen.</p>
+            <p class="muted">{t('reward.waitPartner')}</p>
           {/if}
         </div>
       </Card>
@@ -196,11 +196,11 @@
     <div class="stack">
       <section class="stack" aria-labelledby="debts-title">
         <div class="line">
-          <h2 class="ds-card__title" id="debts-title">Schulden</h2>
-          <Segmented label="Anzeige" bind:value={filter} onchange={() => { void loadDebts(); void loadClaims(); }} options={[{ value: 'open', label: 'Offen' }, { value: 'all', label: 'Alle' }]} />
+          <h2 class="ds-card__title" id="debts-title">{t('debt.card')}</h2>
+          <Segmented label={t('debt.filter')} bind:value={filter} onchange={() => { void loadDebts(); void loadClaims(); }} options={[{ value: 'open', label: t('debt.filterOpen') }, { value: 'all', label: t('debt.filterAll') }]} />
         </div>
         {#if debts.length === 0}
-          <p class="muted">{filter === 'open' ? 'Nichts offen.' : 'Noch keine Schulden.'}</p>
+          <p class="muted">{filter === 'open' ? t('debt.nothingOpen') : t('debt.none')}</p>
         {:else}
           <ul class="list">
             {#each debts as d (d.id)}
@@ -209,7 +209,7 @@
                 creditorName={d.creditorName}
                 viewerIsCreditor={d.direction === 'owed'}
                 bet={d.betText}
-                week="KW {isoWeek(d.weekStart)}"
+                week={weekNumber(d.weekStart)}
                 redeemed={d.redeemedAt !== null}
                 busy={redeeming === d.id}
                 onredeem={() => redeem(d.id)}
@@ -220,9 +220,9 @@
       </section>
 
       <section class="stack" aria-labelledby="claims-title">
-        <h2 class="ds-card__title" id="claims-title">Verdiente Belohnungen</h2>
+        <h2 class="ds-card__title" id="claims-title">{t('claims.card')}</h2>
         {#if claims.length === 0}
-          <p class="muted">{filter === 'open' ? 'Nichts offen.' : 'Noch keine Belohnungen verdient.'}</p>
+          <p class="muted">{filter === 'open' ? t('debt.nothingOpen') : t('claims.none')}</p>
         {:else}
           <ul class="list">
             {#each claims as c (c.id)}
@@ -231,7 +231,7 @@
                 giverName={c.giverName}
                 viewerIsRecipient={c.direction === 'earned'}
                 reward={c.rewardText}
-                week="KW {isoWeek(c.weekStart)}"
+                week={weekNumber(c.weekStart)}
                 received={c.redeemedAt !== null}
                 busy={receiving === c.id}
                 onreceive={() => receive(c.id)}
@@ -244,22 +244,22 @@
   </div>
 </Page>
 
-<Sheet open={betOpen} title="Einsatz ändern" onclose={() => (betOpen = false)}>
+<Sheet open={betOpen} title={t('bet.sheetTitle')} onclose={() => (betOpen = false)}>
   <form class="form" onsubmit={(e) => { e.preventDefault(); void saveBet(); }}>
-    <Field label="Was steht auf dem Spiel?" bind:value={betText} maxlength={140} hint="Gilt ab der nächsten Woche." required />
+    <Field label={t('bet.fieldLabel')} bind:value={betText} maxlength={140} hint={t('bet.fieldHint')} required />
   </form>
   {#snippet footer()}
-    <Button variant="ghost" onclick={() => (betOpen = false)}>Abbrechen</Button>
-    <Button loading={savingBet} onclick={saveBet}>Speichern</Button>
+    <Button variant="ghost" onclick={() => (betOpen = false)}>{t('common.cancel')}</Button>
+    <Button loading={savingBet} onclick={saveBet}>{t('common.save')}</Button>
   {/snippet}
 </Sheet>
 
-<Sheet open={rewardOpen} title="Belohnung festlegen" onclose={() => (rewardOpen = false)}>
+<Sheet open={rewardOpen} title={t('reward.sheetTitle')} onclose={() => (rewardOpen = false)}>
   <form class="form" onsubmit={(e) => { e.preventDefault(); void saveReward(); }}>
-    <Field label="Was bekommt {rewards?.partner?.displayName ?? 'dein Partner'}, wenn das Wochenziel klappt?" bind:value={rewardText} maxlength={140} hint="Gilt ab der nächsten Woche. Leer lassen, um sie zurückzuziehen." />
+    <Field label={t('reward.fieldLabel', { name: rewards?.partner?.displayName ?? t('common.yourPartner') })} bind:value={rewardText} maxlength={140} hint={t('reward.fieldHint')} />
   </form>
   {#snippet footer()}
-    <Button variant="ghost" onclick={() => (rewardOpen = false)}>Abbrechen</Button>
-    <Button loading={savingReward} onclick={saveReward}>Speichern</Button>
+    <Button variant="ghost" onclick={() => (rewardOpen = false)}>{t('common.cancel')}</Button>
+    <Button loading={savingReward} onclick={saveReward}>{t('common.save')}</Button>
   {/snippet}
 </Sheet>

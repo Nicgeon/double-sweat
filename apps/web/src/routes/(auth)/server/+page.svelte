@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '#lib/i18n/index.svelte.ts';
   import { goto } from '$app/navigation';
   import Banner from '#lib/components/Banner.svelte';
   import Button from '#lib/components/Button.svelte';
@@ -28,19 +29,19 @@
       await session.init();
       await goto('/login', { replaceState: true });
     } catch (err) {
-      error = err instanceof ServerError ? err.message : 'Das hat nicht geklappt.';
+      error = err instanceof ServerError ? err.message : t('common.failed');
     } finally {
       busy = false;
     }
   }
 </script>
 
-<svelte:head><title>Server · Double Sweat</title></svelte:head>
+<svelte:head><title>{t('server.docTitle')} · Double Sweat</title></svelte:head>
 
-<h1 class="auth__title">Mit deinem Server verbinden.</h1>
-<p class="auth__lead">Double Sweat läuft auf einem Server, den du oder dein Partner betreibt. Gib seine Adresse ein.</p>
+<h1 class="auth__title">{t('server.title')}</h1>
+<p class="auth__lead">{t('server.lead')}</p>
 {#if error}<Banner tone="error">{error}</Banner>{/if}
 <form class="form" onsubmit={connect}>
-  <Field label="Serveradresse" bind:value={address} type="text" inputmode="url" placeholder="sweat.beispiel.de" autocapitalize="none" autocomplete="url" spellcheck={false} hint="Nur HTTPS. Vor jeder Anmeldung prüft die App, ob dort ein Double-Sweat-Server antwortet." required />
-  <Button type="submit" size="lg" loading={busy}>Verbinden</Button>
+  <Field label={t('server.address')} bind:value={address} type="text" inputmode="url" placeholder={t('server.placeholder')} autocapitalize="none" autocomplete="url" spellcheck={false} hint={t('server.hint')} required />
+  <Button type="submit" size="lg" loading={busy}>{t('server.connect')}</Button>
 </form>

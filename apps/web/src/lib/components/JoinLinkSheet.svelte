@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '#lib/i18n/index.svelte.ts';
   import { goto } from '$app/navigation';
   import { pendingJoin } from '#lib/native/boot.svelte.ts';
   import { probeServer, ServerError } from '#lib/native/server-url.ts';
@@ -29,24 +30,24 @@
       close();
       await goto(`/join/${code}`);
     } catch (e) {
-      error = e instanceof ServerError ? e.message : 'Das hat nicht geklappt.';
+      error = e instanceof ServerError ? e.message : t('common.failed');
     } finally {
       busy = false;
     }
   }
 </script>
 
-<Sheet open={link !== null} title="Mit diesem Server verbinden?" onclose={close}>
+<Sheet open={link !== null} title={t('joinLink.title')} onclose={close}>
   <div class="stack">
     <p class="code">{host}</p>
-    <p>Diese Einladung stammt von einem Server, mit dem die App noch nicht verbunden ist. Bestätige nur, wenn du ihn kennst: Dort legst du dein Konto an.</p>
+    <p>{t('joinLink.body')}</p>
     {#if session.serverUrl}
-      <Banner tone="warning" title="Du wirst abgemeldet">Die App wechselt vom bisherigen Server ({new URL(session.serverUrl).host}) zu diesem.</Banner>
+      <Banner tone="warning" title={t('joinLink.switchTitle')}>{t('joinLink.switchBody', { host: new URL(session.serverUrl).host })}</Banner>
     {/if}
     {#if error}<Banner tone="error">{error}</Banner>{/if}
   </div>
   {#snippet footer()}
-    <Button variant="ghost" onclick={close}>Abbrechen</Button>
-    <Button loading={busy} onclick={connect}>Verbinden</Button>
+    <Button variant="ghost" onclick={close}>{t('common.cancel')}</Button>
+    <Button loading={busy} onclick={connect}>{t('joinLink.connect')}</Button>
   {/snippet}
 </Sheet>

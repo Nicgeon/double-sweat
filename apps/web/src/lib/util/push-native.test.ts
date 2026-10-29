@@ -32,7 +32,7 @@ vi.mock('#lib/api/client.ts', () => client);
 import {
   disableNative,
   enableNative,
-  FCM_CHOICE,
+  fcmChoice,
   nativeActive,
   planPush,
   syncNative,
@@ -67,7 +67,7 @@ describe('planPush: UnifiedPush zuerst, FCM nur wo es passt', () => {
   it('Verteiler und FCM möglich: Auswahl mit FCM am Ende', () => {
     expect(planPush({ ...base, distributors: [ntfy], fcmUsable: true })).toEqual({
       kind: 'choose',
-      options: [ntfy, FCM_CHOICE],
+      options: [ntfy, fcmChoice()],
     });
   });
   it('ein früher gewählter Verteiler wird wieder genommen', () => {
@@ -170,7 +170,7 @@ describe('Push einschalten', () => {
   it('Verteiler und FCM möglich: erst fragen, dann mit der Wahl einrichten', async () => {
     setup({ distributors: [ntfy] });
     const asked = await enableNative('x');
-    expect(asked).toEqual({ status: 'choose', distributors: [ntfy, FCM_CHOICE] });
+    expect(asked).toEqual({ status: 'choose', distributors: [ntfy, fcmChoice()] });
     expect(plugins.Fcm.register).not.toHaveBeenCalled();
     expect(plugins.UnifiedPush.register).not.toHaveBeenCalled();
 

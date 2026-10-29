@@ -1,5 +1,6 @@
 <script lang="ts">
   import '../app.css';
+  import { t } from '#lib/i18n/index.svelte.ts';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
@@ -8,6 +9,7 @@
   import { NATIVE } from '#lib/native/flag.ts';
   import Banner from '#lib/components/Banner.svelte';
   import Button from '#lib/components/Button.svelte';
+  import LanguageSwitch from '#lib/components/LanguageSwitch.svelte';
   import Logo from '#lib/components/Logo.svelte';
   import { session } from '#lib/state/session.svelte.ts';
   import { theme } from '#lib/state/theme.svelte.ts';
@@ -41,17 +43,18 @@
 <svelte:head><title>Double Sweat</title></svelte:head>
 
 {#if !session.ready}
-  <div class="boot" role="status" aria-label="Lädt"><Logo variant="mark" size={48} /></div>
+  <div class="boot" role="status" aria-label={t('common.loading')}><Logo variant="mark" size={48} /></div>
 {:else if session.unreachable && !session.user}
   <div class="auth">
     <div class="auth__box">
       <Logo size={32} />
-      <h1 class="auth__title">Kein Kontakt zum Server.</h1>
-      <Banner tone="error" title="Der Server ist gerade nicht erreichbar">
-        Prüfe deine Verbindung und versuch es gleich noch einmal.
+      <h1 class="auth__title">{t('root.unreachableTitle')}</h1>
+      <Banner tone="error" title={t('root.unreachableBannerTitle')}>
+        {t('root.unreachableBody')}
       </Banner>
-      <Button size="lg" icon="refresh-cw" loading={retrying} onclick={retry}>Erneut versuchen</Button>
-      {#if NATIVE}<Button variant="ghost" href="/server">Server ändern</Button>{/if}
+      <Button size="lg" icon="refresh-cw" loading={retrying} onclick={retry}>{t('common.retry')}</Button>
+      {#if NATIVE}<Button variant="ghost" href="/server">{t('root.changeServer')}</Button>{/if}
+      <LanguageSwitch />
     </div>
   </div>
 {:else}

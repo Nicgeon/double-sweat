@@ -1,12 +1,12 @@
 import type { PartnerColor } from '#lib/api/client.ts';
+import { type MessageKey, t } from '#lib/i18n/index.svelte.ts';
 
-/** Palette in der Reihenfolge der Auswahl; Namen entsprechen den Tokens in design/tokens.json. */
-export const PARTNER_COLORS: { value: PartnerColor; label: string }[] = [
-  { value: 'ember', label: 'Glut' },
-  { value: 'tide', label: 'Flut' },
-  { value: 'orchid', label: 'Orchidee' },
-  { value: 'moss', label: 'Moos' },
-  { value: 'sky', label: 'Himmel' },
-  { value: 'cocoa', label: 'Kakao' },
-  { value: 'graphite', label: 'Graphit' },
-];
+/** Palette in der Reihenfolge der Auswahl; Kennungen entsprechen den Tokens in design/tokens.json. */
+const VALUES: PartnerColor[] = ['ember', 'tide', 'orchid', 'moss', 'sky', 'cocoa', 'graphite'];
+
+export const colorName = (value: PartnerColor): string => t(`color.${value}` as MessageKey);
+
+export const partnerColors = (): { value: PartnerColor; label: string }[] =>
+  VALUES.map((value) => ({ value, label: colorName(value) }));
+
+export const PARTNER_COLOR_VALUES = VALUES;

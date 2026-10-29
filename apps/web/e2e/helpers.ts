@@ -26,10 +26,13 @@ export async function newUserContext(
   browser: Browser,
   testInfo: TestInfo,
   ip = nextIp(),
+  locale = 'de-DE',
 ): Promise<{ context: BrowserContext; page: Page; problems: string[] }> {
   const { viewport, hasTouch, isMobile } = testInfo.project.use;
   const context = await browser.newContext({
     baseURL: BASE,
+    // Die Oberfläche folgt der Browsersprache; die meisten Tests laufen auf Deutsch
+    locale,
     extraHTTPHeaders: { 'x-forwarded-for': ip },
     permissions: ['camera'],
     viewport,
@@ -114,9 +117,10 @@ export class Api {
 /** Anmeldung über die Oberfläche. */
 export async function loginViaUi(page: Page, email: string, password = PASSWORD) {
   await page.goto('/login');
-  await page.getByLabel('E-Mail').fill(email);
-  await page.getByLabel('Passwort').fill(password);
-  await page.getByRole('button', { name: 'Anmelden' }).click();
+  // Sprachunabhängig: die meisten Tests laufen auf Deutsch, einige im englischen Browser
+  await page.getByLabel(/^E-?mail$/i).fill(email);
+  await page.getByLabel(/^Passwo(rt|rd)$/).fill(password);
+  await page.getByRole('button', { name: /^(Anmelden|Sign in)$/ }).click();
   await page.waitForURL((url) => !url.pathname.startsWith('/login'));
 }
 

@@ -1,4 +1,5 @@
 import createClient from 'openapi-fetch';
+import { i18n, t } from '#lib/i18n/index.svelte.ts';
 import { clearTokens, currentAuth, currentServer, setTokens } from '#lib/native/auth-store.ts';
 import { NATIVE } from '#lib/native/flag.ts';
 import type { components, paths } from './schema';
@@ -50,13 +51,13 @@ async function refreshTokens(): Promise<boolean> {
   try {
     res = await fetch(`${server}/api/v1/auth/refresh`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', 'Accept-Language': i18n.current },
       body: JSON.stringify({ refreshToken: refresh }),
       credentials: 'omit',
     });
   } catch {
     // Netzfehler: Tokens behalten, später erneut versuchen
-    throw new ApiError(0, 'network', 'Der Server ist gerade nicht erreichbar.');
+    throw new ApiError(0, 'network', t('error.network'));
   }
   if (!res.ok) {
     // Abgelaufen, widerrufen oder wiederverwendet: neu anmelden
@@ -78,7 +79,7 @@ const refreshOnce = () => (refreshing ??= refreshTokens().finally(() => (refresh
 export async function send(request: Request): Promise<Response> {
   if (!NATIVE) return fetch(request);
   const server = currentServer();
-  if (!server) throw new ApiError(0, 'no_server', 'Es ist noch kein Server eingerichtet.');
+  if (!server) throw new ApiError(0, 'no_server', t('error.noServer'));
   const url = new URL(request.url);
   const target = `${server}${url.pathname}${url.search}`;
   const body = ['GET', 'HEAD'].includes(request.method) ? undefined : await request.clone().arrayBuffer();
@@ -95,13 +96,13 @@ export async function send(request: Request): Promise<Response> {
   try {
     res = await attempt();
   } catch {
-    throw new ApiError(0, 'network', 'Der Server ist gerade nicht erreichbar.');
+    throw new ApiError(0, 'network', t('error.network'));
   }
   if (res.status === 401 && currentAuth().refresh && (await refreshOnce())) {
     try {
       res = await attempt();
     } catch {
-      throw new ApiError(0, 'network', 'Der Server ist gerade nicht erreichbar.');
+      throw new ApiError(0, 'network', t('error.network'));
     }
   }
   return res;
@@ -115,13 +116,15 @@ const client = createClient<paths>({
       return await send(request);
     } catch (e) {
       if (e instanceof ApiError) throw e;
-      throw new ApiError(0, 'network', 'Der Server ist gerade nicht erreichbar.');
+      throw new ApiError(0, 'network', t('error.network'));
     }
   },
 });
 
 client.use({
   onRequest({ request }) {
+    // Der Server antwortet (Fehlermeldungen) in der Sprache der Oberfläche
+    request.headers.set('Accept-Language', i18n.current);
     if (!NATIVE && csrfToken && !['GET', 'HEAD', 'OPTIONS'].includes(request.method)) {
       request.headers.set('X-CSRF-Token', csrfToken);
     }
@@ -140,7 +143,7 @@ export function unwrap<T>({ data, error, response }: Result<T>): T {
   throw new ApiError(
     response.status,
     body?.error?.code ?? 'error',
-    body?.error?.message ?? 'Das hat nicht geklappt. Versuch es gleich noch einmal.',
+    body?.error?.message ?? t('error.generic'),
     Number.isFinite(retry) && retry > 0 ? retry : undefined,
   );
 }
@@ -153,14 +156,17 @@ export async function uploadCheckin(photo: Blob, tag: string | null, note: strin
   form.set('photo', photo, 'checkin.jpg');
   if (tag) form.set('tag', tag);
   if (note.trim()) form.set('note', note.trim());
-  const headers: Record<string, string> = !NATIVE && csrfToken ? { 'X-CSRF-Token': csrfToken } : {};
+  const headers: Record<string, string> = {
+    'Accept-Language': i18n.current,
+    ...(!NATIVE && csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+  };
   let response: Response;
   try {
     response = await send(
       new Request('/api/v1/checkins', { method: 'POST', body: form, credentials: 'same-origin', headers }),
     );
   } catch {
-    throw new ApiError(0, 'network', 'Der Server ist gerade nicht erreichbar.');
+    throw new ApiError(0, 'network', t('error.network'));
   }
   const json = (await response.json().catch(() => null)) as {
     checkin?: Checkin;
@@ -170,7 +176,7 @@ export async function uploadCheckin(photo: Blob, tag: string | null, note: strin
     throw new ApiError(
       response.status,
       json?.error?.code ?? 'error',
-      json?.error?.message ?? 'Das hat nicht geklappt. Versuch es gleich noch einmal.',
+      json?.error?.message ?? t('error.generic'),
     );
   }
   return json.checkin;

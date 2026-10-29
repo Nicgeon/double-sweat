@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '#lib/i18n/index.svelte.ts';
   import { onMount } from 'svelte';
   import { api, ApiError, unwrap } from '#lib/api/client.ts';
   import Banner from '#lib/components/Banner.svelte';
@@ -19,7 +20,7 @@
       items = res.notifications;
       session.unread = res.unreadCount;
     } catch (e) {
-      error = e instanceof ApiError ? e.message : 'Das hat nicht geklappt.';
+      error = e instanceof ApiError ? e.message : t('common.failed');
     } finally {
       loading = false;
     }
@@ -31,18 +32,18 @@
       items = items.map((i) => ({ ...i, read: true }));
       session.unread = 0;
     } catch (e) {
-      error = e instanceof ApiError ? e.message : 'Das hat nicht geklappt.';
+      error = e instanceof ApiError ? e.message : t('common.failed');
     }
   }
 </script>
 
-<Page title="Benachrichtigungen" backHref="/">
+<Page title={t('notifications.title')} backHref="/">
   {#snippet actions()}
-    {#if session.unread > 0}<Button variant="ghost" size="sm" icon="check" onclick={markAll}>Alle gelesen</Button>{/if}
+    {#if session.unread > 0}<Button variant="ghost" size="sm" icon="check" onclick={markAll}>{t('notifications.markAll')}</Button>{/if}
   {/snippet}
   {#if error}<Banner tone="error">{error}</Banner>{/if}
   {#if !loading && items.length === 0 && !error}
-    <div class="center"><p class="lead">Keine Benachrichtigungen.</p></div>
+    <div class="center"><p class="lead">{t('notifications.empty')}</p></div>
   {/if}
   <ul class="list">
     {#each items as n (n.id)}
@@ -50,7 +51,7 @@
         <Card tone={n.read ? 'sunken' : undefined}>
           <p><strong>{n.title}</strong></p>
           <p>{n.body}</p>
-          <p class="small muted">{relative(n.createdAt)}{n.read ? '' : ' · neu'}</p>
+          <p class="small muted">{relative(n.createdAt)}{n.read ? '' : ` · ${t('notifications.new')}`}</p>
         </Card>
       </li>
     {/each}

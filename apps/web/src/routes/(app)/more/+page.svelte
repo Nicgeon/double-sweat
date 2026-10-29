@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { i18n, LANGUAGE_NAMES, LOCALES, type Locale, t } from '#lib/i18n/index.svelte.ts';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { api, ApiError, type PartnerColor, unwrap } from '#lib/api/client.ts';
@@ -55,7 +56,7 @@
       return ['Europe/Berlin', 'UTC'];
     }
   })();
-  const fail = (e: unknown) => (error = e instanceof ApiError ? e.message : 'Das hat nicht geklappt.');
+  const fail = (e: unknown) => (error = e instanceof ApiError ? e.message : t('common.failed'));
   const ok = (text: string) => {
     notice = text;
     error = null;
@@ -82,10 +83,10 @@
       if (name.trim() !== user?.displayName) body.displayName = name.trim();
       if (reminder !== user?.reminderTime) body.reminderTime = reminder;
       if (timezone !== user?.timezone && timezone !== user?.pendingTimezone) body.timezone = timezone;
-      if (Object.keys(body).length === 0) return ok('Nichts zu speichern.');
+      if (Object.keys(body).length === 0) return ok(t('more.nothingToSave'));
       unwrap(await api.PATCH('/api/v1/me', { body }));
       await session.refresh();
-      ok(body.timezone ? 'Gespeichert. Die neue Zeitzone gilt ab Montag.' : 'Gespeichert.');
+      ok(body.timezone ? t('more.savedTimezone') : t('more.saved'));
     } catch (e) {
       fail(e);
     } finally {
@@ -93,11 +94,25 @@
     }
   }
 
+  /** Sprache umstellen: sofort in der Oberfläche, dauerhaft am Konto (Mitteilungen und Mails folgen ihr). */
+  async function chooseLanguage(locale: Locale) {
+    const before = i18n.current;
+    i18n.set(locale);
+    try {
+      unwrap(await api.PATCH('/api/v1/me', { body: { locale } }));
+      await session.refresh();
+      ok(t('more.languageSaved'));
+    } catch (e) {
+      i18n.set(before);
+      fail(e);
+    }
+  }
+
   async function saveColor(c: PartnerColor) {
     try {
       unwrap(await api.PATCH('/api/v1/me', { body: { color: c } }));
       await session.refresh();
-      ok('Farbe gespeichert.');
+      ok(t('more.colorSaved'));
     } catch (e) {
       color = user?.color ?? color;
       fail(e);
@@ -132,7 +147,7 @@
   async function testPush() {
     try {
       unwrap(await api.POST('/api/v1/push/test'));
-      ok('Testbenachrichtigung gesendet. Sie erscheint auch unter „Benachrichtigungen“.');
+      ok(t('more.pushTestSent'));
     } catch (e) {
       fail(e);
     }
@@ -158,7 +173,7 @@
     const res = unwrap(await api.POST('/api/v1/me/email', { body: { newEmail, password } }));
     sheet = '';
     await session.refresh();
-    ok(res.status === 'verification_sent' ? 'Wir haben dir einen Bestätigungslink an die neue Adresse geschickt.' : 'E-Mail-Adresse geändert.');
+    ok(res.status === 'verification_sent' ? t('more.emailVerificationSent') : t('more.emailChanged'));
   }
   async function changePassword() {
     error = null;
@@ -166,7 +181,7 @@
       unwrap(await api.POST('/api/v1/auth/change-password', { body: { currentPassword: currentPw, newPassword: newPw } }));
       sheet = '';
       currentPw = newPw = '';
-      ok('Passwort geändert. Andere Geräte wurden abgemeldet.');
+      ok(t('more.passwordChanged'));
       await loadLists();
     } catch (e) {
       fail(e);
@@ -176,7 +191,7 @@
     const res = unwrap(await api.POST('/api/v1/me/export', { body: { password } }));
     sheet = '';
     await downloadExport(res.downloadUrl);
-    ok(NATIVE ? 'Export bereit. Wähle, wohin du ihn speicherst.' : 'Der Download startet. Der Link gilt 60 Sekunden.');
+    ok(NATIVE ? t('more.exportReadyNative') : t('more.exportStarted'));
   }
   async function dissolve(password: string) {
     unwrap(await api.DELETE('/api/v1/team', { body: { password } }));
@@ -191,7 +206,7 @@
   async function resendVerification() {
     try {
       unwrap(await api.POST('/api/v1/auth/resend-verification'));
-      ok('Bestätigungsmail gesendet.');
+      ok(t('more.verificationResent'));
     } catch (e) {
       fail(e);
     }
@@ -206,61 +221,70 @@
   }
 </script>
 
-<Page title="Mehr">
+<Page title={t('more.title')}>
   {#if error}<Banner tone="error">{error}</Banner>{/if}
   {#if notice}<Banner tone="success">{notice}</Banner>{/if}
 
   <div class="cols">
     <div class="stack">
-      <Card title="Profil">
+      <Card title={t('more.profile')}>
         <form class="form" onsubmit={(e) => { e.preventDefault(); void saveProfile(); }}>
-          <Field label="Anzeigename" bind:value={name} maxlength={40} required />
-          <Field label="Erinnerung um" type="time" bind:value={reminder} hint="Wenn du an einem Tag noch einchecken musst, erinnern wir dich dann." required />
+          <Field label={t('common.displayName')} bind:value={name} maxlength={40} required />
+          <Field label={t('more.reminderAt')} type="time" bind:value={reminder} hint={t('more.reminderHint')} required />
           <div class="ds-field">
-            <label class="ds-field__label" for="tz">Zeitzone</label>
+            <label class="ds-field__label" for="tz">{t('more.timezone')}</label>
             <div class="ds-field__control">
               <select id="tz" class="ds-field__input" bind:value={timezone}>
                 {#each zones as z}<option value={z}>{z}</option>{/each}
               </select>
             </div>
             {#if user?.pendingTimezone}
-              <p class="ds-field__hint">Wechsel auf {user.pendingTimezone} gilt ab dem nächsten Montag.</p>
+              <p class="ds-field__hint">{t('more.timezonePending', { zone: user.pendingTimezone })}</p>
             {:else}
-              <p class="ds-field__hint">Ein Wechsel gilt erst ab dem nächsten Wochenstart.</p>
+              <p class="ds-field__hint">{t('more.timezoneHint')}</p>
             {/if}
           </div>
-          <Button type="submit" loading={saving}>Speichern</Button>
+          <Button type="submit" loading={saving}>{t('common.save')}</Button>
         </form>
       </Card>
 
-      <Card title="Deine Farbe">
+      <Card title={t('more.colorCard')}>
         <ColorPicker bind:value={color} seat={me?.slot ?? 1} taken={partner ? { [partner.color]: partner.displayName } : {}} onchange={saveColor} />
       </Card>
 
-      <Card title="Darstellung">
+      <Card title={t('more.languageCard')}>
         <Segmented
-          label="Darstellung"
+          label={t('common.language')}
+          value={i18n.current}
+          onchange={chooseLanguage}
+          options={LOCALES.map((value) => ({ value, label: LANGUAGE_NAMES[value] }))}
+        />
+      </Card>
+
+      <Card title={t('more.appearance')}>
+        <Segmented
+          label={t('more.appearance')}
           value={theme.choice}
           onchange={(v: ThemeChoice) => theme.set(v)}
           options={[
-            { value: 'light', label: 'Hell', icon: 'sun' },
-            { value: 'dark', label: 'Dunkel', icon: 'moon' },
-            { value: 'system', label: 'System', icon: 'monitor' },
+            { value: 'light', label: t('more.themeLight'), icon: 'sun' },
+            { value: 'dark', label: t('more.themeDark'), icon: 'moon' },
+            { value: 'system', label: t('more.themeSystem'), icon: 'monitor' },
           ]}
         />
       </Card>
 
-      <Card title="Benachrichtigungen">
+      <Card title={t('more.pushCard')}>
         <div class="stack">
           {#if pushSupported()}
-            <Toggle label="Push auf diesem Gerät" hint="{NATIVE ? 'Über UnifiedPush oder FCM. ' : ''}Erinnerung am Abend und Anstupser von {partner?.displayName ?? 'deinem Partner'}." bind:checked={pushOn} disabled={pushBusy} onchange={togglePush} />
+            <Toggle label={t('more.pushToggle')} hint="{NATIVE ? `${t('more.pushHintNative')} ` : ''}{t('more.pushHint', { name: partner?.displayName ?? t('more.pushHintPartner') })}" bind:checked={pushOn} disabled={pushBusy} onchange={togglePush} />
           {:else}
-            <p class="small muted">Push braucht eine HTTPS-Verbindung und einen unterstützten Browser. Alles erscheint auch unter „Benachrichtigungen“.</p>
+            <p class="small muted">{t('more.pushUnsupported')}</p>
           {/if}
           {#if pushNote}<Banner tone="info">{pushNote}</Banner>{/if}
           {#if pushChoices}
             <div class="stack">
-              <p>Wie sollen die Benachrichtigungen ankommen?</p>
+              <p>{t('more.pushChoose')}</p>
               {#each pushChoices as d (d.id)}
                 <Button variant="secondary" onclick={() => togglePush(true, d.id)}>{d.label}</Button>
                 {#if d.hint}<p class="small muted">{d.hint}</p>{/if}
@@ -271,66 +295,66 @@
             <ul class="list">
               {#each devices as d (d.id)}
                 <li class="line">
-                  <span>{d.deviceLabel ?? d.provider}<span class="small muted"> · {PROVIDER_NAMES[d.provider] ?? d.provider} · seit {dateAndTime(d.createdAt)}</span></span>
-                  <Button variant="ghost" size="sm" icon="trash-2" iconOnly onclick={() => removeDevice(d.id)}>Gerät entfernen</Button>
+                  <span>{d.deviceLabel ?? d.provider}<span class="small muted"> · {t('more.deviceSince', { provider: PROVIDER_NAMES[d.provider] ?? d.provider, date: dateAndTime(d.createdAt) })}</span></span>
+                  <Button variant="ghost" size="sm" icon="trash-2" iconOnly onclick={() => removeDevice(d.id)}>{t('more.removeDevice')}</Button>
                 </li>
               {/each}
             </ul>
-            <Button variant="secondary" icon="bell-ring" onclick={testPush}>Testbenachrichtigung senden</Button>
+            <Button variant="secondary" icon="bell-ring" onclick={testPush}>{t('more.pushTest')}</Button>
           {/if}
         </div>
       </Card>
     </div>
 
     <div class="stack">
-      <Card title="Team">
+      <Card title={t('more.teamCard')}>
         <div class="stack">
           <p>{team?.name}</p>
           <ul class="list">
             {#each team?.members ?? [] as m (m.id)}
-              <li class="line"><span>{m.displayName}{m.isMe ? ' (Du)' : ''}</span><span class="small muted">{m.timezone}</span></li>
+              <li class="line"><span>{m.isMe ? t('common.nameYou', { name: m.displayName }) : m.displayName}</span><span class="small muted">{m.timezone}</span></li>
             {/each}
           </ul>
           {#if team && !team.full}
-            <Button icon="send" onclick={() => (inviteOpen = true)}>Partner einladen</Button>
-            {#if team.invite}<p class="small muted">Eine Einladung ist offen bis {longDate(new Date(team.invite.expiresAt).toISOString().slice(0, 10))}.</p>{/if}
+            <Button icon="send" onclick={() => (inviteOpen = true)}>{t('more.invitePartner')}</Button>
+            {#if team.invite}<p class="small muted">{t('more.inviteOpen', { date: longDate(new Date(team.invite.expiresAt).toISOString().slice(0, 10)) })}</p>{/if}
           {/if}
-          <Button variant="secondary" icon="trash-2" onclick={() => (sheet = 'dissolve')}>Team auflösen</Button>
+          <Button variant="secondary" icon="trash-2" onclick={() => (sheet = 'dissolve')}>{t('more.dissolve')}</Button>
         </div>
       </Card>
 
-      <Card title="Konto">
+      <Card title={t('more.accountCard')}>
         <div class="stack">
-          <div class="line"><span class="muted">E-Mail</span><span>{user?.email}</span></div>
+          <div class="line"><span class="muted">{t('common.email')}</span><span>{user?.email}</span></div>
           {#if session.mailEnabled && user && !user.emailVerified}
-            <Banner tone="warning" title="E-Mail noch nicht bestätigt">
-              Ohne Bestätigung kannst du dein Passwort nicht per Mail zurücksetzen.
-              {#snippet action()}<Button variant="secondary" size="sm" onclick={resendVerification}>Erneut senden</Button>{/snippet}
+            <Banner tone="warning" title={t('more.notVerifiedTitle')}>
+              {t('more.notVerifiedBody')}
+              {#snippet action()}<Button variant="secondary" size="sm" onclick={resendVerification}>{t('more.resend')}</Button>{/snippet}
             </Banner>
           {/if}
-          <Button variant="secondary" icon="mail" onclick={() => (sheet = 'email')}>E-Mail ändern</Button>
-          <Button variant="secondary" icon="key-round" onclick={() => (sheet = 'password')}>Passwort ändern</Button>
-          <Button variant="secondary" icon="download" onclick={() => (sheet = 'export')}>Meine Daten exportieren</Button>
-          <Button variant="secondary" icon="log-out" onclick={logout}>Abmelden</Button>
-          <Button variant="danger" icon="trash-2" onclick={() => (sheet = 'delete')}>Konto löschen</Button>
+          <Button variant="secondary" icon="mail" onclick={() => (sheet = 'email')}>{t('more.changeEmail')}</Button>
+          <Button variant="secondary" icon="key-round" onclick={() => (sheet = 'password')}>{t('more.changePassword')}</Button>
+          <Button variant="secondary" icon="download" onclick={() => (sheet = 'export')}>{t('more.export')}</Button>
+          <Button variant="secondary" icon="log-out" onclick={logout}>{t('common.signOut')}</Button>
+          <Button variant="danger" icon="trash-2" onclick={() => (sheet = 'delete')}>{t('more.deleteAccount')}</Button>
         </div>
       </Card>
 
       {#if NATIVE && session.serverUrl}
-        <Card title="Server">
+        <Card title={t('more.serverCard')}>
           <div class="stack">
-            <div class="line"><span class="muted">Verbunden mit</span><span>{new URL(session.serverUrl).host}</span></div>
-            <Button variant="secondary" icon="refresh-cw" onclick={changeServer}>Server wechseln</Button>
+            <div class="line"><span class="muted">{t('more.connectedTo')}</span><span>{new URL(session.serverUrl).host}</span></div>
+            <Button variant="secondary" icon="refresh-cw" onclick={changeServer}>{t('more.switchServer')}</Button>
           </div>
         </Card>
       {/if}
 
-      <Card title="Geräte und Sitzungen">
+      <Card title={t('more.sessionsCard')}>
         <ul class="list">
           {#each sessions as s (s.id)}
             <li class="line">
-              <span>{s.kind === 'web' ? describeAgent(s.label ?? '') : (s.label ?? 'App')}{s.current ? ' (dieses Gerät)' : ''}<span class="small muted"> · zuletzt {dateAndTime(s.lastSeenAt)}</span></span>
-              {#if !s.current}<Button variant="ghost" size="sm" onclick={() => endSession(s.id)}>Abmelden</Button>{/if}
+              <span>{s.kind === 'web' ? describeAgent(s.label ?? '') : (s.label ?? t('more.appSession'))}{s.current ? ` ${t('more.thisDevice')}` : ''}<span class="small muted"> · {t('more.lastSeen', { date: dateAndTime(s.lastSeenAt) })}</span></span>
+              {#if !s.current}<Button variant="ghost" size="sm" onclick={() => endSession(s.id)}>{t('common.signOut')}</Button>{/if}
             </li>
           {/each}
         </ul>
@@ -341,29 +365,29 @@
 
 <InviteSheet open={inviteOpen} onclose={() => (inviteOpen = false)} />
 
-<PasswordSheet open={sheet === 'email'} title="E-Mail ändern" confirmLabel="Ändern" onclose={() => (sheet = '')} onconfirm={changeEmail}>
-  <Field label="Neue E-Mail-Adresse" type="email" bind:value={newEmail} autocomplete="email" required />
+<PasswordSheet open={sheet === 'email'} title={t('more.emailSheet')} confirmLabel={t('common.change')} onclose={() => (sheet = '')} onconfirm={changeEmail}>
+  <Field label={t('more.newEmail')} type="email" bind:value={newEmail} autocomplete="email" required />
 </PasswordSheet>
 
-<PasswordSheet open={sheet === 'export'} title="Daten exportieren" confirmLabel="Export starten" onclose={() => (sheet = '')} onconfirm={exportData}>
-  <p>Du bekommst ein ZIP mit allen eigenen Daten und Fotos. Vom Partner ist nur der Anzeigename enthalten.</p>
+<PasswordSheet open={sheet === 'export'} title={t('more.exportTitle')} confirmLabel={t('more.exportStart')} onclose={() => (sheet = '')} onconfirm={exportData}>
+  <p>{t('more.exportBody')}</p>
 </PasswordSheet>
 
-<PasswordSheet open={sheet === 'dissolve'} title="Team auflösen" confirmLabel="Team auflösen" danger onclose={() => (sheet = '')} onconfirm={dissolve}>
-  <p>Beide Konten bleiben bestehen. Alle Check-ins, Fotos, Einsätze und Schulden des Teams werden endgültig gelöscht.{partner ? ` ${partner.displayName} wird benachrichtigt.` : ''}</p>
+<PasswordSheet open={sheet === 'dissolve'} title={t('more.dissolveTitle')} confirmLabel={t('more.dissolve')} danger onclose={() => (sheet = '')} onconfirm={dissolve}>
+  <p>{t('more.dissolveBody')}{partner ? ` ${t('more.dissolveNotify', { name: partner.displayName })}` : ''}</p>
 </PasswordSheet>
 
-<PasswordSheet open={sheet === 'delete'} title="Konto löschen" confirmLabel="Konto löschen" danger onclose={() => (sheet = '')} onconfirm={deleteAccount}>
-  <p>Konto löschen? Deine Check-ins und Fotos werden endgültig entfernt.{partner ? ` ${partner.displayName} behält sein Konto.` : ''}</p>
+<PasswordSheet open={sheet === 'delete'} title={t('more.deleteTitle')} confirmLabel={t('more.deleteAccount')} danger onclose={() => (sheet = '')} onconfirm={deleteAccount}>
+  <p>{t('more.deleteBody')}{partner ? ` ${t('more.deleteKeeps', { name: partner.displayName })}` : ''}</p>
 </PasswordSheet>
 
-<Sheet open={sheet === 'password'} title="Passwort ändern" onclose={() => (sheet = '')}>
+<Sheet open={sheet === 'password'} title={t('more.changePassword')} onclose={() => (sheet = '')}>
   <form class="form" onsubmit={(e) => { e.preventDefault(); void changePassword(); }}>
-    <Field label="Aktuelles Passwort" type="password" bind:value={currentPw} autocomplete="current-password" required />
-    <Field label="Neues Passwort" type="password" bind:value={newPw} hint="Mindestens 10 Zeichen. Andere Geräte werden abgemeldet." minlength={10} maxlength={128} autocomplete="new-password" required />
+    <Field label={t('more.currentPassword')} type="password" bind:value={currentPw} autocomplete="current-password" required />
+    <Field label={t('common.newPassword')} type="password" bind:value={newPw} hint={t('more.newPasswordHint')} minlength={10} maxlength={128} autocomplete="new-password" required />
   </form>
   {#snippet footer()}
-    <Button variant="ghost" onclick={() => (sheet = '')}>Abbrechen</Button>
-    <Button onclick={changePassword}>Passwort ändern</Button>
+    <Button variant="ghost" onclick={() => (sheet = '')}>{t('common.cancel')}</Button>
+    <Button onclick={changePassword}>{t('more.changePassword')}</Button>
   {/snippet}
 </Sheet>

@@ -22,6 +22,7 @@ sind optional und im Abschnitt [Datenschutz](#datenschutz) beschrieben.
 - [Konfiguration](#konfiguration)
 - [Erste Schritte](#erste-schritte)
 - [E-Mail (optional)](#e-mail-optional)
+- [Sprachen](#sprachen)
 - [Push-Benachrichtigungen](#push-benachrichtigungen)
 - [Android-App](#android-app)
 - [Betrieb: Updates, Backup, Wiederherstellung](#betrieb)
@@ -106,6 +107,7 @@ bricht mit einer klaren Meldung ab, wenn etwas fehlt oder ein Platzhalter (z. B.
 | `MAX_TEAMS`                                                    | Höchstzahl an Teams (0 = unbegrenzt).                                                                                                                                                              |
 | `TRUST_PROXY`                                                  | Welchen Proxys `X-Forwarded-For` geglaubt wird.                                                                                                                                                    |
 | `MAX_UPLOAD_MB`                                                | Größtes Foto (Standard 12).                                                                                                                                                                        |
+| `DEFAULT_LOCALE`                                               | Standardsprache für neue Konten, wenn der Browser keine unterstützte Sprache meldet: `de` (Standard) oder `en`. Siehe [Sprachen](#sprachen).                                                       |
 | `SMTP_URL`, `MAIL_FROM`, `SMTP_REQUIRE_TLS`                    | Optionaler Mailversand.                                                                                                                                                                            |
 | `WEBPUSH_ENABLED`, `UNIFIEDPUSH_ENABLED`, `PUSH_ALLOWED_HOSTS` | Push-Anbieter und erlaubte lokale Ziele.                                                                                                                                                           |
 | `FCM_ENABLED`, `FCM_SERVICE_ACCOUNT_FILE`                      | Optional: Push über Firebase Cloud Messaging (Dienstkonto-Datei), siehe [Push](#push-benachrichtigungen).                                                                                          |
@@ -190,6 +192,32 @@ MAIL_FROM=Double Sweat <deine.adresse@gmail.com>
 
 Andere Anbieter (Mailbox.org, Posteo, Strato, eigener Server) funktionieren genauso: Host, Port und Benutzer
 stehen in deren SMTP-Hilfe, Port 465 = `smtps://`, Port 587 = `smtp://` mit STARTTLS.
+
+## Sprachen
+
+Die Oberfläche gibt es auf **Deutsch** und **Englisch**. Jedes Konto hat seine eigene Sprache (unter _Mehr →
+Sprache_); Paare dürfen also verschiedene Sprachen nutzen.
+
+- **Oberfläche:** Vor der Anmeldung gilt die zuletzt gewählte Sprache, sonst die des Browsers, sonst
+  `DEFAULT_LOCALE` des Servers. Nach der Anmeldung gilt die Sprache des Kontos. Auf den Seiten vor der Anmeldung
+  gibt es unten eine Sprachwahl.
+- **Mitteilungen und Push:** Sie entstehen in der Sprache des **Empfängers**. Das Postfach (_Benachrichtigungen_)
+  zeigt auch ältere Einträge nach einem Sprachwechsel in der neuen Sprache.
+- **E-Mails:** Bestätigung, Passwort-Reset und Hinweise kommen in der Sprache des Kontos.
+- **Fehlermeldungen der API:** Der Client sendet `Accept-Language`; der Fehlercode (`code`) bleibt in jeder Sprache
+  gleich, nur die Meldung (`message`) wechselt.
+- **Android-App:** Die Kanalnamen der Benachrichtigungen folgen der Gerätesprache (Deutsch oder Englisch).
+- **Datumsformate** (Wochentage, Monate, Uhrzeiten) richten sich nach der gewählten Sprache. Die Kalenderwoche
+  heißt auf Englisch _Week_.
+
+### Eine Sprache hinzufügen
+
+1. Server: `apps/api/src/i18n/locales.ts` (Sprache in `LOCALES`), dazu die Texte in `notifications.ts` (Mitteilungen),
+   `modules/mail/templates.ts` (Mails) und `errors.ts` (Fehlermeldungen; fehlende Einträge fallen auf Deutsch zurück).
+   Ein Test (`pnpm test`) meldet, wenn eine im Code geworfene Fehlermeldung keine Übersetzung hat.
+2. Web: `apps/web/src/lib/i18n/` — `en.ts` als Vorlage kopieren (der Compiler verlangt alle Schlüssel und dieselben
+   Platzhalter), in `messages.ts` unter `LOCALES`, `LANGUAGE_NAMES` und `DICTIONARIES` eintragen.
+3. Android: `apps/android/android/app/src/main/res/values-<code>/strings.xml`.
 
 ## Push-Benachrichtigungen
 
@@ -442,7 +470,7 @@ pnpm test           # Tests (Vitest)
 pnpm typecheck
 pnpm lint           # Biome
 pnpm design:check   # Designsystem: tokens.css aktuell, Kontraste (WCAG AA) in Hell und Dunkel
-pnpm test:e2e       # Playwright (Chromium mit Fake-Kamera): baut die Web-App, startet die API, mobil, Desktop und App-Build
+pnpm test:e2e       # Playwright (Chromium mit Fake-Kamera, Browsersprache Deutsch): baut die Web-App, startet die API, mobil, Desktop und App-Build
 pnpm android:test   # Kotlin-Unit-Tests der Android-App (braucht ANDROID_HOME)
 ```
 

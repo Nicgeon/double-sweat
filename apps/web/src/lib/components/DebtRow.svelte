@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '#lib/i18n/index.svelte.ts';
   import Button from './Button.svelte';
   import Icon from './Icon.svelte';
   import StatusChip from './StatusChip.svelte';
@@ -14,7 +15,7 @@
     onredeem?: () => void;
   };
   let { debtorName, creditorName, viewerIsCreditor, bet, week, redeemed = false, busy = false, onredeem }: Props = $props();
-  const title = $derived(viewerIsCreditor ? `${debtorName} schuldet dir` : `Du schuldest ${creditorName}`);
+  const title = $derived(viewerIsCreditor ? t('debt.owesYou', { name: debtorName }) : t('debt.youOwe', { name: creditorName }));
 </script>
 
 <li class="ds-debt {redeemed ? 'is-redeemed' : ''}">
@@ -24,9 +25,9 @@
     <span class="ds-debt__sub">{bet} · {week}</span>
   </div>
   {#if redeemed}
-    <StatusChip status="done">Eingelöst</StatusChip>
+    <StatusChip status="done">{t('debt.redeemed')}</StatusChip>
   {:else if viewerIsCreditor}
-    <Button variant="secondary" size="sm" icon="check" loading={busy} onclick={onredeem}>Eingelöst</Button>
+    <Button variant="secondary" size="sm" icon="check" loading={busy} onclick={onredeem}>{t('debt.redeemed')}</Button>
   {:else}
     <StatusChip status="open" />
   {/if}

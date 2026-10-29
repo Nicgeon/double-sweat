@@ -9,6 +9,7 @@ import {
   unique,
 } from 'drizzle-orm/sqlite-core';
 import { PARTNER_COLORS } from '../domain/colors.js';
+import { LOCALES } from '../i18n/locales.js';
 
 // Zeitpunkte: UTC-Millisekunden (integer). Lokale Kalendertage: TEXT 'YYYY-MM-DD'.
 
@@ -26,9 +27,7 @@ export const users = sqliteTable('users', {
   pendingFromWeek: text('pending_from_week'),
   reminderTime: text('reminder_time').notNull().default('19:00'),
   /** Sprache der Oberfläche, der Mitteilungen und Mails (de oder en). */
-  locale: text('locale', { enum: ['de', 'en'] })
-    .notNull()
-    .default('de'),
+  locale: text('locale', { enum: LOCALES }).notNull().default('de'),
   createdAt: integer('created_at').notNull(),
 });
 

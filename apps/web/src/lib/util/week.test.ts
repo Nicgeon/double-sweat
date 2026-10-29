@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import type { DashboardMember } from '#lib/api/client.ts';
+import { i18n } from '#lib/i18n/index.svelte.ts';
 import { laneOf } from './week.ts';
 
 const day = (checkedIn: boolean, isToday = false, isFuture = false) => ({
@@ -77,5 +78,18 @@ describe('laneOf (Anzeigetafel)', () => {
       member({ slot: 2, color: 'orchid', goalDays: undefined as never, isMe: false }),
     );
     expect(lane).toMatchObject({ slot: 2, color: 'orchid', you: false, goal: null, name: 'Anna' });
+  });
+});
+
+describe('laneOf auf Englisch', () => {
+  afterEach(() => i18n.set('de'));
+
+  it('übersetzt Statusbeschriftung und Wochentage', () => {
+    i18n.set('en');
+    const lane = laneOf(member({ status: 'unreachable' }));
+    expect(lane.statusLabel).toBe('No longer reachable');
+    expect(lane.days.map((d) => d.label)).toEqual(['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']);
+    expect(lane.days[0]?.name).toBe('Monday');
+    expect(laneOf(member({ status: 'no_goal' })).statusLabel).toBe('No goal');
   });
 });

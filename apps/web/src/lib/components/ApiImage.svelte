@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '#lib/i18n/index.svelte.ts';
   import { NATIVE } from '#lib/native/flag.ts';
   import { loadPhoto } from '#lib/util/photo-cache.ts';
 
@@ -31,5 +32,5 @@
 {:else if blobUrl}
   <img src={blobUrl} {alt} {width} {height} class={className} />
 {:else if failed}
-  <span class="ds-photo__empty">Foto nicht verfügbar</span>
+  <span class="ds-photo__empty">{t('photo.unavailable')}</span>
 {/if}

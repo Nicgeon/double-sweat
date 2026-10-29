@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { i18n } from '#lib/i18n/index.svelte.ts';
 import {
   addDays,
+  dayLabel,
+  dayName,
   isoWeek,
   longDate,
   relative,
@@ -42,5 +45,32 @@ describe('Datumsformate', () => {
     expect(relative(now - 3 * 3_600_000, now)).toBe('vor 3 Std.');
     expect(relative(now - 24 * 3_600_000, now)).toBe('gestern');
     expect(relative(now - 4 * 24 * 3_600_000, now)).toBe('vor 4 Tagen');
+  });
+});
+
+describe('Datumsformate auf Englisch', () => {
+  afterEach(() => i18n.set('de'));
+
+  it('formatiert Datum, Woche und Zeitabstände in der gewählten Sprache', () => {
+    i18n.set('en');
+    expect(shortDate('2026-10-26')).toBe('Oct 26');
+    expect(weekdayDate('2026-10-26')).toBe('Mon, Oct 26');
+    expect(longDate('2026-10-26')).toBe('Monday, October 26');
+    expect(weekLabel('2026-10-26')).toBe('Week 44 · Oct 26 – Nov 1');
+    const now = Date.parse('2026-10-28T12:00:00Z');
+    expect(relative(now - 20_000, now)).toBe('just now');
+    expect(relative(now - 5 * 60_000, now)).toBe('5 min ago');
+    expect(relative(now - 3 * 3_600_000, now)).toBe('3 h ago');
+    expect(relative(now - 24 * 3_600_000, now)).toBe('yesterday');
+    expect(relative(now - 4 * 24 * 3_600_000, now)).toBe('4 days ago');
+  });
+
+  it('Wochentage der Wochenleiste folgen der Sprache', () => {
+    i18n.set('de');
+    expect([0, 1, 6].map(dayLabel)).toEqual(['Mo', 'Di', 'So']);
+    expect([0, 6].map(dayName)).toEqual(['Montag', 'Sonntag']);
+    i18n.set('en');
+    expect([0, 1, 6].map(dayLabel)).toEqual(['Mo', 'Tu', 'Su']);
+    expect([0, 6].map(dayName)).toEqual(['Monday', 'Sunday']);
   });
 });

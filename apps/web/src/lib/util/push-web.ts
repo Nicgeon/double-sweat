@@ -1,4 +1,5 @@
 import { api, unwrap } from '#lib/api/client.ts';
+import { t } from '#lib/i18n/index.svelte.ts';
 
 import type { PushSupport } from './push.ts';
 
@@ -94,7 +95,7 @@ export function describeAgent(ua: string): string {
           : /Linux/.test(ua)
             ? 'Linux'
             : '';
-  return `${browser}${os ? ` auf ${os}` : ''}`.slice(0, 80);
+  return (os ? t('device.on', { browser, os }) : browser).slice(0, 80);
 }
 
 /** Kurze Beschreibung dieses Geräts für die Geräteliste. */

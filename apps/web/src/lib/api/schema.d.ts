@@ -41,6 +41,11 @@ export interface paths {
                             features: {
                                 mail: boolean;
                             };
+                            /**
+                             * @description Standardsprache des Servers (DEFAULT_LOCALE), wenn ein Client keine eigene hat
+                             * @enum {string}
+                             */
+                            defaultLocale: "de" | "en";
                         };
                     };
                 };

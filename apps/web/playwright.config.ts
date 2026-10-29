@@ -21,6 +21,8 @@ export default defineConfig({
   outputDir: 'e2e/.results',
   use: {
     baseURL: BASE,
+    // Die Oberfläche folgt der Browsersprache; die meisten Tests prüfen den deutschen Text
+    locale: 'de-DE',
     permissions: ['camera'],
     launchOptions: {
       // Fake-Kamera mit Testbild statt echter Hardware

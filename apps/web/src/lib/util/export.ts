@@ -1,3 +1,4 @@
+import { t } from '#lib/i18n/index.svelte.ts';
 import { currentServer } from '#lib/native/auth-store.ts';
 import { NATIVE } from '#lib/native/flag.ts';
 
@@ -23,8 +24,8 @@ export async function downloadExport(downloadUrl: string): Promise<void> {
   });
   await FileTransfer.downloadFile({ url: `${server}${downloadUrl}`, path: uri });
   await Share.share({
-    title: 'Double Sweat Export',
+    title: t('export.shareTitle'),
     files: [uri],
-    dialogTitle: 'Export speichern oder teilen',
+    dialogTitle: t('export.shareDialog'),
   });
 }

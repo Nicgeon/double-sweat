@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { t } from '#lib/i18n/index.svelte.ts';
   import { api, ApiError, type Checkin, unwrap } from '#lib/api/client.ts';
   import { session } from '#lib/state/session.svelte.ts';
   import { longDate } from '#lib/util/format.ts';
-  import { REACTIONS, type ReactionKind, reactionMeta } from '#lib/util/reactions.ts';
+  import { type ReactionKind, reactionList, reactionMeta } from '#lib/util/reactions.ts';
   import { tagMeta } from '#lib/util/tags.ts';
   import ApiImage from './ApiImage.svelte';
   import Banner from './Banner.svelte';
@@ -40,7 +41,7 @@
           : unwrap(await api.PUT('/api/v1/checkins/{id}/reaction', { params: { path: { id } }, body: { kind } }));
       onreacted?.(res.reactions);
     } catch (e) {
-      error = e instanceof ApiError ? e.message : 'Das hat nicht geklappt.';
+      error = e instanceof ApiError ? e.message : t('common.failed');
     } finally {
       reacting = null;
     }
@@ -54,7 +55,7 @@
       unwrap(await api.DELETE('/api/v1/checkins/{id}', { params: { path: { id: checkin.id } } }));
       ondeleted();
     } catch (e) {
-      error = e instanceof ApiError ? e.message : 'Das hat nicht geklappt.';
+      error = e instanceof ApiError ? e.message : t('common.failed');
     } finally {
       busy = false;
     }
@@ -64,12 +65,12 @@
 <Sheet open={checkin !== null} title={checkin ? `${checkin.displayName}, ${longDate(checkin.localDate)}` : ''} {onclose}>
   {#if checkin}
     <div class="stack">
-      <ApiImage class="viewer" src={checkin.photo.fullUrl} alt="Foto von {checkin.displayName}" width={checkin.photo.width} height={checkin.photo.height} />
+      <ApiImage class="viewer" src={checkin.photo.fullUrl} alt={t('photo.of', { name: checkin.displayName })} width={checkin.photo.width} height={checkin.photo.height} />
       {#if tag}<p class="row"><Icon name={tag.icon} size={18} /> {tag.label}</p>{/if}
       {#if checkin.note}<p>{checkin.note}</p>{/if}
       {#if !mine}
-        <div class="ds-react" role="group" aria-label="Auf das Training von {checkin.displayName} reagieren">
-          {#each REACTIONS as r (r.value)}
+        <div class="ds-react" role="group" aria-label={t('photo.reactTo', { name: checkin.displayName })}>
+          {#each reactionList() as r (r.value)}
             <Button variant="secondary" size="sm" icon={r.icon} aria-pressed={mineKind === r.value} loading={reacting === r.value} onclick={() => react(r.value)}>{r.label}</Button>
           {/each}
         </div>
@@ -78,7 +79,7 @@
         {#if meta}<p class="row"><Icon name={meta.icon} size={18} /> {fromPartner.displayName}: {meta.label}</p>{/if}
       {/if}
       {#if error}<Banner tone="error">{error}</Banner>{/if}
-      {#if mine}<Button variant="secondary" icon="trash-2" loading={busy} onclick={remove}>Check-in zurücknehmen</Button>{/if}
+      {#if mine}<Button variant="secondary" icon="trash-2" loading={busy} onclick={remove}>{t('photo.undo')}</Button>{/if}
     </div>
   {/if}
 </Sheet>

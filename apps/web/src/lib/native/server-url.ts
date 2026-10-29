@@ -1,3 +1,4 @@
+import { t } from '#lib/i18n/index.svelte.ts';
 import { ALLOW_HTTP, CLIENT_API } from './flag.ts';
 
 export type ServerErrorCode =
@@ -24,24 +25,24 @@ export class ServerError extends Error {
  */
 export function normalizeServerUrl(input: string, allowHttp = ALLOW_HTTP): string {
   let value = input.trim();
-  if (!value) throw new ServerError('invalid_url', 'Bitte gib die Adresse deines Servers ein.');
+  if (!value) throw new ServerError('invalid_url', t('serverUrl.empty'));
   if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) value = `https://${value}`;
   let url: URL;
   try {
     url = new URL(value);
   } catch {
-    throw new ServerError('invalid_url', 'Das ist keine gültige Adresse.');
+    throw new ServerError('invalid_url', t('serverUrl.invalid'));
   }
   if (url.protocol === 'http:' && !allowHttp) {
-    throw new ServerError('insecure', 'Nur HTTPS-Adressen sind erlaubt (https://…).');
+    throw new ServerError('insecure', t('serverUrl.insecure'));
   }
   if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-    throw new ServerError('invalid_url', 'Das ist keine gültige Adresse.');
+    throw new ServerError('invalid_url', t('serverUrl.invalid'));
   }
   if (url.username || url.password) {
-    throw new ServerError('invalid_url', 'Zugangsdaten in der Adresse sind nicht erlaubt.');
+    throw new ServerError('invalid_url', t('serverUrl.credentials'));
   }
-  if (!url.hostname) throw new ServerError('invalid_url', 'Das ist keine gültige Adresse.');
+  if (!url.hostname) throw new ServerError('invalid_url', t('serverUrl.invalid'));
   return url.origin;
 }
 
@@ -70,10 +71,7 @@ export async function probeServer(origin: string, timeoutMs = 10_000): Promise<S
         signal: controller.signal,
       });
     } catch {
-      throw new ServerError(
-        'unreachable',
-        'Der Server ist nicht erreichbar. Prüfe die Adresse und deine Verbindung.',
-      );
+      throw new ServerError('unreachable', t('serverUrl.unreachable'));
     }
     // Antwort ohne JSON (z. B. eine fremde Webseite): erreichbar, aber kein Double-Sweat-Server
     body = res.ok ? await res.json().catch(() => null) : null;
@@ -86,22 +84,13 @@ export async function probeServer(origin: string, timeoutMs = 10_000): Promise<S
     typeof h.apiVersion !== 'number' ||
     typeof h.minClientApi !== 'number'
   ) {
-    throw new ServerError(
-      'not_double_sweat',
-      'Unter dieser Adresse läuft kein Double-Sweat-Server.',
-    );
+    throw new ServerError('not_double_sweat', t('serverUrl.notDoubleSweat'));
   }
   if (h.minClientApi > CLIENT_API) {
-    throw new ServerError(
-      'client_too_old',
-      'Dieser Server ist neuer als die App. Bitte aktualisiere die App.',
-    );
+    throw new ServerError('client_too_old', t('serverUrl.clientTooOld'));
   }
   if (h.apiVersion < CLIENT_API) {
-    throw new ServerError(
-      'server_too_old',
-      'Dieser Server ist zu alt für die App. Bitte aktualisiere den Server.',
-    );
+    throw new ServerError('server_too_old', t('serverUrl.serverTooOld'));
   }
   return {
     version: String(h.version ?? ''),

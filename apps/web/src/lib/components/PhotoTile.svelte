@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '#lib/i18n/index.svelte.ts';
   import type { PartnerColor } from '#lib/api/client.ts';
   import type { IconName } from '#lib/icons.ts';
   import ApiImage from './ApiImage.svelte';
@@ -39,6 +40,6 @@
     </figcaption>
   {/if}
   {#if onclick}
-    <button type="button" class="ds-photo__open" {onclick} aria-label="Foto ansehen: {name ?? ''} {dateLabel ?? ''}"></button>
+    <button type="button" class="ds-photo__open" {onclick} aria-label={t('photo.view', { name: name ?? '', date: dateLabel ?? '' })}></button>
   {/if}
 </figure>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, tn } from '#lib/i18n/index.svelte.ts';
   import { onDestroy, onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { api, ApiError, type Checkin, type Dashboard, unwrap, uploadCheckin } from '#lib/api/client.ts';
@@ -9,9 +10,9 @@
   import Segmented from '#lib/components/Segmented.svelte';
   import ShutterButton from '#lib/components/ShutterButton.svelte';
   import { NATIVE } from '#lib/native/flag.ts';
-  import { CAMERA_MESSAGES, cameraAvailable, cameraProblem, type Facing, frameToJpeg, fileToJpeg, startCamera, stopStream, takeNativePhoto } from '#lib/util/camera.ts';
+  import { cameraAvailable, cameraMessage, cameraProblem, type Facing, frameToJpeg, fileToJpeg, startCamera, stopStream, takeNativePhoto } from '#lib/util/camera.ts';
   import { longDate } from '#lib/util/format.ts';
-  import { TAGS } from '#lib/util/tags.ts';
+  import { tagList } from '#lib/util/tags.ts';
 
   type Step = 'loading' | 'already' | 'camera' | 'file' | 'review' | 'done';
   let step = $state<Step>('loading');
@@ -37,7 +38,7 @@
     try {
       dash = unwrap(await api.GET('/api/v1/dashboard'));
     } catch (e) {
-      error = e instanceof ApiError ? e.message : 'Das hat nicht geklappt.';
+      error = e instanceof ApiError ? e.message : t('common.failed');
     }
     const mine = dash?.members.find((m) => m.isMe);
     if (dash && mine && mine.checkinsToday >= dash.maxCheckinsPerDay) {
@@ -73,7 +74,7 @@
       return;
     }
     if (!cameraAvailable()) {
-      cameraError = 'Die Kamera ist hier nicht verfügbar (sie braucht eine HTTPS-Verbindung).';
+      cameraError = t('checkin.unavailable');
       step = 'file';
       return;
     }
@@ -81,7 +82,7 @@
       stream = await startCamera(facing);
       step = 'camera';
     } catch (e) {
-      cameraError = `${CAMERA_MESSAGES[cameraProblem(e)]} Du kannst stattdessen ein Foto auswählen.`;
+      cameraError = `${cameraMessage(cameraProblem(e))} ${t('checkin.pickInstead')}`;
       step = 'file';
     }
   }
@@ -138,7 +139,7 @@
       step = 'done';
       dash = unwrap(await api.GET('/api/v1/dashboard'));
     } catch (e) {
-      error = e instanceof ApiError ? e.message : 'Das hat nicht geklappt.';
+      error = e instanceof ApiError ? e.message : t('common.failed');
     } finally {
       busy = false;
     }
@@ -164,74 +165,74 @@
 {#if step === 'camera'}
   <div class="camera" data-testid="camera">
     <!-- svelte-ignore a11y_media_has_caption -->
-    <video bind:this={video} class="camera__video {facing === 'user' ? 'camera__video--mirror' : ''}" playsinline muted aria-label="Kamerabild" onplaying={() => (cameraReady = true)}></video>
+    <video bind:this={video} class="camera__video {facing === 'user' ? 'camera__video--mirror' : ''}" playsinline muted aria-label={t('camera.view')} onplaying={() => (cameraReady = true)}></video>
     <div class="camera__top">
-      <Button variant="ghost" iconOnly icon="x" class="camera__round" onclick={() => goto('/')}>Schließen</Button>
-      <Button variant="ghost" iconOnly icon="switch-camera" class="camera__round" onclick={flip}>Kamera wechseln</Button>
+      <Button variant="ghost" iconOnly icon="x" class="camera__round" onclick={() => goto('/')}>{t('common.close')}</Button>
+      <Button variant="ghost" iconOnly icon="switch-camera" class="camera__round" onclick={flip}>{t('camera.flip')}</Button>
     </div>
     <div class="camera__bottom"><ShutterButton {busy} disabled={!cameraReady} onclick={shoot} /></div>
   </div>
 {:else}
-  <Page title="Check-in" backHref="/">
+  <Page title={t('checkin.title')} backHref="/">
     {#if step === 'loading'}
-      <p class="muted" role="status">Lädt …</p>
+      <p class="muted" role="status">{t('common.loading')}</p>
     {:else if step === 'already'}
-      <Banner tone="success" title="Für heute reicht es">
-        Du hast heute {dash?.maxCheckinsPerDay} Check-ins gemacht, mehr sind pro Tag nicht möglich. Morgen geht es weiter.
+      <Banner tone="success" title={t('checkin.alreadyTitle')}>
+        {t('checkin.alreadyBody', { n: dash?.maxCheckinsPerDay ?? 0 })}
       </Banner>
-      <Button href="/">Zur Übersicht</Button>
+      <Button href="/">{t('common.toOverview')}</Button>
     {:else if step === 'file'}
       <div class="stack">
         {#if cameraError}<Banner tone="info">{cameraError}</Banner>{/if}
-        <p class="lead">Mach ein Foto von deinem Training oder wähle eines aus.</p>
+        <p class="lead">{t('checkin.fileLead')}</p>
         <input bind:this={fileInput} class="ds-sr" type="file" accept="image/*" capture={NATIVE ? undefined : "environment"} onchange={picked} data-testid="file-input" />
         {#if NATIVE}
-          <Button size="lg" icon="camera" loading={busy} onclick={nativeShoot}>Foto aufnehmen</Button>
-          <Button variant="secondary" icon="image" onclick={() => fileInput?.click()}>Foto auswählen</Button>
+          <Button size="lg" icon="camera" loading={busy} onclick={nativeShoot}>{t('checkin.takePhoto')}</Button>
+          <Button variant="secondary" icon="image" onclick={() => fileInput?.click()}>{t('checkin.pickPhoto')}</Button>
         {:else}
-          <Button size="lg" icon="camera" loading={busy} onclick={() => fileInput?.click()}>Foto aufnehmen oder auswählen</Button>
-          {#if cameraAvailable()}<Button variant="ghost" onclick={openCamera}>Kamera erneut versuchen</Button>{/if}
+          <Button size="lg" icon="camera" loading={busy} onclick={() => fileInput?.click()}>{t('checkin.takeOrPick')}</Button>
+          {#if cameraAvailable()}<Button variant="ghost" onclick={openCamera}>{t('checkin.retryCamera')}</Button>{/if}
         {/if}
       </div>
     {:else if step === 'review'}
       <div class="cols">
         <div class="stack">
-          {#if photoUrl}<img class="preview" src={photoUrl} alt="Dein Foto" />{/if}
+          {#if photoUrl}<img class="preview" src={photoUrl} alt={t('checkin.photoAlt')} />{/if}
         </div>
         <form class="stack" onsubmit={(e) => { e.preventDefault(); void submit(); }}>
           <p class="muted small">
             {#if me && me.checkinsToday > 0}
-              Das ist dein {me.checkinsToday + 1}. Check-in heute. Für das Wochenziel zählt der Tag nur einmal.
+              {t('checkin.nthToday', { n: me.checkinsToday + 1 })}
             {:else}
-              Das Datum bestimmt der Server.
+              {t('checkin.serverDate')}
             {/if}
           </p>
           <div>
-            <p class="ds-field__label">Training</p>
-            <Segmented wrap label="Training" options={TAGS.map((t) => ({ value: t.value, label: t.label, icon: t.icon }))} bind:value={tag} />
+            <p class="ds-field__label">{t('checkin.workout')}</p>
+            <Segmented wrap label={t('checkin.workout')} options={tagList()} bind:value={tag} />
           </div>
-          <Field label="Notiz (optional)" multiline maxlength={280} placeholder="Wie war es?" bind:value={note} />
+          <Field label={t('checkin.note')} multiline maxlength={280} placeholder={t('checkin.notePlaceholder')} bind:value={note} />
           {#if error}<Banner tone="error">{error}</Banner>{/if}
           <div class="form__actions">
-            <Button type="submit" size="lg" icon="check" loading={busy}>Einchecken</Button>
-            <Button variant="ghost" onclick={retake}>Neues Foto</Button>
+            <Button type="submit" size="lg" icon="check" loading={busy}>{t('checkin.submit')}</Button>
+            <Button variant="ghost" onclick={retake}>{t('checkin.newPhoto')}</Button>
           </div>
         </form>
       </div>
     {:else if step === 'done'}
       <div class="stack">
-        <h2 class="auth__title">Eingecheckt.</h2>
+        <h2 class="auth__title">{t('checkin.doneTitle')}</h2>
         <p class="lead">
-          {#if partner}{partner.displayName} sieht dein Foto.{/if}
+          {#if partner}{t('checkin.partnerSees', { name: partner.displayName })}{/if}
           {#if me?.goalDays}
-            {me.neededDays > 0 ? `Noch ${me.neededDays} ${me.neededDays === 1 ? 'Tag' : 'Tage'} bis zu deinem Wochenziel.` : 'Wochenziel erreicht.'}
+            {me.neededDays > 0 ? tn('checkin.toGoal', me.neededDays) : t('checkin.goalReached')}
           {/if}
         </p>
-        {#if me?.goalDays}<Banner tone="success" title="{me.doneDays} von {me.goalDays} Tagen">{result ? longDate(result.localDate) : ''}</Banner>{/if}
-        {#if me && dash && me.checkinsToday > 1}<p class="muted small">Das war dein {me.checkinsToday}. Check-in heute. Für das Wochenziel zählt der Tag nur einmal.</p>{/if}
-        <Button size="lg" href="/">Zur Übersicht</Button>
+        {#if me?.goalDays}<Banner tone="success" title={tn('days.progress', me.goalDays, { done: me.doneDays })}>{result ? longDate(result.localDate) : ''}</Banner>{/if}
+        {#if me && dash && me.checkinsToday > 1}<p class="muted small">{t('checkin.wasNth', { n: me.checkinsToday })}</p>{/if}
+        <Button size="lg" href="/">{t('common.toOverview')}</Button>
         {#if me && dash && me.checkinsToday < dash.maxCheckinsPerDay}
-          <Button variant="secondary" icon="camera" onclick={another}>Noch ein Workout eintragen</Button>
+          <Button variant="secondary" icon="camera" onclick={another}>{t('checkin.another')}</Button>
         {/if}
       </div>
     {/if}

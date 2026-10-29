@@ -6,7 +6,8 @@ import org.json.JSONObject
 data class PushPayload(val type: String, val title: String, val body: String, val tag: String?) {
     companion object {
         const val DEFAULT_TITLE = "Double Sweat"
-        const val DEFAULT_BODY = "Du hast eine neue Benachrichtigung."
+        /** Platzhalter für unlesbare Nachrichten; die Anzeige ersetzt ihn durch den übersetzten Text (push_default_body). */
+        const val DEFAULT_BODY = "You have a new notification."
         private const val MAX_TITLE = 80
         private const val MAX_BODY = 240
         private const val MAX_TAG = 64

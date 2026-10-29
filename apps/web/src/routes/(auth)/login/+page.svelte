@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from '#lib/i18n/index.svelte.ts';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { ApiError } from '#lib/api/client.ts';
@@ -30,27 +31,27 @@
       await session.login(email, password);
       await goto(next, { replaceState: true });
     } catch (err) {
-      error = err instanceof ApiError ? err.message : 'Das hat nicht geklappt.';
+      error = err instanceof ApiError ? err.message : t('common.failed');
     } finally {
       busy = false;
     }
   }
 </script>
 
-<svelte:head><title>Anmelden · Double Sweat</title></svelte:head>
+<svelte:head><title>{t('login.docTitle')} · Double Sweat</title></svelte:head>
 
-<h1 class="auth__title">Willkommen zurück.</h1>
+<h1 class="auth__title">{t('login.title')}</h1>
 {#if NATIVE && session.serverUrl}
-  <p class="small muted">Server: {new URL(session.serverUrl).host} · <a href="/server">ändern</a></p>
+  <p class="small muted">{t('login.server', { host: new URL(session.serverUrl).host })} · <a href="/server">{t('login.serverChange')}</a></p>
 {/if}
-{#if expired}<Banner tone="info" title="Deine Sitzung ist abgelaufen">Bitte melde dich erneut an.</Banner>{/if}
+{#if expired}<Banner tone="info" title={t('login.expiredTitle')}>{t('login.expiredBody')}</Banner>{/if}
 {#if error}<Banner tone="error">{error}</Banner>{/if}
 <form class="form" onsubmit={submit}>
-  <Field label="E-Mail" type="email" bind:value={email} autocomplete="email" required />
-  <Field label="Passwort" type="password" bind:value={password} autocomplete="current-password" required />
+  <Field label={t('common.email')} type="email" bind:value={email} autocomplete="email" required />
+  <Field label={t('common.password')} type="password" bind:value={password} autocomplete="current-password" required />
   <div class="form__actions">
-    <Button type="submit" size="lg" loading={busy}>Anmelden</Button>
-    {#if session.health?.features.mail}<Button variant="ghost" href="/forgot">Passwort vergessen</Button>{/if}
-    {#if canRegister}<Button variant="ghost" href="/register">Neues Team gründen</Button>{/if}
+    <Button type="submit" size="lg" loading={busy}>{t('login.submit')}</Button>
+    {#if session.health?.features.mail}<Button variant="ghost" href="/forgot">{t('login.forgot')}</Button>{/if}
+    {#if canRegister}<Button variant="ghost" href="/register">{t('login.newTeam')}</Button>{/if}
   </div>
 </form>

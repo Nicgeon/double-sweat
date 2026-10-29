@@ -1,3 +1,4 @@
+import { t } from '#lib/i18n/index.svelte.ts';
 import { NATIVE } from '#lib/native/flag.ts';
 import type { PushDistributor } from '#lib/native/plugins.ts';
 import { disableNative, enableNative, nativeActive, syncNative } from './push-native.ts';
@@ -36,14 +37,15 @@ export async function enablePush(label: string, distributor?: string): Promise<E
 }
 
 /** Hinweise, wenn sich Push nicht einschalten lässt. */
-export const PUSH_NOTES: Record<Exclude<PushSupport, 'ok' | 'choose'>, string> = {
-  denied: 'Die Erlaubnis wurde abgelehnt. Du kannst sie in den Einstellungen deines Geräts ändern.',
-  disabled: 'Dieser Server hat Push ausgeschaltet.',
-  no_distributor:
-    'Für Push brauchst du eine UnifiedPush-App, zum Beispiel ntfy, oder die App-Version mit Google-Benachrichtigungen (FCM), falls dein Server sie anbietet. Alles erscheint auch unter „Benachrichtigungen“.',
-  unsupported:
-    'Dieser Browser unterstützt keine Push-Benachrichtigungen (auf dem iPhone nur als installierte App).',
-};
+const NOTE_KEYS = {
+  denied: 'push.denied',
+  disabled: 'push.disabled',
+  no_distributor: 'push.noDistributor',
+  unsupported: 'push.unsupported',
+} as const;
+
+export const pushNote = (status: Exclude<PushSupport, 'ok' | 'choose'>): string =>
+  t(NOTE_KEYS[status]);
 
 /** Was der Schalter nach einem Umschalten zeigen soll. */
 export interface ToggleOutcome {
@@ -69,7 +71,7 @@ export async function togglePushState(
   }
   const res = await enablePush(label, choice);
   if (res.status === 'choose') return { active: false, choices: res.distributors, note: null };
-  if (res.status !== 'ok') return { active: false, choices: null, note: PUSH_NOTES[res.status] };
+  if (res.status !== 'ok') return { active: false, choices: null, note: pushNote(res.status) };
   return { active: true, choices: null, note: null };
 }
 

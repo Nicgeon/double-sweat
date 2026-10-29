@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="channel_nudge">Anstupser</string>
+    <string name="channel_reminder">Erinnerungen</string>
+    <string name="channel_general">Weitere Mitteilungen</string>
+    <string name="push_default_body">Du hast eine neue Benachrichtigung.</string>
+</resources>

@@ -2,6 +2,7 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi';
 import type { AppContext } from '../../context.js';
 import { jsonResponse } from '../../http/schemas.js';
 import type { AppEnv } from '../../http/types.js';
+import { LOCALES } from '../../i18n/locales.js';
 import { API_VERSION, APP_NAME, APP_VERSION, MIN_CLIENT_API } from '../../version.js';
 
 export function healthRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
@@ -26,6 +27,11 @@ export function healthRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
               requiresSetupToken: z.boolean(),
             }),
             features: z.object({ mail: z.boolean() }),
+            defaultLocale: z
+              .enum(LOCALES)
+              .describe(
+                'Standardsprache des Servers (DEFAULT_LOCALE), wenn ein Client keine eigene hat',
+              ),
           }),
           'Server läuft',
         ),
@@ -52,6 +58,7 @@ export function healthRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
             requiresSetupToken: ctx.config.signupMode === 'token',
           },
           features: { mail: ctx.mailer.enabled },
+          defaultLocale: ctx.config.defaultLocale,
         },
         200,
       );

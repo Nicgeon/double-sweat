@@ -13,6 +13,7 @@ describe('System', () => {
       minClientApi: 1,
       signup: { mode: 'token', requiresSetupToken: true },
       features: { mail: false },
+      defaultLocale: 'de',
     });
   });
 

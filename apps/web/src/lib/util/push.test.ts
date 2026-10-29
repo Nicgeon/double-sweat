@@ -18,7 +18,7 @@ vi.mock('./push-web.ts', () => ({
   deviceLabel: vi.fn(),
 }));
 
-import { PUSH_NOTES, togglePushState } from './push.ts';
+import { pushNote, togglePushState } from './push.ts';
 
 const ntfy = { id: 'io.heckel.ntfy', label: 'ntfy' };
 const fcm = { id: 'fcm', label: 'Google (Firebase Cloud Messaging)' };
@@ -54,7 +54,7 @@ describe('Push-Schalter zeigt den echten Zustand', () => {
       expect(await togglePushState(true, 'x')).toEqual({
         active: false,
         choices: null,
-        note: PUSH_NOTES[status],
+        note: pushNote(status),
       });
     },
   );

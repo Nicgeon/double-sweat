@@ -8,6 +8,7 @@ import {
   type User,
   unwrap,
 } from '#lib/api/client.ts';
+import { i18n } from '#lib/i18n/index.svelte.ts';
 import {
   clearAll,
   clearTokens,
@@ -44,6 +45,7 @@ class Session {
     }
     try {
       this.health = unwrap(await api.GET('/api/v1/health'));
+      i18n.useServerDefault(this.health.defaultLocale);
       this.unreachable = false;
     } catch {
       this.unreachable = true;
@@ -65,6 +67,7 @@ class Session {
     try {
       const me = unwrap(await api.GET('/api/v1/me'));
       this.user = me.user;
+      i18n.set(me.user.locale);
       this.team = me.team ?? null;
       this.mailEnabled = me.features.mail;
       setCsrfToken(me.csrfToken ?? null);
@@ -80,6 +83,7 @@ class Session {
 
   adopt(result: { user: User; team?: Team | null; csrfToken?: string }): void {
     this.user = result.user;
+    i18n.set(result.user.locale);
     this.team = result.team ?? null;
     setCsrfToken(result.csrfToken ?? null);
     this.unreachable = false;
@@ -125,7 +129,10 @@ class Session {
     teamName?: string;
     setupToken?: string;
   }): Promise<void> {
-    const body = NATIVE ? { ...input, client: 'app' as const, deviceLabel: 'Android-App' } : input;
+    const withLocale = { ...input, locale: i18n.current };
+    const body = NATIVE
+      ? { ...withLocale, client: 'app' as const, deviceLabel: 'Android-App' }
+      : withLocale;
     await this.adoptAuth(unwrap(await api.POST('/api/v1/auth/register', { body })));
   }
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t, tSplit } from '#lib/i18n/index.svelte.ts';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
@@ -9,7 +10,7 @@
   import Field from '#lib/components/Field.svelte';
   import { joinLinkFor } from '#lib/native/deeplink.ts';
   import { NATIVE } from '#lib/native/flag.ts';
-  import { PARTNER_COLORS } from '#lib/state/colors.ts';
+  import { PARTNER_COLOR_VALUES } from '#lib/state/colors.ts';
   import { session } from '#lib/state/session.svelte.ts';
   import { browserTimezone } from '#lib/util/next.ts';
 
@@ -34,7 +35,7 @@
       preview = unwrap(await api.GET('/api/v1/invites/{code}', { params: { path: { code } } }));
       status = 'ok';
       // Standardfarbe des zweiten Platzes, sonst die erste freie
-      if (preview.inviterColor === color) color = PARTNER_COLORS.find((c) => c.value !== preview?.inviterColor)?.value ?? 'ember';
+      if (preview.inviterColor === color) color = PARTNER_COLOR_VALUES.find((c) => c !== preview?.inviterColor) ?? 'ember';
     } catch {
       status = 'invalid';
     }
@@ -55,7 +56,7 @@
       });
       await goto('/', { replaceState: true });
     } catch (err) {
-      error = err instanceof ApiError ? err.message : 'Das hat nicht geklappt.';
+      error = err instanceof ApiError ? err.message : t('common.failed');
     } finally {
       busy = false;
     }
@@ -69,53 +70,54 @@
       await session.refresh();
       await goto('/', { replaceState: true });
     } catch (err) {
-      error = err instanceof ApiError ? err.message : 'Das hat nicht geklappt.';
+      error = err instanceof ApiError ? err.message : t('common.failed');
     } finally {
       busy = false;
     }
   }
 </script>
 
-<svelte:head><title>Einladung · Double Sweat</title><meta name="referrer" content="no-referrer" /></svelte:head>
+<svelte:head><title>{t('join.docTitle')} · Double Sweat</title><meta name="referrer" content="no-referrer" /></svelte:head>
 
 {#if status === 'loading'}
-  <p class="auth__lead" role="status">Einen Moment …</p>
+  <p class="auth__lead" role="status">{t('common.wait')}</p>
 {:else if status === 'invalid' || !preview}
-  <h1 class="auth__title">Dieser Link gilt nicht mehr.</h1>
-  <Banner tone="info" title="Neuen Link anfragen">
-    Bitte die Person, die dich eingeladen hat, dir einen neuen Einladungslink zu schicken. Er ist 7 Tage gültig und funktioniert einmal.
+  <h1 class="auth__title">{t('join.invalidTitle')}</h1>
+  <Banner tone="info" title={t('join.invalidBannerTitle')}>
+    {t('join.invalidBody')}
   </Banner>
-  <Button variant="secondary" href={session.user ? '/' : '/login'}>{session.user ? 'Zur App' : 'Zur Anmeldung'}</Button>
+  <Button variant="secondary" href={session.user ? '/' : '/login'}>{session.user ? t('common.toApp') : t('common.toLogin')}</Button>
 {:else}
-  <h1 class="auth__title">{preview.inviterName} lädt dich ein.</h1>
+  <h1 class="auth__title">{t('join.title', { name: preview.inviterName })}</h1>
   <p class="auth__lead">
-    Ihr trainiert zu zweit und checkt mit einem Foto ein. Wer sein Wochenziel verfehlt, löst den Einsatz ein.
+    {t('join.lead')}
   </p>
   {#if error}<Banner tone="error">{error}</Banner>{/if}
   {#if inApp}
-    <Button variant="secondary" icon="smartphone" href={joinLinkFor(location.origin, code)}>In der App öffnen</Button>
+    <Button variant="secondary" icon="smartphone" href={joinLinkFor(location.origin, code)}>{t('join.openApp')}</Button>
   {/if}
 
   {#if session.user && session.team}
-    <Banner tone="info" title="Du bist schon in einem Team">Mit diesem Konto kannst du keinem zweiten Team beitreten.</Banner>
-    <Button href="/">Zur App</Button>
+    <Banner tone="info" title={t('join.alreadyTeamTitle')}>{t('join.alreadyTeamBody')}</Banner>
+    <Button href="/">{t('common.toApp')}</Button>
   {:else if session.user}
-    <p class="lead">Du bist als <strong>{session.user.displayName}</strong> angemeldet.</p>
+    {@const [signedBefore, signedAfter] = tSplit('join.signedIn', 'name')}
+    <p class="lead">{signedBefore}<strong>{session.user.displayName}</strong>{signedAfter}</p>
     <div class="form__actions">
-      <Button size="lg" loading={busy} onclick={joinExisting}>Beitreten</Button>
+      <Button size="lg" loading={busy} onclick={joinExisting}>{t('common.join')}</Button>
     </div>
   {:else}
     <form class="form" onsubmit={register}>
-      <Field label="Anzeigename" bind:value={displayName} maxlength={40} autocomplete="nickname" required />
-      <Field label="E-Mail" type="email" bind:value={email} autocomplete="email" required />
-      <Field label="Passwort" type="password" bind:value={password} hint="Mindestens 10 Zeichen." minlength={10} maxlength={128} autocomplete="new-password" required />
+      <Field label={t('common.displayName')} bind:value={displayName} maxlength={40} autocomplete="nickname" required />
+      <Field label={t('common.email')} type="email" bind:value={email} autocomplete="email" required />
+      <Field label={t('common.password')} type="password" bind:value={password} hint={t('common.passwordHint')} minlength={10} maxlength={128} autocomplete="new-password" required />
       <div>
-        <p class="ds-field__label">Deine Farbe</p>
+        <p class="ds-field__label">{t('common.yourColor')}</p>
         <ColorPicker bind:value={color} seat={2} {taken} />
       </div>
       <div class="form__actions">
-        <Button type="submit" size="lg" loading={busy}>Beitreten</Button>
-        <Button variant="ghost" href="/login?next={encodeURIComponent(`/join/${code}`)}">Ich habe schon ein Konto</Button>
+        <Button type="submit" size="lg" loading={busy}>{t('common.join')}</Button>
+        <Button variant="ghost" href="/login?next={encodeURIComponent(`/join/${code}`)}">{t('register.haveAccount')}</Button>
       </div>
     </form>
   {/if}

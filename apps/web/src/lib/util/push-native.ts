@@ -1,4 +1,5 @@
 import { api, unwrap } from '#lib/api/client.ts';
+import { t } from '#lib/i18n/index.svelte.ts';
 import {
   Fcm,
   type PushDistributor,
@@ -32,11 +33,11 @@ const forget = () => SecureStore.remove({ key: KEY });
 const providerOf = (s: Stored): NativeProvider => s.provider ?? 'unifiedpush';
 
 /** Auswahlpunkt für FCM neben den UnifiedPush-Apps. */
-export const FCM_CHOICE: PushDistributor = {
+export const fcmChoice = (): PushDistributor => ({
   id: 'fcm',
-  label: 'Google (Firebase Cloud Messaging)',
-  hint: 'Läuft über Google-Server, ohne zusätzliche App. Der Inhalt bleibt Ende-zu-Ende verschlüsselt.',
-};
+  label: t('push.fcmLabel'),
+  hint: t('push.fcmHint'),
+});
 
 export type Plan =
   | { kind: 'unified'; distributor: string }
@@ -79,7 +80,7 @@ export function planPush(input: {
       ? { kind: 'unified', distributor: only.id }
       : { kind: 'choose', options: candidates };
   }
-  return { kind: 'choose', options: [...candidates, FCM_CHOICE] };
+  return { kind: 'choose', options: [...candidates, fcmChoice()] };
 }
 
 async function announce(

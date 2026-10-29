@@ -1,3 +1,5 @@
+import { t } from '#lib/i18n/index.svelte.ts';
+
 const MAX_SIDE = 2000;
 
 export type Facing = 'user' | 'environment';
@@ -40,13 +42,15 @@ export function cameraProblem(error: unknown): CameraProblem {
   return 'other';
 }
 
-export const CAMERA_MESSAGES: Record<CameraProblem, string> = {
-  denied:
-    'Der Zugriff auf die Kamera ist blockiert. Erlaube ihn über das Kamera-Symbol in der Adressleiste oder in den Seiteneinstellungen deines Browsers und versuche es noch einmal.',
-  busy: 'Die Kamera lässt sich nicht starten. Meist nutzt sie gerade eine andere App (zum Beispiel die Kamera-App oder ein Videoanruf). Schließe sie und versuche es noch einmal.',
-  missing: 'Es wurde keine Kamera gefunden.',
-  other: 'Die Kamera lässt sich nicht öffnen.',
-};
+const CAMERA_KEYS = {
+  denied: 'camera.denied',
+  busy: 'camera.busy',
+  missing: 'camera.missing',
+  other: 'camera.other',
+} as const;
+
+/** Meldung zu einem Kameraproblem in der aktuellen Sprache. */
+export const cameraMessage = (problem: CameraProblem): string => t(CAMERA_KEYS[problem]);
 
 export function stopStream(stream: MediaStream | null): void {
   for (const track of stream?.getTracks() ?? []) track.stop();
