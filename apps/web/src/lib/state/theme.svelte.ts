@@ -1,3 +1,5 @@
+import { syncSystemBars } from '#lib/native/system-bars.ts';
+
 export type ThemeChoice = 'system' | 'light' | 'dark';
 const KEY = 'ds_theme';
 
@@ -35,6 +37,7 @@ class Theme {
     const root = document.documentElement;
     if (this.choice === 'system') root.removeAttribute('data-theme');
     else root.setAttribute('data-theme', this.choice);
+    syncSystemBars(this.choice);
   }
 }
 

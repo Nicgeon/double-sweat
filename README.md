@@ -7,11 +7,13 @@ verfehlt, schuldet dem anderen etwas. Kein Statistik-Tracking, Fokus auf gemeins
 Keine Telemetrie und keine externen Dienste im Standardbetrieb. Mailversand und Push über Hersteller-Dienste
 sind optional und im Abschnitt [Datenschutz](#datenschutz) beschrieben.
 
-> **Status: in Entwicklung.** Backend und **Web-Oberfläche** (mobil und Desktop, Hell und Dunkel, als PWA
-> installierbar) sind fertig und getestet: Konten, Anmeldung, Einladung per Link, optionaler Mailversand,
-> Wochenziele, Foto-Check-ins mit Wochenlogik pro Zeitzone, Anzeigetafel, Wetteinsatz mit automatischer
-> Wochenabrechnung, Schulden, Verlauf, Push (Web Push und UnifiedPush), Anstupsen und Abend-Erinnerung.
-> **Die Android-App folgt.** Die OpenAPI-Spezifikation liegt unter `/api/v1/openapi.json`.
+> **Status: in Entwicklung.** Backend, **Web-Oberfläche** (mobil und Desktop, Hell und Dunkel, als PWA
+> installierbar) und **Android-App** sind gebaut und automatisch getestet: Konten, Anmeldung, Einladung per
+> Link, optionaler Mailversand, Wochenziele, Foto-Check-ins mit Wochenlogik pro Zeitzone, Anzeigetafel,
+> Wetteinsatz mit automatischer Wochenabrechnung, Schulden, Verlauf, Push (Web Push und UnifiedPush),
+> Anstupsen und Abend-Erinnerung. **Auf einem echten Gerät ist die App noch nicht ausprobiert**
+> (siehe [Android-App](#android-app), Abschnitt "Was noch nicht geprüft ist").
+> Die OpenAPI-Spezifikation liegt unter `/api/v1/openapi.json`.
 
 ## Inhalt
 
@@ -21,6 +23,7 @@ sind optional und im Abschnitt [Datenschutz](#datenschutz) beschrieben.
 - [Erste Schritte](#erste-schritte)
 - [E-Mail (optional)](#e-mail-optional)
 - [Push-Benachrichtigungen](#push-benachrichtigungen)
+- [Android-App](#android-app)
 - [Betrieb: Updates, Backup, Wiederherstellung](#betrieb)
 - [Wochenlogik und Wetteinsatz](#wochenlogik-und-wetteinsatz)
 - [Sicherheit](#sicherheit) · [Datenschutz](#datenschutz)
@@ -163,7 +166,7 @@ Mails im Spam. `cli mail-test` prüft die Verbindung. TLS wird erzwungen (`SMTP_
 
 ## Push-Benachrichtigungen
 
-- **UnifiedPush / ntfy** (empfohlen, vollständig selbst hostbar; vorgesehen für die Android-App): Auf dem Handy
+- **UnifiedPush / ntfy** (empfohlen, vollständig selbst hostbar; für die Android-App): Auf dem Handy
   die ntfy-App als Verteiler installieren. Läuft ntfy in deinem eigenen Netz, trage dessen Hostnamen in
   `PUSH_ALLOWED_HOSTS` ein, sonst lehnt der Server lokale Ziele ab.
 - **Web Push** (Browser, installierte PWA): läuft technisch über den Push-Dienst des Browser-Herstellers
@@ -173,6 +176,81 @@ Mails im Spam. `cli mail-test` prüft die Verbindung. TLS wird erzwungen (`SMTP_
 - Nudge: `POST /api/v1/nudges`, höchstens einmal pro Stunde. Abend-Erinnerung: zur persönlichen Uhrzeit
   (Standard 19:00), wenn das Wochenziel gefährdet ist (heute noch kein Check-in und kein Puffer mehr).
 - FCM (Firebase) ist nicht Teil des Standard-Builds; die Anbieter-Schnittstelle ist dafür vorbereitet.
+
+## Android-App
+
+Die App ist ein Capacitor-Wrapper um dieselbe Web-Oberfläche. Die Oberfläche steckt **im APK** (die App lädt
+keine Seiten vom Server nach), nur die Daten kommen von deinem Server. Es gibt keinen Play-Store-Eintrag: du baust
+das APK selbst und installierst es auf den Handys.
+
+**Voraussetzungen zum Bauen:** JDK 21 und das Android-SDK (Plattform 36, Build-Tools 36). Die Kommandozeilen-Tools
+reichen (`sdkmanager "platforms;android-36" "build-tools;36.0.0"`). Setze `ANDROID_HOME` auf das SDK.
+
+```bash
+./scripts/gen-keystore.sh   # einmalig: Signaturschlüssel erzeugen (apps/android/signing/, nicht im Repository)
+pnpm android:apk            # baut Web, synchronisiert Capacitor, baut und prüft das signierte Release
+```
+
+Das Ergebnis liegt in `apps/android/dist/double-sweat-<Version>.apk`; das Skript zeigt den Fingerabdruck des
+Zertifikats. **Sichere `apps/android/signing/` an einem zweiten Ort.** Android nimmt ein Update nur an, wenn es mit
+demselben Schlüssel signiert ist; ohne ihn müsstest du die App deinstallieren und neu einrichten. Wer den Ordner
+hat, kann Updates in deinem Namen signieren.
+
+**Installieren (Sideloading):** APK aufs Handy kopieren, öffnen und "Unbekannte Apps installieren" für die
+öffnende App erlauben. Oder per Kabel: `adb install double-sweat-0.1.0.apk`. Zur Kontrolle auf dem Rechner:
+`apksigner verify --print-certs double-sweat-0.1.0.apk` (zeigt dasselbe Zertifikat wie beim Bauen).
+
+**Erster Start.** Die App fragt nach der Adresse deines Servers (`https://...`, **nur HTTPS**). Bevor sie
+Zugangsdaten sendet, ruft sie `/api/v1/health` ab und prüft, ob dort wirklich ein Double-Sweat-Server in einer
+passenden Version antwortet. Danach melden sich beide wie im Web an. Einladungslinks funktionieren auch in der
+App: Auf der Beitrittsseite im Browser gibt es "In der App öffnen" (`doublesweat://join?s=<Server>&c=<Code>`).
+Zeigt der Link auf einen anderen Server als den eingerichteten, fragt die App mit Anzeige des Hosts nach, bevor sie
+etwas tut. (Eigene Schemata kann auch eine fremde App beanspruchen; deshalb gibt es keinen stillen Wechsel.)
+
+**Server-Einstellungen für die App:** `CORS_APP_ORIGINS` bleibt auf dem Standard `https://localhost`
+(so nennt sich die WebView der App). Mehr ist nicht nötig; der Server liefert für die App dieselbe API.
+
+**Push.** Installiere einen UnifiedPush-Verteiler, z. B. **ntfy** (F-Droid oder Play Store), und schalte unter
+"Mehr → Benachrichtigungen" Push ein. Bei mehreren Verteilern fragt die App, welchen sie nehmen soll. Ab
+Android 13 erscheint die Frage nach der Erlaubnis für Benachrichtigungen. Läuft ntfy in deinem Heimnetz, trage
+dessen Hostnamen in `PUSH_ALLOWED_HOSTS` des Servers ein. Anstupser, Abend-Erinnerung und Abrechnung bekommen eigene
+Benachrichtigungskanäle, die du in den Android-Einstellungen einzeln einstellst. Ohne Verteiler läuft alles weiter,
+du siehst die Meldungen dann in der App unter "Benachrichtigungen".
+
+**Test-APK für ein Gerät im Heimnetz.** `pnpm android:debug` baut ein Debug-APK (`...-debug.apk`, eigene App-ID
+`app.doublesweat.mobile.debug`, läuft neben dem Release). Nur dieser Build erlaubt `http://`-Serveradressen
+(z. B. `http://192.168.1.20:3000`) und Web-Debugging über `chrome://inspect`. Das Release enthält beides nicht.
+
+**Update der App.** Version in `apps/android/package.json` erhöhen, `pnpm android:apk` ausführen, das neue APK
+über das alte installieren. Beim Einrichten des Servers prüft die App per Health-Check, ob App und Server
+zusammenpassen (App zu alt für den Server oder Server zu alt für die App) und zeigt dann einen Hinweis.
+
+**Sicherheit der App.**
+
+- Zugangsdaten (Server, Access- und Refresh-Token) liegen verschlüsselt (AES-256-GCM) in der App; der Schlüssel
+  steckt im Android Keystore und ist nicht auslesbar. Backups und Geräteübertragung sind abgeschaltet
+  (`allowBackup=false`, Extraktionsregeln), die Daten bleiben auf dem Gerät.
+- Access-Token laufen nach 15 Minuten ab. Refresh-Token werden bei jeder Nutzung erneuert; wird ein alter
+  Refresh-Token noch einmal benutzt, widerruft der Server die ganze Sitzung (Diebstahl-Erkennung).
+- Nur HTTPS, nur Zertifikate, denen das System traut (keine nachinstallierten Zertifizierungsstellen); kein
+  Klartext im Release. Die Seite des APK läuft unter einer strengen Content-Security-Policy ohne `unsafe-eval`.
+- Berechtigungen: Internet und Benachrichtigungen. Die **Kamera** braucht keine eigene Berechtigung, das Foto
+  macht die Kamera-App des Geräts.
+- Push-Nachrichten sind, wenn der Verteiler Schlüssel liefert, Ende-zu-Ende verschlüsselt und bleiben minimal;
+  sonst enthält die Nachricht nur einen neutralen Text.
+- Kein Google-Dienst, kein Firebase, keine Telemetrie im APK.
+
+**Automatisch getestet:** Web-Logik der App (Server-Prüfung, Token-Erneuerung samt Wiederholung bei 401,
+Deep-Links) mit Vitest; der Native-Build läuft in Playwright gegen einen echten Server (Server einrichten,
+Team gründen, Fotos mit Bearer-Token laden, Abmelden, Token-Ablauf, Einladungslinks, Serverwechsel);
+`pnpm android:test` prüft die Kotlin-Teile (Verschlüsselung der Zugangsdaten, Push-Nachrichten); Android Lint ohne
+Fehler; das Release wird beim Bauen mit `apksigner` geprüft.
+
+**Was noch nicht geprüft ist (bitte auf deinem Gerät testen).** Hier gibt es keinen Emulator und kein Handy.
+Ungetestet sind deshalb: Kamera-Ablauf, Safe-Area/Statusleiste auf deinem Handy, Push über ntfy (Anmeldung beim
+Verteiler und Benachrichtigung), Deep-Links aus einem Mail- oder Chat-Programm, Teilen-Menü beim Export,
+Tastatur-Verhalten in den Formularen, Verhalten nach Neustart des Handys. Erst nach diesem Test sollte der Stand
+nach `main`.
 
 ## Betrieb
 
@@ -284,7 +362,8 @@ pnpm test           # Tests (Vitest)
 pnpm typecheck
 pnpm lint           # Biome
 pnpm design:check   # Designsystem: tokens.css aktuell, Kontraste (WCAG AA) in Hell und Dunkel
-pnpm test:e2e       # Playwright (Chromium mit Fake-Kamera): baut die Web-App, startet die API, mobil und Desktop
+pnpm test:e2e       # Playwright (Chromium mit Fake-Kamera): baut die Web-App, startet die API, mobil, Desktop und App-Build
+pnpm android:test   # Kotlin-Unit-Tests der Android-App (braucht ANDROID_HOME)
 ```
 
 Die Web-Oberfläche entwickelst du mit `pnpm dev:api` (Port 3000) und `pnpm dev:web` (Vite, leitet `/api` an die
@@ -294,10 +373,10 @@ API-Clients neu. Die Kamera braucht HTTPS oder `localhost`; ohne sie bietet die 
 ```
 apps/api       Hono-API (TypeScript), SQLite via Drizzle, Scheduler, CLI
 apps/web       Web-Oberfläche (SvelteKit als SPA, PWA, Playwright-Tests)
-apps/android   Capacitor-Wrapper für die Android-App         [folgt]
+apps/android   Android-App (Capacitor, Kotlin-Plugins für sicheren Speicher und UnifiedPush)
 design/        Designsystem: Tokens, Schriften, Icons, Logo, Komponenten-CSS, Richtlinie
 deploy/        Caddy- und Traefik-Beispiele
-scripts/       Backup-Skript, Design-Werkzeuge
+scripts/       Backup-Skript, Design-Werkzeuge, Android-Bau (Schlüssel, APK)
 ```
 
 Branches: `main` (stabil, getestet) und `develop` (Integration). Änderungen laufen über `develop`.

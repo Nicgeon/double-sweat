@@ -892,8 +892,8 @@ textarea.ds-field__input {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: var(--appbar-h);
-  padding: 0 var(--space-2) 0 var(--space-4);
+  min-height: calc(var(--appbar-h) + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) var(--space-2) 0 var(--space-4);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }

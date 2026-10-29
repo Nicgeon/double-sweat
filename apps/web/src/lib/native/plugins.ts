@@ -39,11 +39,3 @@ export interface UnifiedPushPlugin {
 export const UnifiedPush = registerPlugin<UnifiedPushPlugin>('UnifiedPush', {
   web: () => import('./unified-push.web.ts').then((m) => new m.UnifiedPushWeb()),
 });
-
-/** Kennzeichen des Builds (Debug oder Release), aus BuildConfig. */
-export interface BuildInfoPlugin {
-  info(): Promise<{ debug: boolean; version: string }>;
-}
-export const BuildInfo = registerPlugin<BuildInfoPlugin>('BuildInfo', {
-  web: () => import('./build-info.web.ts').then((m) => new m.BuildInfoWeb()),
-});

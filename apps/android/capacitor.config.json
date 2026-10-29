@@ -1,0 +1,13 @@
+{
+  "appId": "app.doublesweat.mobile",
+  "appName": "Double Sweat",
+  "webDir": "../web/build-native",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false,
+    "backgroundColor": "#f2f4f8"
+  }
+}

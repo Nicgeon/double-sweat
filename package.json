@@ -18,7 +18,11 @@
     "design:check": "node scripts/design-build.mjs --check && node scripts/check-contrast.mjs",
     "design:icons": "node scripts/design-icons.mjs",
     "dev:web": "pnpm --filter @double-sweat/web dev",
-    "test:e2e": "pnpm --filter @double-sweat/web test:e2e"
+    "test:e2e": "pnpm --filter @double-sweat/web test:e2e",
+    "android:icons": "node scripts/android-icons.mjs",
+    "android:debug": "sh scripts/android-build.sh debug",
+    "android:apk": "sh scripts/android-build.sh release",
+    "android:test": "sh scripts/android-build.sh test"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.3"

@@ -178,7 +178,8 @@ p {
   display: flex;
   justify-content: center;
   min-height: 100dvh;
-  padding: var(--space-8) var(--space-5) var(--space-6);
+  padding: calc(var(--space-8) + env(safe-area-inset-top, 0px)) var(--space-5)
+    calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
 }
 
 .auth__box {
