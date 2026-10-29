@@ -132,7 +132,7 @@ export const de = {
   'camera.selfieToggle': 'Selfie dazu aufnehmen',
   'camera.selfieTitle': 'Jetzt ein Selfie',
   'camera.selfieCountdown': 'Selfie in {n} …',
-  'camera.selfieSkip': 'Ohne Selfie',
+  'camera.selfieSkip': 'Selfie überspringen',
   'camera.selfieShutter': 'Selfie aufnehmen',
 
   // Einladung (Fenster)
@@ -283,6 +283,8 @@ export const de = {
   'checkin.photoAlt': 'Dein Foto',
   'checkin.selfie': 'Selfie (optional)',
   'checkin.selfieHint': 'Ein Selfie zeigt, wie es dir beim Training geht. Es ist freiwillig.',
+  'checkin.selfiePromptTitle': 'Jetzt ein Selfie?',
+  'checkin.selfiePromptBody': 'Zeig, wie es dir gerade geht. Wähle in der Kamera die Frontkamera.',
   'checkin.selfieAdd': 'Selfie hinzufügen',
   'checkin.selfieRetake': 'Selfie neu aufnehmen',
   'checkin.selfieRemove': 'Selfie entfernen',

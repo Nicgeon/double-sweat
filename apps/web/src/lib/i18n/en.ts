@@ -279,6 +279,9 @@ export const en: Record<MessageKey, string> = {
   'checkin.photoAlt': 'Your photo',
   'checkin.selfie': 'Selfie (optional)',
   'checkin.selfieHint': 'A selfie shows how you are doing during your workout. It is optional.',
+  'checkin.selfiePromptTitle': 'A selfie now?',
+  'checkin.selfiePromptBody':
+    'Show how you are doing right now. Pick the front camera in the camera app.',
   'checkin.selfieAdd': 'Add a selfie',
   'checkin.selfieRetake': 'Retake selfie',
   'checkin.selfieRemove': 'Remove selfie',

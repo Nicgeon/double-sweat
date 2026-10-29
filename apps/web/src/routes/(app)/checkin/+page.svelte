@@ -49,7 +49,8 @@
 
   const me = $derived(dash?.members.find((m) => m.isMe));
   const partner = $derived(dash?.members.find((m) => !m.isMe));
-  const inCamera = $derived(step === 'camera' || step === 'selfie');
+  /** Live-Kamera im Browser (Vorschau mit Auslöser); in der App öffnet sich stattdessen die Kamera des Geräts. */
+  const inCamera = $derived(step === 'camera' || (step === 'selfie' && !NATIVE));
   const mirrored = $derived(step === 'selfie' || facing === 'user');
 
   function readPref(): boolean {
@@ -94,8 +95,11 @@
     busy = true;
     try {
       const blob = await takeNativePhoto();
-      if (blob) keep(blob);
-      else step = 'file';
+      if (blob) {
+        setPhoto(blob);
+        // Gleich danach das Selfie anfragen; "überspringen" geht jederzeit
+        step = 'selfie';
+      } else step = 'file';
     } finally {
       busy = false;
     }
@@ -235,11 +239,15 @@
   }
 
   async function nativeSelfie() {
-    step = 'review';
+    const before = step;
+    step = 'selfie';
     busy = true;
     try {
       const blob = await takeNativePhoto();
-      if (blob) setSelfie(blob);
+      if (blob) {
+        setSelfie(blob);
+        step = 'review';
+      } else if (before === 'review') step = 'review';
     } finally {
       busy = false;
     }
@@ -344,6 +352,13 @@
         {t('checkin.alreadyBody', { n: dash?.maxCheckinsPerDay ?? 0 })}
       </Banner>
       <Button href="/">{t('common.toOverview')}</Button>
+    {:else if step === 'selfie'}
+      <div class="stack">
+        <h2 class="auth__title">{t('checkin.selfiePromptTitle')}</h2>
+        <p class="lead">{t('checkin.selfiePromptBody')}</p>
+        <Button size="lg" icon="user" loading={busy} onclick={nativeSelfie}>{t('camera.selfieShutter')}</Button>
+        <Button variant="ghost" onclick={skipSelfie}>{t('camera.selfieSkip')}</Button>
+      </div>
     {:else if step === 'file'}
       <div class="stack">
         {#if cameraError}<Banner tone="info">{cameraError}</Banner>{/if}

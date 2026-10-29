@@ -130,7 +130,7 @@ test('Selfie nachträglich hinzufügen, neu aufnehmen und wieder entfernen', asy
   expect(checkins[0].selfie).not.toBeNull();
 });
 
-test('„Ohne Selfie“ überspringt die Frontkamera, der Check-in klappt trotzdem', async ({
+test('„Selfie überspringen“ überspringt die Frontkamera, der Check-in klappt trotzdem', async ({
   browser,
 }, testInfo) => {
   const { annaEmail } = await makeCouple();
@@ -141,7 +141,7 @@ test('„Ohne Selfie“ überspringt die Frontkamera, der Check-in klappt trotzd
   await page.getByRole('button', { name: 'Selfie dazu aufnehmen' }).click();
   await page.getByRole('button', { name: 'Foto aufnehmen' }).click();
   await expect(page.getByTestId('selfie-camera')).toBeVisible();
-  await page.getByRole('button', { name: 'Ohne Selfie' }).click();
+  await page.getByRole('button', { name: 'Selfie überspringen' }).click();
   await expect(page.getByRole('img', { name: 'Dein Foto' })).toBeVisible();
   await expect(page.getByTestId('selfie-preview')).toHaveCount(0);
   await page.getByRole('button', { name: 'Einchecken' }).click();

@@ -29,6 +29,7 @@ sind optional und im Abschnitt [Datenschutz](#datenschutz) beschrieben.
 - [Wochenlogik und Wetteinsatz](#wochenlogik-und-wetteinsatz)
 - [Sicherheit](#sicherheit) · [Datenschutz](#datenschutz)
 - [Entwicklung](#entwicklung)
+- [Roadmap](#roadmap)
 
 ## Schnellstart mit Docker
 
@@ -496,3 +497,16 @@ scripts/       Backup-Skript, Design-Werkzeuge, Android-Bau (Schlüssel, APK)
 ```
 
 Branches: `main` (stabil, getestet) und `develop` (Integration). Änderungen laufen über `develop`.
+
+## Roadmap
+
+Geplant, in dieser Reihenfolge:
+
+1. **Serien-Benachrichtigungen:** Hinweis, wenn die gemeinsame Serie in Gefahr ist, und Glückwunsch bei Meilensteinen.
+2. **Android-Widget:** Wochenfortschritt beider Partner auf dem Startbildschirm.
+3. **Veröffentlichung der Android-App:** signierte `foss`-Release-APK als GitHub-Release (die FCM-Variante bleibt
+   privat, sie hängt am eigenen Firebase-Projekt).
+4. **GitHub-Action:** Bei einem Tag baut sie automatisch die signierte APK und hängt sie an den Release (Schlüssel
+   als verschlüsseltes Secret).
+5. **LICENSE-Datei** und ein README-Abschnitt für Nutzer der APK (Installation, Server-Adresse, Updates).
+6. **Health Connect** (Android): Workout-Vorschläge aus Wearables, nur auf dem Gerät, das Foto bleibt Pflicht.
