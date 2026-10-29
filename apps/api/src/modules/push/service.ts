@@ -31,6 +31,8 @@ const DELIVERY: Record<NotificationType, DeliveryOptions> = {
   reward_earned: { ttlSec: 86_400, urgency: 'normal' },
   reaction: { ttlSec: 3600, urgency: 'low' },
   team_dissolved: { ttlSec: 86_400, urgency: 'normal' },
+  streak_milestone: { ttlSec: 86_400, urgency: 'low' },
+  streak_broken: { ttlSec: 86_400, urgency: 'normal' },
   test: { ttlSec: 60, urgency: 'high' },
 };
 

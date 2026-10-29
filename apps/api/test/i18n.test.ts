@@ -103,6 +103,7 @@ describe('Mitteilungen in der Sprache des Empfängers', () => {
           name: 'Anna',
           other: 'Ben',
           missing: 2,
+          weeks: 4,
           kind: 'flame',
           role: type === 'reward_earned' ? 'recipient' : 'debtor',
           bet: 'Kaffee',

@@ -4,6 +4,7 @@ import type { AppContext } from '../context.js';
 import { memberships, reminderLog, teams, users } from '../db/schema.js';
 import { localDateAt } from '../domain/weeks.js';
 import { buildMemberProgress } from '../modules/dashboard/service.js';
+import { loadTeamStreak } from '../modules/history/service.js';
 import { currentTimezone } from '../modules/me/timezone.js';
 import { firstScoredWeek } from '../modules/settlement/service.js';
 import { HOUR } from '../util/time.js';
@@ -28,6 +29,7 @@ export function remindersJob(ctx: AppContext): void {
 
   for (const team of fullTeams) {
     if (team.fullSince === null) continue;
+    const teamStreak = loadTeamStreak(ctx.db, team.id).current;
     const members = ctx.db
       .select({ user: users, slot: memberships.slot })
       .from(memberships)
@@ -57,7 +59,7 @@ export function remindersJob(ctx: AppContext): void {
       const missing = progress.neededDays;
       ctx.push.notify(user.id, {
         type: 'reminder',
-        params: { missing },
+        params: { missing, streak: teamStreak },
         data: { weekStart: progress.weekStart, needed: missing },
       });
     }

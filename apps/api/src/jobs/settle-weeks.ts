@@ -1,7 +1,13 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import type { AppContext } from '../context.js';
-import { users } from '../db/schema.js';
+import { users, weekResults } from '../db/schema.js';
+import { loadTeamStreak } from '../modules/history/service.js';
 import { settleDueWeeks } from '../modules/settlement/service.js';
+
+/** Meilensteine der gemeinsamen Serie in Wochen (danach jede 52). */
+export const STREAK_MILESTONES = [2, 4, 8, 12, 26, 52];
+const isMilestone = (weeks: number) =>
+  STREAK_MILESTONES.includes(weeks) || (weeks > 52 && weeks % 52 === 0);
 
 const nameOf = (ctx: AppContext, id: string) =>
   ctx.db.select({ n: users.displayName }).from(users).where(eq(users.id, id)).get()?.n ??
@@ -47,10 +53,44 @@ export function settleWeeksJob(ctx: AppContext): void {
       });
     }
   }
+  notifyStreaks(ctx, settled);
   ctx.log.info('weeks_settled', {
     weeks: settled.length,
     missed: settled.filter((s) => s.met === false).length,
     debts: settled.filter((s) => s.debtId !== null).length,
     rewards: settled.filter((s) => s.rewardClaimId !== null).length,
   });
+}
+
+/**
+ * Serie der Wochen eines Teams: sobald beide Partner einer Woche abgerechnet sind (bei verschiedenen Zeitzonen
+ * kann das in verschiedenen Läufen sein), gibt es einen Meilenstein oder, wenn eine Serie ab zwei Wochen endet,
+ * eine Info. Jede Woche wird pro Team nur einmal bewertet.
+ */
+function notifyStreaks(ctx: AppContext, settled: ReturnType<typeof settleDueWeeks>): void {
+  const done = new Set<string>();
+  for (const week of settled) {
+    const key = `${week.teamId}:${week.weekStart}`;
+    if (done.has(key)) continue;
+    const partner = ctx.db
+      .select({ met: weekResults.met })
+      .from(weekResults)
+      .where(and(eq(weekResults.userId, week.partnerId), eq(weekResults.weekStart, week.weekStart)))
+      .get();
+    if (!partner) continue; // der Partner wird erst später abgerechnet
+    done.add(key);
+    const members = [week.userId, week.partnerId];
+    const data = { weekStart: week.weekStart };
+    if (week.met === true && partner.met === true) {
+      const weeks = loadTeamStreak(ctx.db, week.teamId).current;
+      if (isMilestone(weeks))
+        for (const id of members)
+          ctx.push.notify(id, { type: 'streak_milestone', params: { weeks }, data });
+    } else if (week.met === false || partner.met === false) {
+      const weeks = loadTeamStreak(ctx.db, week.teamId, week.weekStart).current;
+      if (weeks >= 2)
+        for (const id of members)
+          ctx.push.notify(id, { type: 'streak_broken', params: { weeks }, data });
+    }
+  }
 }

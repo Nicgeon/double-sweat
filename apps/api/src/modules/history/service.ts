@@ -1,5 +1,6 @@
 import { and, desc, eq, inArray, lt } from 'drizzle-orm';
 import type { AppContext } from '../../context.js';
+import type { DbLike } from '../../db/client.js';
 import { debts, memberships, type User, users, weekResults } from '../../db/schema.js';
 import type { PartnerColor } from '../../domain/colors.js';
 import {
@@ -35,6 +36,32 @@ export interface History {
   streaks: { me: Streak; partner: Streak; team: Streak };
   /** Für die nächste Seite als `before` übergeben. Null, wenn es nichts Älteres gibt. */
   nextCursor: string | null;
+}
+
+/**
+ * Aktuelle Team-Serie aus den abgerechneten Wochen. Mit `before` zählen nur Wochen davor (Serie "vor" einer Woche).
+ * Ohne vollständiges Team gibt es keine Serie.
+ */
+export function loadTeamStreak(db: DbLike, teamId: string, before?: string): Streak {
+  const members = db
+    .select({ id: memberships.userId })
+    .from(memberships)
+    .where(eq(memberships.teamId, teamId))
+    .orderBy(memberships.slot)
+    .all();
+  if (members.length < 2) return { current: 0, best: 0 };
+  const rows = db
+    .select()
+    .from(weekResults)
+    .where(
+      before
+        ? and(eq(weekResults.teamId, teamId), lt(weekResults.weekStart, before))
+        : eq(weekResults.teamId, teamId),
+    )
+    .all();
+  const outcomes = (userId: string): WeekOutcome[] =>
+    rows.filter((r) => r.userId === userId).map((r) => ({ weekStart: r.weekStart, met: r.met }));
+  return computeTeamStreak(outcomes(members[0]?.id ?? ''), outcomes(members[1]?.id ?? ''));
 }
 
 export function getHistory(ctx: AppContext, viewer: User, limit: number, before?: string): History {

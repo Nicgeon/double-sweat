@@ -9,6 +9,8 @@ export type NotificationType =
   | 'reward_earned'
   | 'reaction'
   | 'team_dissolved'
+  | 'streak_milestone'
+  | 'streak_broken'
   | 'test';
 
 export type NotificationParams = Record<string, string | number>;
@@ -32,6 +34,13 @@ const REACTION_PHRASE: Record<Locale, Record<string, string>> = {
   },
 };
 
+/** Hängt an die Abend-Erinnerung an, dass auch die gemeinsame Serie auf dem Spiel steht (ab zwei Wochen). */
+const streakRisk: Record<Locale, Template> = {
+  de: (p) =>
+    Number(p.streak) >= 2 ? ` Eure Serie von ${p.streak} Wochen steht auf dem Spiel.` : '',
+  en: (p) => (Number(p.streak) >= 2 ? ` Your streak of ${p.streak} weeks is on the line.` : ''),
+};
+
 const TEMPLATES: Record<NotificationType, Record<Locale, Template>> = {
   nudge: {
     de: (p) => `${p.name} stupst dich an: Zeit fürs Training!`,
@@ -39,13 +48,26 @@ const TEMPLATES: Record<NotificationType, Record<Locale, Template>> = {
   },
   reminder: {
     de: (p) =>
-      p.missing === 1
+      (p.missing === 1
         ? 'Heute noch trainieren: Dir fehlt noch ein Tag für dein Wochenziel, und es bleibt kein Puffer.'
-        : `Dir fehlen noch ${p.missing} Tage für dein Wochenziel, und jeder verbleibende Tag zählt. Heute schon trainiert?`,
+        : `Dir fehlen noch ${p.missing} Tage für dein Wochenziel, und jeder verbleibende Tag zählt. Heute schon trainiert?`) +
+      streakRisk.de(p),
     en: (p) =>
-      p.missing === 1
+      (p.missing === 1
         ? 'Work out today: you are one day short of your weekly goal, and there is no buffer left.'
-        : `You are ${p.missing} days short of your weekly goal, and every remaining day counts. Worked out today yet?`,
+        : `You are ${p.missing} days short of your weekly goal, and every remaining day counts. Worked out today yet?`) +
+      streakRisk.en(p),
+  },
+  streak_milestone: {
+    de: (p) =>
+      `${p.weeks} Wochen in Serie! Ihr habt ${p.weeks} Wochen in Folge beide euer Ziel geschafft.`,
+    en: (p) => `${p.weeks} weeks in a row! You both reached your goal ${p.weeks} weeks running.`,
+  },
+  streak_broken: {
+    de: (p) =>
+      `Die Serie ist gerissen: ${p.weeks} Wochen in Folge, diese Woche hat es nicht gereicht. Nächste Woche beginnt eine neue.`,
+    en: (p) =>
+      `The streak ended: ${p.weeks} weeks in a row, but this week fell short. A new one starts next week.`,
   },
   debt_created: {
     de: (p) =>
