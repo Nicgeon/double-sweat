@@ -19,7 +19,7 @@
   import { downloadExport } from '#lib/util/export.ts';
   import { NATIVE } from '#lib/native/flag.ts';
   import type { PushDistributor } from '#lib/native/plugins.ts';
-  import { describeAgent, deviceLabel, disablePush, enablePush, PUSH_PROVIDER, pushActive, pushSupported } from '#lib/util/push.ts';
+  import { describeAgent, deviceLabel, PUSH_PROVIDER, pushActive, pushSupported, togglePushState } from '#lib/util/push.ts';
 
   type Device = { id: string; provider: string; deviceLabel: string | null; createdAt: number };
   type Sess = { id: string; kind: string; label: string | null; createdAt: number; lastSeenAt: number; current: boolean };
@@ -107,28 +107,16 @@
   const PROVIDER_NAMES: Record<string, string> = { webpush: 'Web Push', unifiedpush: 'UnifiedPush', fcm: 'FCM' };
   let pushChoices = $state<PushDistributor[] | null>(null);
 
-  async function togglePush(on: boolean, distributor?: string) {
+  async function togglePush(on: boolean, choice?: string) {
     pushBusy = true;
     pushNote = null;
     pushChoices = null;
     try {
-      if (on) {
-        const res = await enablePush(deviceLabel(), distributor);
-        if (res.status === 'choose') {
-          pushOn = false;
-          pushChoices = res.distributors;
-        } else if (res.status !== 'ok') {
-          pushOn = false;
-          pushNote = {
-            denied: 'Die Erlaubnis wurde abgelehnt. Du kannst sie in den Einstellungen deines Geräts ändern.',
-            disabled: 'Dieser Server hat Push ausgeschaltet.',
-            no_distributor:
-              'Für Push brauchst du eine UnifiedPush-App, zum Beispiel ntfy, oder die App-Version mit Google-Benachrichtigungen (FCM), falls dein Server sie anbietet. Alles erscheint auch unter „Benachrichtigungen“.',
-            unsupported: 'Dieser Browser unterstützt keine Push-Benachrichtigungen (auf dem iPhone nur als installierte App).',
-          }[res.status];
-        }
-      } else {
-        await disablePush();
+      const outcome = await togglePushState(on, deviceLabel(), choice);
+      pushOn = outcome.active;
+      pushChoices = outcome.choices;
+      pushNote = outcome.note;
+      if (!on) {
         const mine = devices.find((d) => d.provider === PUSH_PROVIDER);
         if (mine && !NATIVE) await api.DELETE('/api/v1/push/subscriptions/{id}', { params: { path: { id: mine.id } } });
       }
