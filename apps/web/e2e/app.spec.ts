@@ -203,7 +203,8 @@ test('Ziel und Einsatz festlegen', async ({ browser }, testInfo) => {
   await expect(page.locator('.ds-lane').first()).toContainText('von 5');
   await page.goto('/bet');
 
-  await page.getByRole('button', { name: 'Ändern' }).click();
+  // Die erste Karte ist der Einsatz; die Belohnung hat ein eigenes "Ändern"
+  await page.getByRole('button', { name: 'Ändern' }).first().click();
   await page.getByLabel('Was steht auf dem Spiel?').fill('Wer verliert, kocht am Sonntag');
   await page.getByRole('button', { name: 'Speichern', exact: true }).click();
   await expect(page.getByText('Wer verliert, kocht am Sonntag')).toBeVisible();
@@ -246,4 +247,80 @@ test('Farbe wählen: wirkt sofort, die des Partners ist gesperrt', async ({ brow
   await expect(ben.page.getByRole('radio', { name: 'Orchidee, vergeben von Anna' })).toBeDisabled();
   await ben.page.goto('/');
   await expect(ben.page.locator('.ds-lane.ds-c-orchid')).toContainText('Anna');
+});
+
+test('Belohnung versprechen: Partner sieht sie und bekommt eine Mitteilung', async ({
+  browser,
+}, testInfo) => {
+  const { annaEmail, benEmail } = await makeCouple();
+  const anna = await newUserContext(browser, testInfo);
+  await loginViaUi(anna.page, annaEmail);
+  await anna.page.goto('/bet');
+  const card = anna.page.locator('#belohnung');
+  await expect(card).toContainText('Du für Ben: Noch nichts versprochen.');
+  await card.getByRole('button', { name: 'Ändern' }).click();
+  await anna.page
+    .getByLabel('Was bekommt Ben, wenn das Wochenziel klappt?')
+    .fill('Anna kocht am Sonntag');
+  await anna.page.getByRole('button', { name: 'Speichern', exact: true }).click();
+  await expect(anna.page.getByRole('dialog')).toHaveCount(0);
+  await expect(card).toContainText('Anna kocht am Sonntag');
+
+  const ben = await newUserContext(browser, testInfo);
+  await loginViaUi(ben.page, benEmail);
+  await ben.page.goto('/bet');
+  await expect(ben.page.locator('#belohnung')).toContainText('Anna für dich:');
+  await expect(ben.page.locator('#belohnung')).toContainText('Anna kocht am Sonntag');
+  await ben.page.goto('/notifications');
+  await expect(ben.page.getByText(/Anna verspricht dir eine Belohnung/)).toBeVisible();
+  expect(anna.problems).toEqual([]);
+  expect(ben.problems).toEqual([]);
+});
+
+test('Reaktion auf das Foto des Partners: sichtbar auf der Kachel, Mitteilung, wieder zurücknehmen', async ({
+  browser,
+}, testInfo) => {
+  const { anna, annaEmail, benEmail } = await makeCouple();
+  await anna.checkin('laufen');
+
+  const ben = await newUserContext(browser, testInfo);
+  await loginViaUi(ben.page, benEmail);
+  await ben.page.getByRole('button', { name: /Foto ansehen/ }).click();
+  const group = ben.page.getByRole('group', { name: /Auf das Training von Anna reagieren/ });
+  const flame = group.getByRole('button', { name: 'Feuer' });
+  await expect(flame).toHaveAttribute('aria-pressed', 'false');
+  await flame.click();
+  await expect(flame).toHaveAttribute('aria-pressed', 'true');
+  await group.getByRole('button', { name: 'Stark' }).click(); // ersetzt die erste Reaktion
+  await expect(group.getByRole('button', { name: 'Stark' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(flame).toHaveAttribute('aria-pressed', 'false');
+  await ben.page.keyboard.press('Escape');
+  await expect(ben.page.locator('.ds-photo__react')).toContainText('Ben: Stark');
+
+  const annaPage = await newUserContext(browser, testInfo);
+  await loginViaUi(annaPage.page, annaEmail);
+  await expect(annaPage.page.locator('.ds-photo__react')).toContainText('Ben: Stark');
+  await annaPage.page.getByRole('button', { name: /Foto ansehen/ }).click();
+  await expect(annaPage.page.getByRole('dialog')).toContainText('Ben: Stark');
+  // Auf das eigene Foto kann man nicht reagieren
+  await expect(annaPage.page.getByRole('group', { name: /reagieren/ })).toHaveCount(0);
+  await annaPage.page.keyboard.press('Escape');
+  await annaPage.page.goto('/notifications');
+  // Die Mitteilung kommt nur für die erste Reaktion (hier das Feuer); der Wechsel zu "Stark" erzeugt keine zweite
+  await expect(annaPage.page.getByText('Ben feuert dich an.')).toBeVisible();
+  await expect(annaPage.page.getByText('Ben findet dich stark.')).toHaveCount(0);
+
+  // Erneut antippen nimmt die Reaktion zurück
+  await ben.page.getByRole('button', { name: /Foto ansehen/ }).click();
+  await ben.page
+    .getByRole('group', { name: /reagieren/ })
+    .getByRole('button', { name: 'Stark' })
+    .click();
+  await ben.page.keyboard.press('Escape');
+  await expect(ben.page.locator('.ds-photo__react')).toHaveCount(0);
+  expect(ben.problems).toEqual([]);
+  expect(annaPage.problems).toEqual([]);
 });

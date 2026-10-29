@@ -8,6 +8,7 @@ import {
   memberships,
   notifications,
   pushSubscriptions,
+  rewards,
   teams,
   type User,
   users,
@@ -19,6 +20,7 @@ import { HOUR } from '../../util/time.js';
 import { APP_NAME } from '../../version.js';
 import { verifyReauth } from '../auth/service.js';
 import { consumeEmailToken, createEmailToken, EMAIL_TOKEN_TTL_MS } from '../mail/tokens.js';
+import { claimsOfUser } from '../rewards/service.js';
 
 export const EXPORT_FORMAT_VERSION = 1;
 
@@ -157,6 +159,22 @@ function collect(ctx: AppContext, userId: string) {
         createdAt: new Date(d.createdAt).toISOString(),
         redeemedAt: d.redeemedAt ? new Date(d.redeemedAt).toISOString() : null,
       })),
+    rewards: team
+      ? ctx.db
+          .select({ effectiveFrom: rewards.effectiveFrom, text: rewards.text })
+          .from(rewards)
+          .where(eq(rewards.giverId, userId))
+          .orderBy(rewards.effectiveFrom)
+          .all()
+      : [],
+    rewardClaims: claimsOfUser(ctx.db, userId).map((c) => ({
+      weekStart: c.weekStart,
+      rewardText: c.rewardText,
+      direction: c.recipientId === userId ? 'earned' : 'give',
+      otherPerson: partnerName(c.recipientId === userId ? c.giverId : c.recipientId),
+      createdAt: new Date(c.createdAt).toISOString(),
+      redeemedAt: c.redeemedAt ? new Date(c.redeemedAt).toISOString() : null,
+    })),
     notifications: ctx.db
       .select()
       .from(notifications)

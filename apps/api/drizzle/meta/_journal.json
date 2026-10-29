@@ -43,6 +43,13 @@
       "when": 1793258730513,
       "tag": "0005_checkins_per_day",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1793259281929,
+      "tag": "0006_rewards_and_reactions",
+      "breakpoints": true
     }
   ]
 }

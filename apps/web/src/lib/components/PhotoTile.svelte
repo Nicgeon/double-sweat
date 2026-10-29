@@ -14,10 +14,12 @@
     dateLabel?: string;
     tag?: string;
     tagIcon?: IconName;
+    /** Reaktion auf das Foto: Symbol plus Text für Screenreader. */
+    reaction?: { icon: IconName; label: string };
     empty?: string;
     onclick?: () => void;
   };
-  let { src, alt = '', seat = 1, color, name, dateLabel, tag, tagIcon, empty, onclick }: Props = $props();
+  let { src, alt = '', seat = 1, color, name, dateLabel, tag, tagIcon, reaction, empty, onclick }: Props = $props();
 </script>
 
 
@@ -29,6 +31,7 @@
     <ApiImage src={src ?? ''} {alt} />
   {/if}
   {#if name}<Avatar {seat} {color} {name} size="sm" class="ds-photo__who" />{/if}
+  {#if reaction}<span class="ds-photo__react" title={reaction.label}><Icon name={reaction.icon} size={18} /><span class="ds-sr">{reaction.label}</span></span>{/if}
   {#if dateLabel || tag}
     <figcaption class="ds-photo__cap">
       {#if dateLabel}<span class="ds-photo__date">{dateLabel}</span>{/if}

@@ -243,6 +243,67 @@ export const debts = sqliteTable(
   ],
 );
 
+/** Belohnung, die jemand dem Partner verspricht, wenn dieser sein Wochenziel schafft. Gilt wie der Einsatz ab einem Montag. */
+export const rewards = sqliteTable(
+  'rewards',
+  {
+    id: text('id').primaryKey(),
+    teamId: text('team_id')
+      .notNull()
+      .references(() => teams.id, { onDelete: 'cascade' }),
+    giverId: text('giver_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Leer = keine Belohnung (zurückgezogen). */
+    text: text('text').notNull(),
+    effectiveFrom: text('effective_from').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [unique('rewards_giver_effective').on(t.giverId, t.effectiveFrom)],
+);
+
+/** Verdiente Belohnung: Der Empfänger hat sein Wochenziel geschafft, der Geber schuldet sie ihm. */
+export const rewardClaims = sqliteTable(
+  'reward_claims',
+  {
+    id: text('id').primaryKey(),
+    teamId: text('team_id')
+      .notNull()
+      .references(() => teams.id, { onDelete: 'cascade' }),
+    weekStart: text('week_start').notNull(),
+    recipientId: text('recipient_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    giverId: text('giver_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Text der Belohnung zum Zeitpunkt der Abrechnung. */
+    rewardText: text('reward_text').notNull(),
+    createdAt: integer('created_at').notNull(),
+    redeemedAt: integer('redeemed_at'),
+  },
+  (t) => [
+    unique('reward_claims_recipient_week').on(t.recipientId, t.weekStart),
+    index('reward_claims_team_idx').on(t.teamId),
+  ],
+);
+
+/** Reaktion des Partners auf einen Check-in (eine je Person und Check-in). */
+export const reactions = sqliteTable(
+  'reactions',
+  {
+    checkinId: text('checkin_id')
+      .notNull()
+      .references(() => checkins.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.checkinId, t.userId] })],
+);
+
 export const pushSubscriptions = sqliteTable(
   'push_subscriptions',
   {
@@ -331,5 +392,8 @@ export type Checkin = typeof checkins.$inferSelect;
 export type WeekResult = typeof weekResults.$inferSelect;
 export type Bet = typeof bets.$inferSelect;
 export type Debt = typeof debts.$inferSelect;
+export type Reward = typeof rewards.$inferSelect;
+export type RewardClaim = typeof rewardClaims.$inferSelect;
+export type Reaction = typeof reactions.$inferSelect;
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 export type NotificationRow = typeof notifications.$inferSelect;

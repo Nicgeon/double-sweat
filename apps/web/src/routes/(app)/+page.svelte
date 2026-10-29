@@ -11,6 +11,7 @@
   import Scoreboard from '#lib/components/Scoreboard.svelte';
   import { session } from '#lib/state/session.svelte.ts';
   import { addDays, weekdayDate, weekLabel } from '#lib/util/format.ts';
+  import { reactionMeta } from '#lib/util/reactions.ts';
   import { tagMeta } from '#lib/util/tags.ts';
   import { laneOf } from '#lib/util/week.ts';
   import { streakStore } from '#lib/state/streak.svelte.ts';
@@ -96,6 +97,12 @@
         </Banner>
       {/if}
     {/if}
+    {#if data.rewards.earned > 0}
+      <Banner tone="success" title="Belohnung verdient">
+        Du hast dein Wochenziel geschafft. {partner ? `${partner.displayName} schuldet dir etwas.` : ''}
+        {#snippet action()}<Button variant="secondary" size="sm" href="/bet#belohnung">Ansehen</Button>{/snippet}
+      </Banner>
+    {/if}
     {#if me && me.goalDays !== null && !me.checkedInToday && me.remainingDays > 0}
       <Banner tone={me.status === 'at_risk' ? 'warning' : 'info'} title={me.status === 'at_risk' ? 'Heute zählt' : 'Heute noch nicht eingecheckt'}>
         {#if me.neededDays > 0}Noch {me.neededDays} {me.neededDays === 1 ? 'Check-in' : 'Check-ins'} bis zum Wochenziel.{/if}
@@ -125,6 +132,19 @@
           {/if}
         </Card>
 
+        {#if partner}
+          <Card title="Belohnung">
+            {#snippet action()}<Button variant="ghost" size="sm" href="/bet#belohnung">Ändern</Button>{/snippet}
+            <p>{data.reward ? `Wenn du dein Wochenziel schaffst: ${data.reward}` : `${partner.displayName} hat dir noch keine Belohnung versprochen.`}</p>
+            {#if data.rewards.earned > 0 || data.rewards.toGive > 0}
+              <p class="small muted">
+                {#if data.rewards.earned > 0}Du hast dir {data.rewards.earned} {data.rewards.earned === 1 ? 'Belohnung' : 'Belohnungen'} verdient.{/if}
+                {#if data.rewards.toGive > 0}Du schuldest {data.rewards.toGive}.{/if}
+              </p>
+            {/if}
+          </Card>
+        {/if}
+
         <section aria-labelledby="feed-title" class="stack">
           <h2 class="ds-card__title" id="feed-title">Fotos dieser Woche</h2>
           {#if data.feed.length === 0}
@@ -134,6 +154,7 @@
               {#each data.feed as c (c.id)}
                 {@const m = memberById.get(c.userId)}
                 {@const t = tagMeta(c.tag)}
+                {@const r = reactionMeta(c.reactions[0]?.kind)}
                 <PhotoTile
                   src={c.photo.thumbUrl}
                   alt="Foto von {c.displayName}"
@@ -143,6 +164,7 @@
                   dateLabel={weekdayDate(c.localDate)}
                   tag={t?.label}
                   tagIcon={t?.icon}
+                  reaction={r && c.reactions[0] ? { icon: r.icon, label: `${c.reactions[0].displayName}: ${r.label}` } : undefined}
                   onclick={() => (viewing = c)}
                 />
               {/each}
@@ -162,5 +184,11 @@
   ondeleted={() => {
     viewing = null;
     void load();
+  }}
+  onreacted={(reactions) => {
+    const open = viewing;
+    if (!open) return;
+    viewing = { ...open, reactions };
+    if (data) data.feed = data.feed.map((c) => (c.id === open.id ? { ...c, reactions } : c));
   }}
 />

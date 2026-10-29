@@ -2513,7 +2513,7 @@ export interface paths {
         };
         put?: never;
         /**
-         * Check-in mit Foto für heute (höchstens einer pro Tag)
+         * Check-in mit Foto für heute (bis zu 5 pro Tag, für das Wochenziel zählt der Tag einmal)
          * @description Der Tag ergibt sich aus Serverzeit und der Zeitzone des Nutzers. Das Foto wird geprüft (JPEG, PNG oder WebP), auf höchstens 1600 px verkleinert und ohne Metadaten (EXIF/GPS) als JPEG gespeichert.
          */
         post: {
@@ -2827,6 +2827,12 @@ export interface paths {
                             debts: {
                                 owe: number;
                                 owed: number;
+                            };
+                            /** @description Belohnung, die dein Partner dir für das Wochenziel dieser Woche verspricht */
+                            reward: string | null;
+                            rewards: {
+                                earned: number;
+                                toGive: number;
                             };
                             members: {
                                 userId: string;
@@ -3297,6 +3303,621 @@ export interface paths {
                     content: {
                         "application/json": {
                             debt: components["schemas"]["Debt"];
+                        };
+                    };
+                };
+                /** @description Ungültige Eingabe */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht angemeldet */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht erlaubt */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht gefunden */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Konflikt */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Zu viele Anfragen (Retry-After beachten) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rewards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Belohnungen, die du und dein Partner einander für das Wochenziel versprechen */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Versprechen */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RewardOverview"];
+                    };
+                };
+                /** @description Ungültige Eingabe */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht angemeldet */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht erlaubt */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht gefunden */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Konflikt */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Zu viele Anfragen (Retry-After beachten) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Belohnung für den Partner festlegen (leer = zurückziehen). Sie gilt erst für Wochen, die noch bei keinem Partner begonnen haben. */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        text: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Gesetzt */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RewardOverview"];
+                    };
+                };
+                /** @description Ungültige Eingabe */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht angemeldet */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht erlaubt */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht gefunden */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Konflikt */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Zu viele Anfragen (Retry-After beachten) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verdiente Belohnungen im Team (Standard: offene) */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "open" | "redeemed" | "all";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Belohnungen */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            claims: components["schemas"]["RewardClaim"][];
+                        };
+                    };
+                };
+                /** @description Ungültige Eingabe */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht angemeldet */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht erlaubt */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht gefunden */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Konflikt */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Zu viele Anfragen (Retry-After beachten) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reward-claims/{id}/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Belohnung als erhalten markieren (nur durch die Person, die sie verdient hat) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Erhalten */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            claim: components["schemas"]["RewardClaim"];
+                        };
+                    };
+                };
+                /** @description Ungültige Eingabe */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht angemeldet */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht erlaubt */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht gefunden */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Konflikt */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Zu viele Anfragen (Retry-After beachten) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Markierung zurücknehmen (nur durch die Person, die sie verdient hat) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Wieder offen */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            claim: components["schemas"]["RewardClaim"];
+                        };
+                    };
+                };
+                /** @description Ungültige Eingabe */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht angemeldet */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht erlaubt */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht gefunden */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Konflikt */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Zu viele Anfragen (Retry-After beachten) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/checkins/{id}/reaction": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Auf den Check-in des Partners reagieren (Flamme, Applaus, Stärke, Herz). Ersetzt die eigene frühere Reaktion. */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        kind: "flame" | "applause" | "strong" | "heart";
+                    };
+                };
+            };
+            responses: {
+                /** @description Reaktionen des Check-ins */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            reactions: components["schemas"]["Reaction"][];
+                        };
+                    };
+                };
+                /** @description Ungültige Eingabe */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht angemeldet */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht erlaubt */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht gefunden */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Konflikt */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Zu viele Anfragen (Retry-After beachten) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Eigene Reaktion zurücknehmen */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Reaktionen des Check-ins */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            reactions: components["schemas"]["Reaction"][];
                         };
                     };
                 };
@@ -4500,12 +5121,20 @@ export interface components {
             tag: string | null;
             note: string | null;
             createdAt: number;
+            /** @description Reaktion des Partners (höchstens eine) */
+            reactions: components["schemas"]["Reaction"][];
             photo: {
                 thumbUrl: string;
                 fullUrl: string;
                 width: number;
                 height: number;
             };
+        };
+        Reaction: {
+            /** @enum {string} */
+            kind: "flame" | "applause" | "strong" | "heart";
+            userId: string;
+            displayName: string;
         };
         Bet: {
             /** @description Einsatz der laufenden Woche */
@@ -4530,6 +5159,44 @@ export interface components {
             direction: "owe" | "owed";
             debtorName: string;
             creditorName: string;
+        };
+        RewardOverview: {
+            /** @description Was du deinem Partner verspricht */
+            mine: {
+                /** @description Gilt für die laufende Woche */
+                current: string | null;
+                /** @description Bereits beschlossene Änderung (text null = zurückgezogen) */
+                upcoming: {
+                    text: string | null;
+                    effectiveFrom: string;
+                } | null;
+            };
+            /** @description Was dein Partner dir verspricht (null, solange du keinen Partner hast) */
+            partner: {
+                /** @description Gilt für die laufende Woche */
+                current: string | null;
+                /** @description Bereits beschlossene Änderung (text null = zurückgezogen) */
+                upcoming: {
+                    text: string | null;
+                    effectiveFrom: string;
+                } | null;
+                displayName: string;
+            } | null;
+        };
+        RewardClaim: {
+            id: string;
+            weekStart: string;
+            /** @description Belohnung zum Zeitpunkt der Abrechnung */
+            rewardText: string;
+            createdAt: number;
+            redeemedAt: number | null;
+            /**
+             * @description earned: du hast sie verdient, give: du schuldest sie
+             * @enum {string}
+             */
+            direction: "earned" | "give";
+            recipientName: string;
+            giverName: string;
         };
         History: {
             weeks: {

@@ -16,6 +16,7 @@ import { betForWeek } from '../bets/service.js';
 import { type CheckinDto, listTeamCheckins, MAX_CHECKINS_PER_DAY } from '../checkins/service.js';
 import { goalForWeek } from '../goals/service.js';
 import { currentTimezone } from '../me/timezone.js';
+import { openClaimCounts, rewardForWeek } from '../rewards/service.js';
 import { getMembership } from '../teams/service.js';
 
 export type WeekStatus = 'no_goal' | 'done' | 'on_track' | 'at_risk' | 'unreachable';
@@ -55,6 +56,10 @@ export interface Dashboard {
   bet: string | null;
   /** Offene Schulden: wie viele ich schulde und wie viele mir geschuldet werden. */
   debts: { owe: number; owed: number };
+  /** Belohnung, die mein Partner mir für das Wochenziel der laufenden Woche verspricht. */
+  reward: string | null;
+  /** Offene Belohnungen: wie viele ich verdient habe (earned) und wie viele ich noch schulde (toGive). */
+  rewards: { earned: number; toGive: number };
   members: MemberProgress[];
   feed: CheckinDto[];
 }
@@ -144,6 +149,7 @@ export function getDashboard(ctx: AppContext, viewer: User): Dashboard {
 
   const weeks = [...new Set(members.map((m) => m.weekStart))];
   const mine = members.find((m) => m.isMe) as MemberProgress;
+  const partnerId = members.find((m) => !m.isMe)?.userId;
   const open = ctx.db
     .select({ debtorId: debts.debtorId, creditorId: debts.creditorId })
     .from(debts)
@@ -157,6 +163,8 @@ export function getDashboard(ctx: AppContext, viewer: User): Dashboard {
       owe: open.filter((d) => d.debtorId === viewer.id).length,
       owed: open.filter((d) => d.creditorId === viewer.id).length,
     },
+    reward: partnerId ? rewardForWeek(ctx.db, partnerId, mine.weekStart) : null,
+    rewards: openClaimCounts(ctx.db, membership.teamId, viewer.id),
     members,
     feed: listTeamCheckins(ctx.db, membership.teamId, weeks),
   };

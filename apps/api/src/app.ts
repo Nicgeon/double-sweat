@@ -25,6 +25,8 @@ import { meRoutes } from './modules/me/routes.js';
 import { notificationRoutes } from './modules/notifications/routes.js';
 import { nudgeRoutes } from './modules/nudges/routes.js';
 import { pushRoutes } from './modules/push/routes.js';
+import { reactionRoutes } from './modules/reactions/routes.js';
+import { rewardRoutes } from './modules/rewards/routes.js';
 import { teamRoutes } from './modules/teams/routes.js';
 import { APP_VERSION } from './version.js';
 
@@ -91,6 +93,8 @@ export function createApp(ctx: AppContext): OpenAPIHono<AppEnv> {
   api.route('/', dashboardRoutes(ctx));
   api.route('/', betRoutes(ctx));
   api.route('/', debtRoutes(ctx));
+  api.route('/', rewardRoutes(ctx));
+  api.route('/', reactionRoutes(ctx));
   api.route('/', historyRoutes(ctx));
   api.route('/', pushRoutes(ctx));
   api.route('/', notificationRoutes(ctx));

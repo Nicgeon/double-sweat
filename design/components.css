@@ -183,6 +183,13 @@
 .ds-btn--secondary:hover:not(:disabled) {
   background: var(--surface-2);
 }
+/* gewählter Zustand eines Umschalters (z. B. Reaktion): wie der Primärbutton, damit es nicht nur an der Farbe hängt */
+.ds-btn--secondary[aria-pressed="true"],
+.ds-btn--secondary[aria-pressed="true"]:hover:not(:disabled) {
+  background: var(--action);
+  color: var(--on-action);
+  border-color: var(--action);
+}
 .ds-btn--ghost {
   background: transparent;
   color: var(--ink);
@@ -713,6 +720,28 @@ textarea.ds-field__input {
   align-items: center;
   gap: var(--space-1);
   font: 400 14px / 20px var(--font-body);
+}
+
+/* Reaktion des Partners auf der Kachel */
+.ds-photo__react {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-pill);
+  background: var(--scrim);
+  color: var(--on-scrim);
+}
+
+/* ---------- Reactions ---------- */
+.ds-react {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 /* ---------- DebtRow ---------- */

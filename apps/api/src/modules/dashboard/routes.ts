@@ -59,6 +59,13 @@ export function dashboardRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
             maxCheckinsPerDay: z.number().describe('Wie viele Check-ins pro Tag möglich sind'),
             bet: z.string().nullable(),
             debts: z.object({ owe: z.number(), owed: z.number() }),
+            reward: z
+              .string()
+              .nullable()
+              .describe(
+                'Belohnung, die dein Partner dir für das Wochenziel dieser Woche verspricht',
+              ),
+            rewards: z.object({ earned: z.number(), toGive: z.number() }),
             members: z.array(memberSchema),
             feed: z.array(checkinSchema),
           }),

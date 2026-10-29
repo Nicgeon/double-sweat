@@ -9,9 +9,9 @@ sind optional und im Abschnitt [Datenschutz](#datenschutz) beschrieben.
 
 > **Status: in Entwicklung.** Backend, **Web-Oberfläche** (mobil und Desktop, Hell und Dunkel, als PWA
 > installierbar) und **Android-App** sind gebaut und automatisch getestet: Konten, Anmeldung, Einladung per
-> Link, optionaler Mailversand, Wochenziele, Foto-Check-ins mit Wochenlogik pro Zeitzone, Anzeigetafel,
-> Wetteinsatz mit automatischer Wochenabrechnung, Schulden, Verlauf, Push (Web Push und UnifiedPush),
-> Anstupsen und Abend-Erinnerung. **Auf einem echten Gerät ist die App noch nicht ausprobiert**
+> Link, optionaler Mailversand, Wochenziele, Foto-Check-ins (mehrere pro Tag) mit Wochenlogik pro Zeitzone,
+> Anzeigetafel, Wetteinsatz mit automatischer Wochenabrechnung, Schulden, Belohnungen, Reaktionen, Verlauf,
+> Push (Web Push und UnifiedPush), Anstupsen und Abend-Erinnerung. **Auf einem echten Gerät ist die App noch nicht ausprobiert**
 > (siehe [Android-App](#android-app), Abschnitt "Was noch nicht geprüft ist").
 > Die OpenAPI-Spezifikation liegt unter `/api/v1/openapi.json`.
 
@@ -323,6 +323,14 @@ der Android-App).
   sofort, solange die laufende Woche noch nicht gewertet wird (Team nicht vollständig oder Beitrittswoche).
 - Der Einsatz ist Freitext pro Team; eine Änderung gilt erst für Wochen, die bei **keinem** Partner schon
   begonnen haben. Er lässt sich also nicht kurz vor der Abrechnung ändern.
+- **Belohnung** als Gegenstück zum Einsatz: Jede Person kann dem Partner eine Belohnung für dessen Wochenziel
+  versprechen (Freitext, für den Partner sichtbar, gilt wie der Einsatz erst für Wochen, die noch bei niemandem
+  begonnen haben; leer lassen zieht sie zurück). Schafft jemand sein Ziel, wird bei der Abrechnung die Belohnung
+  des anderen "verdient" und beide bekommen eine Mitteilung. Nur wer sie verdient hat, markiert sie als
+  "Erhalten". Der Text wird bei der Abrechnung festgehalten.
+- **Reaktionen:** Auf das Check-in des Partners reagiert man mit Feuer, Bravo, Stark oder Stolz (eine Reaktion
+  je Check-in, erneutes Antippen nimmt sie zurück). Der Partner erfährt von der ersten Reaktion; Wechseln oder
+  Zurücknehmen erzeugt keine weitere Mitteilung.
 - Der Wochenabschluss läuft automatisch jede Minute, ist idempotent (pro Nutzer und Woche genau ein Ergebnis)
   und holt verpasste Wochen nach einem Neustart nach. Gewertet wird ab dem ersten Montag, nachdem das Team
   vollständig ist; ein unvollständiges Team wird nicht abgerechnet. Wer kein Ziel gesetzt hat, wird nicht gewertet.

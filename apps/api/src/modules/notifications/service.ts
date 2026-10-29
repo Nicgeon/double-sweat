@@ -3,7 +3,15 @@ import type { AppContext } from '../../context.js';
 import { type NotificationRow, notifications, type User } from '../../db/schema.js';
 import { newId } from '../../util/ids.js';
 
-export type NotificationType = 'nudge' | 'reminder' | 'debt_created' | 'team_dissolved' | 'test';
+export type NotificationType =
+  | 'nudge'
+  | 'reminder'
+  | 'debt_created'
+  | 'reward_set'
+  | 'reward_earned'
+  | 'reaction'
+  | 'team_dissolved'
+  | 'test';
 
 export interface NotificationInput {
   type: NotificationType;

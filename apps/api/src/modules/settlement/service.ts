@@ -4,6 +4,7 @@ import {
   checkins,
   debts,
   memberships,
+  rewardClaims,
   type Team,
   teams,
   type User,
@@ -18,6 +19,7 @@ import { newId } from '../../util/ids.js';
 import { betForWeek } from '../bets/service.js';
 import { goalForWeek } from '../goals/service.js';
 import { currentTimezone } from '../me/timezone.js';
+import { rewardForWeek } from '../rewards/service.js';
 
 export interface SettledWeek {
   userId: string;
@@ -30,6 +32,9 @@ export interface SettledWeek {
   met: boolean | null;
   debtId: string | null;
   betText: string | null;
+  /** Verdiente Belohnung (Ziel erreicht und der Partner hatte eine versprochen). */
+  rewardClaimId: string | null;
+  rewardText: string | null;
 }
 
 function settleWeek(
@@ -93,6 +98,27 @@ function settleWeek(
             .run();
         }
       }
+      // Ziel erreicht: Der Partner schuldet die Belohnung, die er für diese Woche versprochen hatte
+      let rewardClaimId: string | null = null;
+      let rewardText: string | null = null;
+      if (met === true) {
+        rewardText = rewardForWeek(tx, partner.id, weekStart);
+        if (rewardText) {
+          rewardClaimId = newId(now);
+          tx.insert(rewardClaims)
+            .values({
+              id: rewardClaimId,
+              teamId: team.id,
+              weekStart,
+              recipientId: user.id,
+              giverId: partner.id,
+              rewardText,
+              createdAt: now,
+            })
+            .onConflictDoNothing()
+            .run();
+        }
+      }
       return {
         userId: user.id,
         partnerId: partner.id,
@@ -103,6 +129,8 @@ function settleWeek(
         met,
         debtId,
         betText,
+        rewardClaimId,
+        rewardText,
       };
     },
     { behavior: 'immediate' },

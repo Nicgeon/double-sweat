@@ -7,6 +7,7 @@
   import DebtRow from '#lib/components/DebtRow.svelte';
   import Field from '#lib/components/Field.svelte';
   import Page from '#lib/components/Page.svelte';
+  import RewardRow from '#lib/components/RewardRow.svelte';
   import Segmented from '#lib/components/Segmented.svelte';
   import Sheet from '#lib/components/Sheet.svelte';
   import Stepper from '#lib/components/Stepper.svelte';
@@ -18,7 +19,16 @@
   let goals = $state<Goals | null>(null);
   let nextGoal = $state(3);
   let bet = $state<{ current: string | null; upcoming: { text: string; effectiveFrom: string } | null } | null>(null);
+  type Pledge = { current: string | null; upcoming: { text: string | null; effectiveFrom: string } | null };
+  type Rewards = { mine: Pledge; partner: (Pledge & { displayName: string }) | null };
+  type Claim = { id: string; weekStart: string; rewardText: string; redeemedAt: number | null; direction: 'earned' | 'give'; recipientName: string; giverName: string };
   let debts = $state<Debt[]>([]);
+  let rewards = $state<Rewards | null>(null);
+  let claims = $state<Claim[]>([]);
+  let rewardOpen = $state(false);
+  let rewardText = $state('');
+  let savingReward = $state(false);
+  let receiving = $state<string | null>(null);
   let filter = $state<'open' | 'all'>('open');
   let error = $state<string | null>(null);
   let notice = $state<string | null>(null);
@@ -44,10 +54,11 @@
       goals = unwrap(await api.GET('/api/v1/goals')) as Goals;
       nextGoal = goals.nextGoal ?? goals.currentGoal ?? 3;
       bet = unwrap(await api.GET('/api/v1/bets')) as typeof bet;
+      rewards = unwrap(await api.GET('/api/v1/rewards')) as Rewards;
     } catch (e) {
       fail(e);
     }
-    await loadDebts();
+    await Promise.all([loadDebts(), loadClaims()]);
   });
 
   async function saveGoal() {
@@ -65,6 +76,42 @@
       fail(e);
     } finally {
       savingGoal = false;
+    }
+  }
+
+  async function loadClaims() {
+    try {
+      claims = unwrap(await api.GET('/api/v1/reward-claims', { params: { query: { status: filter } } })).claims;
+    } catch (e) {
+      fail(e);
+    }
+  }
+
+  function openReward() {
+    rewardText = rewards?.mine.upcoming ? (rewards.mine.upcoming.text ?? '') : (rewards?.mine.current ?? '');
+    rewardOpen = true;
+  }
+  async function saveReward() {
+    savingReward = true;
+    error = null;
+    try {
+      rewards = unwrap(await api.PUT('/api/v1/rewards', { body: { text: rewardText } })) as Rewards;
+      rewardOpen = false;
+    } catch (e) {
+      fail(e);
+    } finally {
+      savingReward = false;
+    }
+  }
+  async function receive(id: string) {
+    receiving = id;
+    try {
+      unwrap(await api.POST('/api/v1/reward-claims/{id}/redeem', { params: { path: { id } } }));
+      await loadClaims();
+    } catch (e) {
+      fail(e);
+    } finally {
+      receiving = null;
     }
   }
 
@@ -125,13 +172,32 @@
           </div>
         {/if}
       </Card>
+
+      <Card title="Belohnung" id="belohnung">
+        {#snippet action()}<Button variant="ghost" size="sm" icon="gift" disabled={!rewards?.partner} onclick={openReward}>Ändern</Button>{/snippet}
+        <div class="stack">
+          {#if rewards?.partner}
+            <p><strong>Du für {rewards.partner.displayName}:</strong> {rewards.mine.current || 'Noch nichts versprochen.'}</p>
+            {#if rewards.mine.upcoming}
+              <p class="small muted">Ab {longDate(rewards.mine.upcoming.effectiveFrom)}: {rewards.mine.upcoming.text ?? 'keine Belohnung'}</p>
+            {/if}
+            <p><strong>{rewards.partner.displayName} für dich:</strong> {rewards.partner.current || 'Noch nichts versprochen.'}</p>
+            {#if rewards.partner.upcoming}
+              <p class="small muted">Ab {longDate(rewards.partner.upcoming.effectiveFrom)}: {rewards.partner.upcoming.text ?? 'keine Belohnung'}</p>
+            {/if}
+            <p class="small muted">Wer sein Wochenziel schafft, bekommt, was der andere versprochen hat. Eine Änderung gilt erst für Wochen, die noch bei niemandem begonnen haben.</p>
+          {:else}
+            <p class="muted">Sobald dein Partner dabei ist, könnt ihr einander Belohnungen versprechen.</p>
+          {/if}
+        </div>
+      </Card>
     </div>
 
     <div class="stack">
       <section class="stack" aria-labelledby="debts-title">
         <div class="line">
           <h2 class="ds-card__title" id="debts-title">Schulden</h2>
-          <Segmented label="Anzeige" bind:value={filter} onchange={loadDebts} options={[{ value: 'open', label: 'Offen' }, { value: 'all', label: 'Alle' }]} />
+          <Segmented label="Anzeige" bind:value={filter} onchange={() => { void loadDebts(); void loadClaims(); }} options={[{ value: 'open', label: 'Offen' }, { value: 'all', label: 'Alle' }]} />
         </div>
         {#if debts.length === 0}
           <p class="muted">{filter === 'open' ? 'Nichts offen.' : 'Noch keine Schulden.'}</p>
@@ -152,6 +218,28 @@
           </ul>
         {/if}
       </section>
+
+      <section class="stack" aria-labelledby="claims-title">
+        <h2 class="ds-card__title" id="claims-title">Verdiente Belohnungen</h2>
+        {#if claims.length === 0}
+          <p class="muted">{filter === 'open' ? 'Nichts offen.' : 'Noch keine Belohnungen verdient.'}</p>
+        {:else}
+          <ul class="list">
+            {#each claims as c (c.id)}
+              <RewardRow
+                recipientName={c.recipientName}
+                giverName={c.giverName}
+                viewerIsRecipient={c.direction === 'earned'}
+                reward={c.rewardText}
+                week="KW {isoWeek(c.weekStart)}"
+                received={c.redeemedAt !== null}
+                busy={receiving === c.id}
+                onreceive={() => receive(c.id)}
+              />
+            {/each}
+          </ul>
+        {/if}
+      </section>
     </div>
   </div>
 </Page>
@@ -163,5 +251,15 @@
   {#snippet footer()}
     <Button variant="ghost" onclick={() => (betOpen = false)}>Abbrechen</Button>
     <Button loading={savingBet} onclick={saveBet}>Speichern</Button>
+  {/snippet}
+</Sheet>
+
+<Sheet open={rewardOpen} title="Belohnung festlegen" onclose={() => (rewardOpen = false)}>
+  <form class="form" onsubmit={(e) => { e.preventDefault(); void saveReward(); }}>
+    <Field label="Was bekommt {rewards?.partner?.displayName ?? 'dein Partner'}, wenn das Wochenziel klappt?" bind:value={rewardText} maxlength={140} hint="Gilt ab der nächsten Woche. Leer lassen, um sie zurückzuziehen." />
+  </form>
+  {#snippet footer()}
+    <Button variant="ghost" onclick={() => (rewardOpen = false)}>Abbrechen</Button>
+    <Button loading={savingReward} onclick={saveReward}>Speichern</Button>
   {/snippet}
 </Sheet>

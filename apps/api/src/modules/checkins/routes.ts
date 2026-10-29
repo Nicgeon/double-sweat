@@ -7,6 +7,7 @@ import { errorResponses, jsonResponse, okSchema, protectedSecurity } from '../..
 import type { AppEnv } from '../../http/types.js';
 import { badRequest } from '../../util/errors.js';
 import { currentTimezone } from '../me/timezone.js';
+import { reactionSchema } from '../reactions/routes.js';
 import {
   CHECKIN_TAGS,
   type CheckinDto,
@@ -27,6 +28,7 @@ export const checkinSchema = z
     tag: z.string().nullable(),
     note: z.string().nullable(),
     createdAt: z.number(),
+    reactions: z.array(reactionSchema).describe('Reaktion des Partners (höchstens eine)'),
     photo: z.object({
       thumbUrl: z.string(),
       fullUrl: z.string(),
@@ -46,7 +48,8 @@ export function checkinRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
       method: 'post',
       path: '/checkins',
       tags,
-      summary: 'Check-in mit Foto für heute (höchstens einer pro Tag)',
+      summary:
+        'Check-in mit Foto für heute (bis zu 5 pro Tag, für das Wochenziel zählt der Tag einmal)',
       description:
         'Der Tag ergibt sich aus Serverzeit und der Zeitzone des Nutzers. Das Foto wird geprüft (JPEG, PNG oder WebP), ' +
         'auf höchstens 1600 px verkleinert und ohne Metadaten (EXIF/GPS) als JPEG gespeichert.',

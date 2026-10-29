@@ -46,7 +46,10 @@ test('Verlauf und Einsatz: abgerechnete Wochen, Schuld einlösen', async ({ brow
   await expect(benUi.page.getByRole('button', { name: 'Eingelöst' })).toHaveCount(0);
 
   await annaUi.page.getByRole('button', { name: 'Eingelöst' }).click();
-  await expect(annaUi.page.getByText('Nichts offen.')).toBeVisible();
+  // Schulden und verdiente Belohnungen haben je eine Liste: hier geht es um die Schulden
+  await expect(
+    annaUi.page.getByRole('region', { name: 'Schulden' }).getByText('Nichts offen.'),
+  ).toBeVisible();
   await annaUi.page.getByRole('radio', { name: 'Alle' }).click();
   await expect(annaUi.page.getByText('Ben schuldet dir')).toBeVisible();
   await expect(annaUi.page.locator('.ds-debt .ds-chip--done')).toContainText('Eingelöst');

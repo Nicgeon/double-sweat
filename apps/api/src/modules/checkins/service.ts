@@ -9,6 +9,7 @@ import { newId } from '../../util/ids.js';
 import { HOUR } from '../../util/time.js';
 import { currentTimezone } from '../me/timezone.js';
 import { processPhoto } from '../photos/pipeline.js';
+import { type ReactionDto, reactionsFor } from '../reactions/service.js';
 import { getMembership } from '../teams/service.js';
 
 export const CHECKIN_TAGS = [
@@ -32,10 +33,16 @@ export interface CheckinDto {
   tag: string | null;
   note: string | null;
   createdAt: number;
+  /** Reaktionen des Partners (höchstens eine, eigene Check-ins kann man nicht bewerten). */
+  reactions: ReactionDto[];
   photo: { thumbUrl: string; fullUrl: string; width: number; height: number };
 }
 
-export function toCheckinDto(row: Checkin, displayName: string): CheckinDto {
+export function toCheckinDto(
+  row: Checkin,
+  displayName: string,
+  reactions: ReactionDto[] = [],
+): CheckinDto {
   return {
     id: row.id,
     userId: row.userId,
@@ -45,6 +52,7 @@ export function toCheckinDto(row: Checkin, displayName: string): CheckinDto {
     tag: row.tag,
     note: row.note,
     createdAt: row.createdAt,
+    reactions,
     photo: {
       thumbUrl: `/api/v1/photos/${row.id}/thumb`,
       fullUrl: `/api/v1/photos/${row.id}/full`,
@@ -167,7 +175,11 @@ export function listTeamCheckins(
     .where(and(eq(checkins.teamId, teamId), inArray(checkins.weekStart, weekStarts)))
     .orderBy(desc(checkins.createdAt))
     .all();
-  return rows.map((r) => toCheckinDto(r.checkin, r.displayName));
+  const reacted = reactionsFor(
+    db,
+    rows.map((r) => r.checkin.id),
+  );
+  return rows.map((r) => toCheckinDto(r.checkin, r.displayName, reacted.get(r.checkin.id) ?? []));
 }
 
 /** Eigenen Check-in zurücknehmen, solange seine Woche noch läuft. */

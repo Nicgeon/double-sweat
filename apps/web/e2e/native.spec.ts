@@ -231,6 +231,7 @@ test('Server wechseln in „Mehr“ meldet ab und fragt nach einem neuen Server'
   await page.getByLabel('E-Mail').fill(f.email);
   await page.getByLabel('Passwort').fill(PASSWORD);
   await page.getByRole('button', { name: 'Anmelden' }).click();
+  await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
   await page.goto('/more');
   await expect(page.getByText('Verbunden mit')).toBeVisible();
   await page.getByRole('button', { name: 'Server wechseln' }).click();
