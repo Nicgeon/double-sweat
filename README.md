@@ -229,6 +229,11 @@ Sprache_); Paare dürfen also verschiedene Sprachen nutzen.
 
 ## Push-Benachrichtigungen
 
+**Mitteilungen:** Anstupsen, Abend-Erinnerung, Schulden, Belohnungen, Reaktionen und die **Serie**: Ab zwei Wochen
+in Folge nennt die Abend-Erinnerung, dass eure Serie auf dem Spiel steht. Bei 2, 4, 8, 12, 26 und 52 Wochen (danach
+alle 52) gratuliert der Server beiden. Reißt eine Serie von mindestens zwei Wochen, bekommen beide eine kurze Info
+mit der bisherigen Länge.
+
 - **UnifiedPush / ntfy** (empfohlen, vollständig selbst hostbar; für die Android-App): Auf dem Handy
   die ntfy-App als Verteiler installieren. Läuft ntfy in deinem eigenen Netz, trage dessen Hostnamen in
   `PUSH_ALLOWED_HOSTS` ein, sonst lehnt der Server lokale Ziele ab.
@@ -279,6 +284,12 @@ Der FCM-Build funktioniert nur auf Geräten mit Google Play-Diensten (nicht auf 
 zusätzliche Google-Bibliotheken; der Standard-Build enthält keine.
 
 ## Android-App
+
+**Widgets:** Zwei Widgets für den Startbildschirm: _klein_ (2×1: Serie und ob du heute schon eingecheckt hast) und
+_groß_ (4×2: Wochenfortschritt von euch beiden mit Wochenleiste). Sie zeigen den **letzten Stand, den die App beim
+Öffnen geschrieben hat** ("Stand 19:04" unten rechts). Sie holen selbst nichts vom Server und haben keine
+Zugangsdaten; ein Tipp öffnet die App. Beim Abmelden werden sie geleert. Hinzufügen: Startbildschirm lange drücken →
+Widgets → Double Sweat.
 
 Die App ist ein Capacitor-Wrapper um dieselbe Web-Oberfläche. Die Oberfläche steckt **im APK** (die App lädt
 keine Seiten vom Server nach), nur die Daten kommen von deinem Server. Es gibt keinen Play-Store-Eintrag: du baust
@@ -500,13 +511,12 @@ Branches: `main` (stabil, getestet) und `develop` (Integration). Änderungen lau
 
 ## Roadmap
 
-Geplant, in dieser Reihenfolge:
+Umgesetzt (auf `develop`): Serien-Benachrichtigungen und Android-Widgets, siehe [Push](#push-benachrichtigungen) und
+[Android-App](#android-app). Geplant, in dieser Reihenfolge:
 
-1. **Serien-Benachrichtigungen:** Hinweis, wenn die gemeinsame Serie in Gefahr ist, und Glückwunsch bei Meilensteinen.
-2. **Android-Widget:** Wochenfortschritt beider Partner auf dem Startbildschirm.
-3. **Veröffentlichung der Android-App:** signierte `foss`-Release-APK als GitHub-Release (die FCM-Variante bleibt
+1. **Veröffentlichung der Android-App:** signierte `foss`-Release-APK als GitHub-Release (die FCM-Variante bleibt
    privat, sie hängt am eigenen Firebase-Projekt).
-4. **GitHub-Action:** Bei einem Tag baut sie automatisch die signierte APK und hängt sie an den Release (Schlüssel
+2. **GitHub-Action:** Bei einem Tag baut sie automatisch die signierte APK und hängt sie an den Release (Schlüssel
    als verschlüsseltes Secret).
-5. **LICENSE-Datei** und ein README-Abschnitt für Nutzer der APK (Installation, Server-Adresse, Updates).
-6. **Health Connect** (Android): Workout-Vorschläge aus Wearables, nur auf dem Gerät, das Foto bleibt Pflicht.
+3. **LICENSE-Datei** und ein README-Abschnitt für Nutzer der APK (Installation, Server-Adresse, Updates).
+4. **Health Connect** (Android): Workout-Vorschläge aus Wearables, nur auf dem Gerät, das Foto bleibt Pflicht.

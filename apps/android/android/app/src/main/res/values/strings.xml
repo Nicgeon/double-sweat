@@ -8,4 +8,9 @@
     <string name="channel_reminder">Reminders</string>
     <string name="channel_general">Other notifications</string>
     <string name="push_default_body">You have a new notification.</string>
+    <string name="widget_small_desc">Streak and today’s check-in</string>
+    <string name="widget_large_desc">Weekly progress of you both</string>
+    <string name="widget_empty">Open Double Sweat to fill the widget.</string>
+    <string name="widget_small_label">Double Sweat (small)</string>
+    <string name="widget_large_label">Double Sweat (large)</string>
 </resources>

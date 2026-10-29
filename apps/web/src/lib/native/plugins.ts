@@ -55,3 +55,13 @@ export interface FcmPlugin {
 export const Fcm = registerPlugin<FcmPlugin>('Fcm', {
   web: () => import('./fcm.web.ts').then((m) => new m.FcmWeb()),
 });
+
+/** Startbildschirm-Widgets (Kotlin). Die Oberfläche schreibt den Stand (JSON), das Widget zeigt ihn an. */
+export interface WidgetPlugin {
+  update(options: { snapshot: string }): Promise<void>;
+  clear(): Promise<void>;
+}
+
+export const Widget = registerPlugin<WidgetPlugin>('Widget', {
+  web: () => import('./widget.web.ts').then((m) => new m.WidgetWeb()),
+});

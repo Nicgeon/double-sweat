@@ -4,4 +4,9 @@
     <string name="channel_reminder">Erinnerungen</string>
     <string name="channel_general">Weitere Mitteilungen</string>
     <string name="push_default_body">Du hast eine neue Benachrichtigung.</string>
+    <string name="widget_small_desc">Serie und heutiger Check-in</string>
+    <string name="widget_large_desc">Wochenfortschritt von euch beiden</string>
+    <string name="widget_empty">Öffne Double Sweat, um das Widget zu füllen.</string>
+    <string name="widget_small_label">Double Sweat (klein)</string>
+    <string name="widget_large_label">Double Sweat (groß)</string>
 </resources>

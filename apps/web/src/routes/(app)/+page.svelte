@@ -15,6 +15,7 @@
   import { reactionMeta } from '#lib/util/reactions.ts';
   import { tagMeta } from '#lib/util/tags.ts';
   import { laneOf } from '#lib/util/week.ts';
+  import { pushWidget } from '#lib/util/widget.ts';
   import { streakStore } from '#lib/state/streak.svelte.ts';
 
   let data = $state<Dashboard | null>(null);
@@ -38,6 +39,11 @@
     const onVisible = () => document.visibilityState === 'visible' && void load();
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
+  });
+
+  // App: Widgets auf dem Startbildschirm mit dem aktuellen Stand versorgen (auch nach Sprachwechsel)
+  $effect(() => {
+    if (data) void pushWidget(data, streakStore.team);
   });
 
   const me = $derived(data?.members.find((m) => m.isMe));

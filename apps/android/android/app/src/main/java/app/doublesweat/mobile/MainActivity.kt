@@ -6,6 +6,7 @@ import android.webkit.WebView
 import app.doublesweat.mobile.push.FcmPlugin
 import app.doublesweat.mobile.push.UnifiedPushPlugin
 import app.doublesweat.mobile.securestore.SecureStorePlugin
+import app.doublesweat.mobile.widget.WidgetPlugin
 import com.getcapacitor.BridgeActivity
 
 class MainActivity : BridgeActivity() {
@@ -13,6 +14,7 @@ class MainActivity : BridgeActivity() {
         // Eigene Plugins müssen vor super.onCreate registriert werden
         registerPlugin(SecureStorePlugin::class.java)
         registerPlugin(UnifiedPushPlugin::class.java)
+        registerPlugin(WidgetPlugin::class.java)
         registerPlugin(FcmPlugin::class.java) // je nach Build echt (fcm) oder nur eine Attrappe (foss)
         super.onCreate(savedInstanceState)
 

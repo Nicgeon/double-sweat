@@ -477,6 +477,11 @@ export const de = {
   'push.fcmHint':
     'Läuft über Google-Server, ohne zusätzliche App. Der Inhalt bleibt Ende-zu-Ende verschlüsselt.',
 
+  // Widgets (Android)
+  'widget.todayDone': 'Heute geschafft',
+  'widget.todayOpen': 'Heute noch offen',
+  'widget.updated': 'Stand {time}',
+
   // Export (Teilen-Menü der App)
   'export.shareTitle': 'Double Sweat Export',
   'export.shareDialog': 'Export speichern oder teilen',

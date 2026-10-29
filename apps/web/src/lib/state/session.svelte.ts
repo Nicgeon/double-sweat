@@ -20,6 +20,7 @@ import {
 import { NATIVE } from '#lib/native/flag.ts';
 import type { ServerInfo } from '#lib/native/server-url.ts';
 import { disablePush } from '#lib/util/push.ts';
+import { clearWidget } from '#lib/util/widget.ts';
 import { goto } from '$app/navigation';
 
 /** Anmeldezustand der Web-App (Cookie-Sitzung). Das CSRF-Token liegt nur im Speicher. */
@@ -169,6 +170,7 @@ class Session {
   }
 
   clear(): void {
+    void clearWidget();
     this.user = null;
     this.team = null;
     this.unread = 0;

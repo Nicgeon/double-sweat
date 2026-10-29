@@ -13,6 +13,8 @@
   import { cameraAvailable, cameraMessage, cameraProblem, type Facing, frameToJpeg, fileToJpeg, startCamera, stopStream, takeNativePhoto } from '#lib/util/camera.ts';
   import { longDate } from '#lib/util/format.ts';
   import { tagList } from '#lib/util/tags.ts';
+  import { pushWidget } from '#lib/util/widget.ts';
+  import { streakStore } from '#lib/state/streak.svelte.ts';
 
   type Step = 'loading' | 'already' | 'camera' | 'selfie' | 'file' | 'review' | 'done';
   const SELFIE_PREF = 'ds_selfie';
@@ -295,6 +297,7 @@
       result = await uploadCheckin(photo, tag, note, selfie);
       step = 'done';
       dash = unwrap(await api.GET('/api/v1/dashboard'));
+      void pushWidget(dash, streakStore.team);
     } catch (e) {
       error = e instanceof ApiError ? e.message : t('common.failed');
     } finally {

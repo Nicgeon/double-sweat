@@ -469,6 +469,11 @@ export const en: Record<MessageKey, string> = {
   'push.fcmHint':
     'Runs through Google servers, without an extra app. The content stays end-to-end encrypted.',
 
+  // Widgets (Android)
+  'widget.todayDone': 'Done today',
+  'widget.todayOpen': 'Still open today',
+  'widget.updated': 'Updated {time}',
+
   // Export (share sheet of the app)
   'export.shareTitle': 'Double Sweat export',
   'export.shareDialog': 'Save or share export',
