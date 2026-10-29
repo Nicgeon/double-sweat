@@ -7,13 +7,46 @@ export const cameraAvailable = () =>
   !!navigator.mediaDevices?.getUserMedia &&
   window.isSecureContext;
 
-/** Öffnet die Kamera. Wirft, wenn sie fehlt oder der Zugriff verweigert wurde. */
+/**
+ * Öffnet die Kamera. Wirft, wenn sie fehlt, belegt ist oder der Zugriff verweigert wurde.
+ * Klappt der Wunsch nach hoher Auflösung nicht (manche Treiber und Firefox unter Windows stolpern darüber),
+ * folgt ein zweiter Versuch ohne Auflösungswunsch. Bei verweigertem Zugriff oder fehlender Kamera ändert der nichts.
+ */
 export async function startCamera(facing: Facing): Promise<MediaStream> {
-  return navigator.mediaDevices.getUserMedia({
-    audio: false,
-    video: { facingMode: { ideal: facing }, width: { ideal: 1600 }, height: { ideal: 1600 } },
-  });
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: { ideal: facing }, width: { ideal: 1600 }, height: { ideal: 1600 } },
+    });
+  } catch (first) {
+    const problem = cameraProblem(first);
+    if (problem === 'denied' || problem === 'missing') throw first;
+    return navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+  }
 }
+
+export type CameraProblem = 'denied' | 'busy' | 'missing' | 'other';
+
+/** Ordnet den Fehler von getUserMedia ein, damit die Meldung sagt, was man tun kann. */
+export function cameraProblem(error: unknown): CameraProblem {
+  const name =
+    typeof error === 'object' && error !== null && 'name' in error ? String(error.name) : '';
+  if (name === 'NotAllowedError' || name === 'SecurityError' || name === 'PermissionDeniedError')
+    return 'denied';
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return 'missing';
+  // Firefox meldet eine von einer anderen App belegte Kamera als NotReadableError oder AbortError
+  if (name === 'NotReadableError' || name === 'AbortError' || name === 'TrackStartError')
+    return 'busy';
+  return 'other';
+}
+
+export const CAMERA_MESSAGES: Record<CameraProblem, string> = {
+  denied:
+    'Der Zugriff auf die Kamera ist blockiert. Erlaube ihn über das Kamera-Symbol in der Adressleiste oder in den Seiteneinstellungen deines Browsers und versuche es noch einmal.',
+  busy: 'Die Kamera lässt sich nicht starten. Meist nutzt sie gerade eine andere App (zum Beispiel die Kamera-App oder ein Videoanruf). Schließe sie und versuche es noch einmal.',
+  missing: 'Es wurde keine Kamera gefunden.',
+  other: 'Die Kamera lässt sich nicht öffnen.',
+};
 
 export function stopStream(stream: MediaStream | null): void {
   for (const track of stream?.getTracks() ?? []) track.stop();

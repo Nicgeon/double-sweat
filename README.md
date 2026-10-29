@@ -33,6 +33,10 @@ sind optional und im Abschnitt [Datenschutz](#datenschutz) beschrieben.
 
 Voraussetzungen: Docker mit Compose, eine Domain, die auf den Server zeigt, offene Ports 80 und 443.
 **HTTPS ist Pflicht**: Kamera und Push funktionieren in Browsern und in der App nur über HTTPS.
+Startet die Kamera im Browser nicht, sagt die App, woran es liegt: **blockiert** (Kamera-Symbol in der Adressleiste
+bzw. Seiteneinstellungen des Browsers), **belegt** (meist hat eine andere App sie offen, etwa die Windows-Kamera-App
+oder ein Videoanruf: schließen und "Kamera erneut versuchen") oder **keine Kamera gefunden**. Die Fotoauswahl
+funktioniert immer als Ausweg.
 
 ```bash
 git clone https://github.com/Nicgeon/double-sweat.git

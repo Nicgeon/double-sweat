@@ -324,3 +324,69 @@ test('Reaktion auf das Foto des Partners: sichtbar auf der Kachel, Mitteilung, w
   expect(ben.problems).toEqual([]);
   expect(annaPage.problems).toEqual([]);
 });
+
+test.describe('Kamera-Fehler im Browser', () => {
+  /** Lässt die ersten `fails` Aufrufe von getUserMedia mit dem Fehler `name` scheitern, danach funktioniert die Fake-Kamera. */
+  async function failCamera(page: import('@playwright/test').Page, name: string, fails: number) {
+    await page.addInitScript(
+      ({ name, fails }) => {
+        const original = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+        let calls = 0;
+        navigator.mediaDevices.getUserMedia = (constraints) => {
+          calls += 1;
+          if (calls <= fails) return Promise.reject(new DOMException('test', name));
+          return original(constraints);
+        };
+      },
+      { name, fails },
+    );
+  }
+
+  test('belegte Kamera: erklärt, was zu tun ist, und lässt sich danach erneut versuchen', async ({
+    browser,
+  }, testInfo) => {
+    const { annaEmail } = await makeCouple();
+    const { page, problems } = await newUserContext(browser, testInfo);
+    await failCamera(page, 'NotReadableError', 2); // beide Versuche (hohe Auflösung, dann einfach) scheitern
+    await loginViaUi(page, annaEmail);
+    await page.goto('/checkin');
+    await expect(page.getByText(/nutzt sie gerade eine andere App/)).toBeVisible();
+    await expect(page.getByText('Du kannst stattdessen ein Foto auswählen.')).toBeVisible();
+    // Die andere App ist geschlossen: erneut versuchen öffnet die Kamera
+    await page.getByRole('button', { name: 'Kamera erneut versuchen' }).click();
+    await expect(page.getByTestId('camera')).toBeVisible();
+    expect(problems.filter((p) => !/NotReadable|test/.test(p))).toEqual([]);
+  });
+
+  test('klemmt nur die hohe Auflösung, gelingt der zweite Versuch ohne Fehlermeldung', async ({
+    browser,
+  }, testInfo) => {
+    const { annaEmail } = await makeCouple();
+    const { page } = await newUserContext(browser, testInfo);
+    await failCamera(page, 'NotReadableError', 1);
+    await loginViaUi(page, annaEmail);
+    await page.goto('/checkin');
+    await expect(page.getByTestId('camera')).toBeVisible();
+  });
+
+  test('verweigerter Zugriff und fehlende Kamera haben eigene Hinweise', async ({
+    browser,
+  }, testInfo) => {
+    const { annaEmail } = await makeCouple();
+    const denied = await newUserContext(browser, testInfo);
+    await failCamera(denied.page, 'NotAllowedError', 9);
+    await loginViaUi(denied.page, annaEmail);
+    await denied.page.goto('/checkin');
+    await expect(denied.page.getByText(/Der Zugriff auf die Kamera ist blockiert/)).toBeVisible();
+
+    const missing = await newUserContext(browser, testInfo);
+    await failCamera(missing.page, 'NotFoundError', 9);
+    await loginViaUi(missing.page, annaEmail);
+    await missing.page.goto('/checkin');
+    await expect(missing.page.getByText('Es wurde keine Kamera gefunden.')).toBeVisible();
+    // Die Fotoauswahl bleibt in jedem Fall möglich
+    await expect(
+      missing.page.getByRole('button', { name: /Foto aufnehmen oder auswählen/ }),
+    ).toBeVisible();
+  });
+});

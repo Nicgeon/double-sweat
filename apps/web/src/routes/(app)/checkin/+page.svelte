@@ -9,7 +9,7 @@
   import Segmented from '#lib/components/Segmented.svelte';
   import ShutterButton from '#lib/components/ShutterButton.svelte';
   import { NATIVE } from '#lib/native/flag.ts';
-  import { cameraAvailable, type Facing, frameToJpeg, fileToJpeg, startCamera, stopStream, takeNativePhoto } from '#lib/util/camera.ts';
+  import { CAMERA_MESSAGES, cameraAvailable, cameraProblem, type Facing, frameToJpeg, fileToJpeg, startCamera, stopStream, takeNativePhoto } from '#lib/util/camera.ts';
   import { longDate } from '#lib/util/format.ts';
   import { TAGS } from '#lib/util/tags.ts';
 
@@ -80,8 +80,8 @@
     try {
       stream = await startCamera(facing);
       step = 'camera';
-    } catch {
-      cameraError = 'Kein Zugriff auf die Kamera. Du kannst stattdessen ein Foto auswählen.';
+    } catch (e) {
+      cameraError = `${CAMERA_MESSAGES[cameraProblem(e)]} Du kannst stattdessen ein Foto auswählen.`;
       step = 'file';
     }
   }
