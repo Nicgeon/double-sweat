@@ -28,3 +28,5 @@ apps/android/dist/
 # Android: Firebase-Konfiguration des eigenen Projekts (nur für den fcm-Build)
 apps/android/firebase/
 apps/android/android/app/src/fcm/google-services.json
+# Firebase-Dienstkonto (Geheimnis, falls es im Projektordner zwischengelagert wird)
+*service-account*.json

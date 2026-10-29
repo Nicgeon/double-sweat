@@ -210,10 +210,18 @@ Das ist **optional** und aus: Der Standard-Build der App und der Server kommen o
 ein eigenes (kostenloses) Firebase-Projekt und eine App-Version mit FCM, die du selbst baust.
 
 1. In der [Firebase-Konsole](https://console.firebase.google.com/) ein Projekt anlegen (Google Analytics nicht aktivieren).
-2. **Server:** Projekteinstellungen → Dienstkonten → "Neuen privaten Schlüssel generieren". Speichere die JSON-Datei
-   neben der Datenbank als `data/fcm-service-account.json` (`chmod 600`, Besitzer der Container-Nutzer, nie ins
-   Repository). Setze in der `.env` `FCM_ENABLED=true` und `FCM_SERVICE_ACCOUNT_FILE=/data/fcm-service-account.json`,
-   dann `docker compose up -d`. Der Server prüft die Datei beim Start und meldet Fehler sofort. (Die "Firebase Cloud
+2. **Server:** Projekteinstellungen → Dienstkonten → "Neuen privaten Schlüssel generieren". Das ist eine andere
+   Datei als die `google-services.json` der App. Sie gehört **ins Datenvolumen des Containers**, nicht in den
+   Projektordner und nicht nach `./data` auf dem Host: Der Container sieht nur sein Volume `/data`, und die Datei muss
+   dem Container-Nutzer gehören (UID 10001). Das erledigt ein Skript:
+
+   ```bash
+   ./scripts/fcm-key.sh pfad/zur/dienstkonto.json
+   ```
+
+   Danach in der `.env` `FCM_ENABLED=true` und `FCM_SERVICE_ACCOUNT_FILE=/data/fcm-service-account.json` setzen
+   und `docker compose up -d` ausführen. Die Datei im Projektordner kannst du löschen; sie gehört nie ins Repository.
+   Der Server prüft sie beim Start und meldet Fehler im Log (`docker compose logs app`). (Die "Firebase Cloud
    Messaging API (V1)" ist in neuen Projekten aktiv; sonst in der Google Cloud Console einschalten.)
 3. **App:** In den Projekteinstellungen "Android-App hinzufügen" mit einem Paketnamen deiner Wahl (zum Beispiel
    `app.doublesweat.mobile`), die `google-services.json` herunterladen und als
