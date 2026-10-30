@@ -44,7 +44,9 @@ funktioniert immer als Ausweg.
 **Selfie (freiwillig):** Zu jedem Check-in kann man ein zweites Bild von der Frontkamera mitschicken, als kleines
 Bild im Foto (wie bei BeReal). Im Browser schaltet man in der Kamera das Selfie-Symbol ein: nach dem Foto der
 Rückkamera folgt nach zwei Sekunden Vorlauf automatisch die Frontkamera. Alternativ fügt man in der Vorschau ein
-Selfie hinzu, ersetzt oder entfernt es. In der Android-App läuft es genauso, mit der Live-Kamera der App. Ohne
+Selfie hinzu, ersetzt oder entfernt es. In der Android-App läuft es genauso, mit der Live-Kamera der App; dort ist
+der Schalter ab Werk an (das Selfie kommt gleich nach dem Foto, "Selfie überspringen" oder das Symbol schaltet es ab,
+die Wahl wird gemerkt). Ein kurzer Fehler der Frontkamera wird nach einer Pause erneut versucht. Ohne
 Live-Kamera (Berechtigung verweigert, keine Kamera) läuft das Selfie über die Fotoauswahl. Ohne Selfie ändert sich
 nichts: ein Foto genügt. Das Selfie wird wie das Foto
 verarbeitet (ohne EXIF/GPS) und zählt nicht für die Duplikat-Prüfung.

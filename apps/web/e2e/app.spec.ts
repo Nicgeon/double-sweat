@@ -347,7 +347,7 @@ test.describe('Kamera-Fehler im Browser', () => {
   }, testInfo) => {
     const { annaEmail } = await makeCouple();
     const { page, problems } = await newUserContext(browser, testInfo);
-    await failCamera(page, 'NotReadableError', 2); // beide Versuche (hohe Auflösung, dann einfach) scheitern
+    await failCamera(page, 'NotReadableError', 3); // alle drei Versuche (hohe Auflösung, nur Seite, irgendeine) scheitern
     await loginViaUi(page, annaEmail);
     await page.goto('/checkin');
     await expect(page.getByText(/nutzt sie gerade eine andere App/)).toBeVisible();

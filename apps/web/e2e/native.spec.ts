@@ -87,6 +87,10 @@ test('Team gründen mit Token-Anmeldung, Fotos mit Anmeldung laden, abmelden', a
   await page.goto('/checkin');
   await expect(page.getByTestId('camera')).toBeVisible();
   await page.getByRole('button', { name: 'Foto aufnehmen' }).click();
+  // In der App folgt gleich das Selfie (Schalter standardmäßig an), mit Vorlauf und "Selfie überspringen"
+  await expect(page.getByTestId('selfie-camera')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Selfie überspringen' })).toBeVisible();
+  await expect(page.getByTestId('selfie-preview')).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole('img', { name: 'Dein Foto' })).toBeVisible();
   await page.getByRole('radio', { name: 'Yoga' }).click();
   await page.getByRole('button', { name: 'Einchecken' }).click();
@@ -94,10 +98,14 @@ test('Team gründen mit Token-Anmeldung, Fotos mit Anmeldung laden, abmelden', a
 
   // Das geschützte Foto wird mit Bearer-Token geladen und als blob: angezeigt
   await page.goto('/');
-  const img = page.locator('.ds-photo img');
-  await expect(img).toBeVisible();
-  await expect.poll(async () => (await img.getAttribute('src')) ?? '').toMatch(/^blob:/);
-  expect(await img.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(0);
+  for (const img of [
+    page.locator('.ds-photo img:not(.selfie-inset)'),
+    page.locator('.ds-photo .selfie-inset'),
+  ]) {
+    await expect(img).toBeVisible();
+    await expect.poll(async () => (await img.getAttribute('src')) ?? '').toMatch(/^blob:/);
+    expect(await img.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(0);
+  }
 
   // Abmelden: Tokens weg (Server bleibt), das alte Token ist am Server widerrufen
   const oldAccess = auth.access as string;

@@ -10,22 +10,36 @@ export const cameraAvailable = () =>
   !!navigator.mediaDevices?.getUserMedia &&
   window.isSecureContext;
 
+/** Pause zwischen den Versuchen: Android braucht einen Moment, bis die eben geschlossene Kamera frei ist. */
+const RETRY_DELAY_MS = 350;
+
 /**
  * Öffnet die Kamera. Wirft, wenn sie fehlt, belegt ist oder der Zugriff verweigert wurde.
- * Klappt der Wunsch nach hoher Auflösung nicht (manche Treiber und Firefox unter Windows stolpern darüber),
- * folgt ein zweiter Versuch ohne Auflösungswunsch. Bei verweigertem Zugriff oder fehlender Kamera ändert der nichts.
+ * Bis zu drei Versuche: erst mit Wunsch nach hoher Auflösung, dann nur mit Wunsch nach der Seite (manche Treiber und
+ * Firefox unter Windows stolpern über die Auflösung), zuletzt irgendeine Kamera. Dazwischen eine kurze Pause, denn
+ * direkt nach der Rückkamera meldet Android die Frontkamera manchmal noch als belegt. Bei verweigertem Zugriff oder
+ * fehlender Kamera ändert ein weiterer Versuch nichts, dann bricht es sofort ab.
  */
 export async function startCamera(facing: Facing): Promise<MediaStream> {
-  try {
-    return await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: { facingMode: { ideal: facing }, width: { ideal: 1600 }, height: { ideal: 1600 } },
-    });
-  } catch (first) {
-    const problem = cameraProblem(first);
-    if (problem === 'denied' || problem === 'missing') throw first;
-    return navigator.mediaDevices.getUserMedia({ audio: false, video: true });
+  const attempts: MediaTrackConstraints[] = [
+    { facingMode: { ideal: facing }, width: { ideal: 1600 }, height: { ideal: 1600 } },
+    { facingMode: { ideal: facing } },
+  ];
+  let last: unknown;
+  for (let i = 0; i <= attempts.length; i++) {
+    try {
+      return await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: attempts[i] ?? true,
+      });
+    } catch (e) {
+      last = e;
+      const problem = cameraProblem(e);
+      if (problem === 'denied' || problem === 'missing') throw e;
+      if (i < attempts.length) await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    }
   }
+  throw last;
 }
 
 export type CameraProblem = 'denied' | 'busy' | 'missing' | 'other';

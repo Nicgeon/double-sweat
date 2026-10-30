@@ -194,6 +194,62 @@ test('Frontkamera nicht verfügbar: Hinweis, der Check-in geht ohne Selfie weite
   expect((await weekCheckins(page)).checkins[0].selfie).toBeNull();
 });
 
+/** Lässt die Aufrufe von getUserMedia mit den Nummern from bis to (ab 1) mit NotReadableError scheitern. */
+async function busyCameraCalls(page: Page, from: number, to: number) {
+  await page.addInitScript(
+    ({ from, to }) => {
+      const real = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      let calls = 0;
+      navigator.mediaDevices.getUserMedia = (constraints) => {
+        calls += 1;
+        if (calls >= from && calls <= to) {
+          const error = new Error('belegt');
+          error.name = 'NotReadableError';
+          return Promise.reject(error);
+        }
+        return real(constraints);
+      };
+    },
+    { from, to },
+  );
+}
+
+test('Frontkamera kurz belegt: der zweite Versuch klappt, das Selfie wird aufgenommen', async ({
+  browser,
+}, testInfo) => {
+  const { annaEmail } = await makeCouple();
+  const { page } = await newUserContext(browser, testInfo);
+  await busyCameraCalls(page, 2, 2); // Aufruf 1 = Rückkamera, Aufruf 2 = erster Versuch der Frontkamera
+  await loginViaUi(page, annaEmail);
+  await page.goto('/checkin');
+  await expect(page.getByTestId('camera')).toBeVisible();
+  await page.getByRole('button', { name: 'Selfie dazu aufnehmen' }).click();
+  await page.getByRole('button', { name: 'Foto aufnehmen' }).click();
+  await expect(page.getByTestId('selfie-preview')).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText('Das Selfie konnte nicht aufgenommen werden.')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Einchecken' }).click();
+  await expect(page.getByRole('heading', { name: 'Eingecheckt.' })).toBeVisible();
+  expect((await weekCheckins(page)).checkins[0].selfie).not.toBeNull();
+});
+
+test('Ein kurzer Fehler der Frontkamera schaltet die Live-Kamera nicht für die Sitzung ab', async ({
+  browser,
+}, testInfo) => {
+  const { annaEmail } = await makeCouple();
+  const { page } = await newUserContext(browser, testInfo);
+  await busyCameraCalls(page, 2, 4); // alle drei Versuche der Frontkamera scheitern
+  await loginViaUi(page, annaEmail);
+  await page.goto('/checkin');
+  await page.getByRole('button', { name: 'Selfie dazu aufnehmen' }).click();
+  await page.getByRole('button', { name: 'Foto aufnehmen' }).click();
+  await expect(page.getByText('Das Selfie konnte nicht aufgenommen werden.')).toBeVisible();
+  // Nächster Versuch: wieder die Live-Kamera (nicht die Datei-Auswahl) und diesmal klappt sie
+  await page.getByRole('button', { name: 'Selfie hinzufügen' }).click();
+  await expect(page.getByTestId('selfie-camera')).toBeVisible();
+  await page.getByRole('button', { name: 'Selfie aufnehmen' }).click();
+  await expect(page.getByTestId('selfie-preview')).toBeVisible();
+});
+
 test('Ohne Kamera: Selfie über die Fotoauswahl', async ({ browser }, testInfo) => {
   const { annaEmail } = await makeCouple();
   const { context, page } = await newUserContext(browser, testInfo);

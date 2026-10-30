@@ -55,11 +55,13 @@
   const inCamera = $derived(step === 'camera' || step === 'selfie');
   const mirrored = $derived(step === 'selfie' || facing === 'user');
 
+  /** Gemerkte Wahl; ohne Wahl ist das Selfie in der App an (gleich nach dem Foto, "überspringen" geht jederzeit), im Browser aus. */
   function readPref(): boolean {
     try {
-      return localStorage.getItem(SELFIE_PREF) === '1';
+      const stored = localStorage.getItem(SELFIE_PREF);
+      return stored === null ? NATIVE : stored === '1';
     } catch {
-      return false;
+      return NATIVE;
     }
   }
   function toggleSelfie() {
@@ -225,8 +227,11 @@
     try {
       stream = await startCamera('user');
     } catch (e) {
-      liveCamera = false;
-      selfieMessage = `${t('checkin.selfieFailed')} ${cameraMessage(cameraProblem(e))}`;
+      const problem = cameraProblem(e);
+      // Nur wenn es dauerhaft nicht geht (verweigert, keine Frontkamera), bleibt die Live-Kamera für die Sitzung aus;
+      // ein kurzer Fehler soll nicht dazu führen, dass jedes weitere Selfie über die Kamera-App läuft
+      if (problem === 'denied' || problem === 'missing') liveCamera = false;
+      selfieMessage = `${t('checkin.selfieFailed')} ${cameraMessage(problem)}`;
       step = 'review';
     }
   }
@@ -305,7 +310,7 @@
 {#if inCamera}
   <div class="camera" data-testid={step === 'selfie' ? 'selfie-camera' : 'camera'}>
     <!-- svelte-ignore a11y_media_has_caption -->
-    <video bind:this={video} class="camera__video {mirrored ? 'camera__video--mirror' : ''}" playsinline muted aria-label={t('camera.view')} onplaying={onPlaying}></video>
+    <video bind:this={video} class="camera__video {mirrored ? 'camera__video--mirror' : ''} {cameraReady ? '' : 'camera__video--wait'}" playsinline muted aria-label={t('camera.view')} onplaying={onPlaying}></video>
     <div class="camera__top">
       <Button variant="ghost" iconOnly icon="x" class="camera__round" onclick={() => (step === 'selfie' ? skipSelfie() : goto('/'))}>{t('common.close')}</Button>
       <div class="camera__group">
