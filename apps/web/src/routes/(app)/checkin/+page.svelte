@@ -245,7 +245,7 @@
     step = 'selfie';
     busy = true;
     try {
-      const blob = await takeNativePhoto();
+      const blob = await takeNativePhoto('user');
       if (blob) {
         setSelfie(blob);
         step = 'review';

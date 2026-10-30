@@ -65,3 +65,12 @@ export interface WidgetPlugin {
 export const Widget = registerPlugin<WidgetPlugin>('Widget', {
   web: () => import('./widget.web.ts').then((m) => new m.WidgetWeb()),
 });
+
+/** Selfie über die Kamera-App des Geräts mit Wunsch nach der Frontkamera (Capacitor kann die Seite nicht wählen). */
+export interface SelfieCameraPlugin {
+  take(): Promise<{ webPath: string | null }>;
+}
+
+export const SelfieCamera = registerPlugin<SelfieCameraPlugin>('SelfieCamera', {
+  web: () => import('./selfie-camera.web.ts').then((m) => new m.SelfieCameraWeb()),
+});
