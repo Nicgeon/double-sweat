@@ -3,7 +3,8 @@ import { APP_BASE, BASE } from '../playwright.config';
 import { Api, nextIp, PASSWORD, SETUP_TOKEN, uniqueEmail } from './helpers';
 
 // Native-Build (Android-App) im Browser: Capacitor-Plugins fallen auf ihre Web-Varianten zurück
-// (Speicher = localStorage, Kamera = Fotoauswahl). Geprüft wird die Logik der App, nicht das Gerät.
+// (Speicher = localStorage). Die Live-Kamera ist dieselbe wie im Browser (Fake-Kamera von Chromium).
+// Geprüft wird die Logik der App, nicht das Gerät.
 
 async function appPage(browser: import('@playwright/test').Browser) {
   const context = await browser.newContext({
@@ -82,24 +83,11 @@ test('Team gründen mit Token-Anmeldung, Fotos mit Anmeldung laden, abmelden', a
   expect(auth.refresh).toMatch(/\S{20,}/);
   expect((await context.cookies()).filter((c) => c.name.includes('ds_session'))).toEqual([]);
 
-  // Check-in über die Fotoauswahl (die Gerätekamera gibt es nur auf dem Handy)
+  // Check-in mit der Live-Kamera der App (in der APK erlaubt die CAMERA-Berechtigung das Live-Bild)
   await page.goto('/checkin');
-  const jpeg = await page.evaluate(() => {
-    const c = document.createElement('canvas');
-    c.width = 200;
-    c.height = 150;
-    const g = c.getContext('2d');
-    if (g) {
-      g.fillStyle = '#5b7a6e';
-      g.fillRect(0, 0, 200, 150);
-    }
-    return c.toDataURL('image/jpeg', 0.9).split(',')[1];
-  });
-  await page.getByTestId('file-input').setInputFiles({
-    name: 'foto.jpg',
-    mimeType: 'image/jpeg',
-    buffer: Buffer.from(jpeg ?? '', 'base64'),
-  });
+  await expect(page.getByTestId('camera')).toBeVisible();
+  await page.getByRole('button', { name: 'Foto aufnehmen' }).click();
+  await expect(page.getByRole('img', { name: 'Dein Foto' })).toBeVisible();
   await page.getByRole('radio', { name: 'Yoga' }).click();
   await page.getByRole('button', { name: 'Einchecken' }).click();
   await expect(page.getByRole('heading', { name: 'Eingecheckt.' })).toBeVisible();

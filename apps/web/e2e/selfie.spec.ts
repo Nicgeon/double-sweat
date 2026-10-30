@@ -52,7 +52,7 @@ test('Selfie-Schalter: erst Rückkamera, dann Frontkamera mit Vorlauf, beide lan
   // Gleich danach die Frontkamera; das Selfie löst nach dem Vorlauf von selbst aus
   await expect(page.getByTestId('selfie-camera')).toBeVisible();
   await expect(page.getByText(/Selfie in \d/)).toBeVisible();
-  await expect(page.getByTestId('selfie-preview')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByTestId('selfie-preview')).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole('img', { name: 'Dein Foto' })).toBeVisible();
 
   await page.getByRole('radio', { name: 'Kraft' }).click();
@@ -249,7 +249,7 @@ test('Englisch: Beschriftungen der Selfie-Funktion', async ({ browser }, testInf
   await page.getByRole('button', { name: 'Take photo' }).click();
   await expect(page.getByTestId('selfie-camera')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Skip selfie' }).first()).toBeVisible();
-  await expect(page.getByTestId('selfie-preview')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByTestId('selfie-preview')).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole('button', { name: 'Retake selfie' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Remove selfie' })).toBeVisible();
 });

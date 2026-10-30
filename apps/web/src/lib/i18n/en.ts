@@ -123,6 +123,8 @@ export const en: Record<MessageKey, string> = {
   'camera.flip': 'Switch camera',
   'camera.denied':
     'Camera access is blocked. Allow it via the camera icon in the address bar or in your browser’s site settings and try again.',
+  'camera.deniedApp':
+    'The app is not allowed to use the camera. Allow it in your phone’s app settings under permissions and try again.',
   'camera.busy':
     'The camera cannot be started. It is usually in use by another app (for example the camera app or a video call). Close it and try again.',
   'camera.missing': 'No camera was found.',
@@ -279,9 +281,6 @@ export const en: Record<MessageKey, string> = {
   'checkin.photoAlt': 'Your photo',
   'checkin.selfie': 'Selfie (optional)',
   'checkin.selfieHint': 'A selfie shows how you are doing during your workout. It is optional.',
-  'checkin.selfiePromptTitle': 'A selfie now?',
-  'checkin.selfiePromptBody':
-    'Show how you are doing right now. Pick the front camera in the camera app.',
   'checkin.selfieAdd': 'Add a selfie',
   'checkin.selfieRetake': 'Retake selfie',
   'checkin.selfieRemove': 'Remove selfie',

@@ -1,4 +1,5 @@
 import { t } from '#lib/i18n/index.svelte.ts';
+import { NATIVE } from '#lib/native/flag.ts';
 
 const MAX_SIDE = 2000;
 
@@ -49,8 +50,9 @@ const CAMERA_KEYS = {
   other: 'camera.other',
 } as const;
 
-/** Meldung zu einem Kameraproblem in der aktuellen Sprache. */
-export const cameraMessage = (problem: CameraProblem): string => t(CAMERA_KEYS[problem]);
+/** Meldung zu einem Kameraproblem in der aktuellen Sprache. In der App heißt "blockiert": Berechtigung in den Handy-Einstellungen. */
+export const cameraMessage = (problem: CameraProblem): string =>
+  problem === 'denied' && NATIVE ? t('camera.deniedApp') : t(CAMERA_KEYS[problem]);
 
 export function stopStream(stream: MediaStream | null): void {
   for (const track of stream?.getTracks() ?? []) track.stop();
@@ -94,23 +96,14 @@ export async function fileToJpeg(file: File): Promise<Blob> {
 }
 
 /**
- * App: macht ein Foto mit der Kamera des Geräts. Mit `facing: 'user'` (Selfie) bekommt die Kamera-App den Wunsch
- * nach der Frontkamera (Capacitor Camera kann das unter Android nicht). Gibt null zurück, wenn die Person abbricht.
+ * App: macht ein Foto mit der Kamera-App des Geräts. Nur der Ausweg, wenn die Live-Kamera nicht läuft
+ * (etwa weil die Berechtigung fehlt). Gibt null zurück, wenn die Person abbricht.
  */
-export async function takeNativePhoto(facing: Facing = 'environment'): Promise<Blob | null> {
+export async function takeNativePhoto(): Promise<Blob | null> {
   try {
     // Im Browser (Tests) gibt es keine Gerätekamera; dort bleibt nur die Fotoauswahl
     const { Capacitor } = await import('@capacitor/core');
     if (!Capacitor.isNativePlatform()) return null;
-    if (facing === 'user') {
-      const { SelfieCamera } = await import('#lib/native/plugins.ts');
-      const { webPath } = await SelfieCamera.take();
-      if (!webPath) return null;
-      const res = await fetch(webPath);
-      // Wie Auswahl aus der Galerie: Ausrichtung anwenden und auf höchstens 2000 px verkleinern
-      const raw = await res.blob();
-      return await fileToJpeg(new File([raw], 'selfie.jpg', { type: raw.type || 'image/jpeg' }));
-    }
     const { Camera } = await import('@capacitor/camera');
     const shot = await Camera.takePhoto({
       quality: 85,

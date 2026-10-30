@@ -37,7 +37,7 @@
   let selfieAuto = $state(false);
   let countdown = $state<number | null>(null);
   let selfieMessage = $state<string | null>(null);
-  /** Läuft die Live-Kamera? Sonst gibt es für das Selfie nur die Fotoauswahl bzw. die Gerätekamera. */
+  /** Läuft die Live-Kamera? Sonst gibt es für das Selfie nur die Fotoauswahl. */
   let liveCamera = $state(true);
   let tag = $state<string | null>(null);
   let note = $state('');
@@ -51,8 +51,8 @@
 
   const me = $derived(dash?.members.find((m) => m.isMe));
   const partner = $derived(dash?.members.find((m) => !m.isMe));
-  /** Live-Kamera im Browser (Vorschau mit Auslöser); in der App öffnet sich stattdessen die Kamera des Geräts. */
-  const inCamera = $derived(step === 'camera' || (step === 'selfie' && !NATIVE));
+  /** Live-Kamera (Vorschau mit Auslöser), im Browser wie in der App. */
+  const inCamera = $derived(step === 'camera' || step === 'selfie');
   const mirrored = $derived(step === 'selfie' || facing === 'user');
 
   function readPref(): boolean {
@@ -91,17 +91,14 @@
     if (selfieUrl) URL.revokeObjectURL(selfieUrl);
   });
 
-  /** App: Kamera des Geräts; bei Abbruch bleibt die Auswahl (erneut aufnehmen oder Foto auswählen). */
+  /** App ohne Live-Kamera (Berechtigung verweigert): Kamera-App des Geräts; bei Abbruch bleibt die Auswahl. */
   async function nativeShoot() {
     cameraError = null;
     busy = true;
     try {
       const blob = await takeNativePhoto();
-      if (blob) {
-        setPhoto(blob);
-        // Gleich danach das Selfie anfragen; "überspringen" geht jederzeit
-        step = 'selfie';
-      } else step = 'file';
+      if (blob) keep(blob);
+      else step = 'file';
     } finally {
       busy = false;
     }
@@ -112,11 +109,6 @@
     cameraReady = false;
     stopStream(stream);
     stream = null;
-    if (NATIVE) {
-      liveCamera = false;
-      await nativeShoot();
-      return;
-    }
     if (!cameraAvailable()) {
       liveCamera = false;
       cameraError = t('checkin.unavailable');
@@ -216,7 +208,7 @@
     if (step === 'selfie' && selfieAuto && countdown === null && !selfie) startCountdown();
   }
 
-  /** Selfie aufnehmen: mit der Frontkamera, in der App mit der Gerätekamera, sonst per Fotoauswahl. */
+  /** Selfie aufnehmen: mit der Frontkamera, sonst per Fotoauswahl. */
   async function openSelfie(auto: boolean) {
     selfieMessage = null;
     selfieAuto = auto;
@@ -224,7 +216,6 @@
     clearCountdown();
     stopStream(stream);
     stream = null;
-    if (NATIVE) return nativeSelfie();
     if (!liveCamera || !cameraAvailable()) {
       step = 'review';
       selfieInput?.click();
@@ -237,21 +228,6 @@
       liveCamera = false;
       selfieMessage = `${t('checkin.selfieFailed')} ${cameraMessage(cameraProblem(e))}`;
       step = 'review';
-    }
-  }
-
-  async function nativeSelfie() {
-    const before = step;
-    step = 'selfie';
-    busy = true;
-    try {
-      const blob = await takeNativePhoto('user');
-      if (blob) {
-        setSelfie(blob);
-        step = 'review';
-      } else if (before === 'review') step = 'review';
-    } finally {
-      busy = false;
     }
   }
 
@@ -355,13 +331,6 @@
         {t('checkin.alreadyBody', { n: dash?.maxCheckinsPerDay ?? 0 })}
       </Banner>
       <Button href="/">{t('common.toOverview')}</Button>
-    {:else if step === 'selfie'}
-      <div class="stack">
-        <h2 class="auth__title">{t('checkin.selfiePromptTitle')}</h2>
-        <p class="lead">{t('checkin.selfiePromptBody')}</p>
-        <Button size="lg" icon="user" loading={busy} onclick={nativeSelfie}>{t('camera.selfieShutter')}</Button>
-        <Button variant="ghost" onclick={skipSelfie}>{t('camera.selfieSkip')}</Button>
-      </div>
     {:else if step === 'file'}
       <div class="stack">
         {#if cameraError}<Banner tone="info">{cameraError}</Banner>{/if}
@@ -372,8 +341,8 @@
           <Button variant="secondary" icon="image" onclick={() => fileInput?.click()}>{t('checkin.pickPhoto')}</Button>
         {:else}
           <Button size="lg" icon="camera" loading={busy} onclick={() => fileInput?.click()}>{t('checkin.takeOrPick')}</Button>
-          {#if cameraAvailable()}<Button variant="ghost" onclick={() => { liveCamera = true; void openCamera(); }}>{t('checkin.retryCamera')}</Button>{/if}
         {/if}
+        {#if cameraAvailable()}<Button variant="ghost" onclick={() => { liveCamera = true; void openCamera(); }}>{t('checkin.retryCamera')}</Button>{/if}
       </div>
     {:else if step === 'review'}
       <div class="cols">

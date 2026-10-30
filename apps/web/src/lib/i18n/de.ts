@@ -125,6 +125,8 @@ export const de = {
   'camera.flip': 'Kamera wechseln',
   'camera.denied':
     'Der Zugriff auf die Kamera ist blockiert. Erlaube ihn über das Kamera-Symbol in der Adressleiste oder in den Seiteneinstellungen deines Browsers und versuche es noch einmal.',
+  'camera.deniedApp':
+    'Die App darf die Kamera nicht nutzen. Erlaube es in den App-Einstellungen deines Handys unter Berechtigungen und versuche es noch einmal.',
   'camera.busy':
     'Die Kamera lässt sich nicht starten. Meist nutzt sie gerade eine andere App (zum Beispiel die Kamera-App oder ein Videoanruf). Schließe sie und versuche es noch einmal.',
   'camera.missing': 'Es wurde keine Kamera gefunden.',
@@ -283,8 +285,6 @@ export const de = {
   'checkin.photoAlt': 'Dein Foto',
   'checkin.selfie': 'Selfie (optional)',
   'checkin.selfieHint': 'Ein Selfie zeigt, wie es dir beim Training geht. Es ist freiwillig.',
-  'checkin.selfiePromptTitle': 'Jetzt ein Selfie?',
-  'checkin.selfiePromptBody': 'Zeig, wie es dir gerade geht. Wähle in der Kamera die Frontkamera.',
   'checkin.selfieAdd': 'Selfie hinzufügen',
   'checkin.selfieRetake': 'Selfie neu aufnehmen',
   'checkin.selfieRemove': 'Selfie entfernen',

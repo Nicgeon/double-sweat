@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Berechtigungen: Netz und Benachrichtigungen. Die Kamera braucht keine, das Foto macht die Kamera-App des Geräts. -->
+    <!-- Berechtigungen: Netz, Benachrichtigungen und die Kamera für das Live-Bild beim Check-in (Foto und Selfie).
+         Kamera und Frontkamera sind nicht Pflicht, die App läuft auch ohne (dann mit Fotoauswahl). -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.front" android:required="false" />
 
     <application
         android:allowBackup="false"

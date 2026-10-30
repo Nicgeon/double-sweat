@@ -44,8 +44,9 @@ funktioniert immer als Ausweg.
 **Selfie (freiwillig):** Zu jedem Check-in kann man ein zweites Bild von der Frontkamera mitschicken, als kleines
 Bild im Foto (wie bei BeReal). Im Browser schaltet man in der Kamera das Selfie-Symbol ein: nach dem Foto der
 Rückkamera folgt nach zwei Sekunden Vorlauf automatisch die Frontkamera. Alternativ fügt man in der Vorschau ein
-Selfie hinzu, ersetzt oder entfernt es. In der Android-App und ohne Live-Kamera läuft das Selfie über die
-Gerätekamera bzw. die Fotoauswahl. Ohne Selfie ändert sich nichts: ein Foto genügt. Das Selfie wird wie das Foto
+Selfie hinzu, ersetzt oder entfernt es. In der Android-App läuft es genauso, mit der Live-Kamera der App. Ohne
+Live-Kamera (Berechtigung verweigert, keine Kamera) läuft das Selfie über die Fotoauswahl. Ohne Selfie ändert sich
+nichts: ein Foto genügt. Das Selfie wird wie das Foto
 verarbeitet (ohne EXIF/GPS) und zählt nicht für die Duplikat-Prüfung.
 
 ```bash
@@ -349,8 +350,12 @@ zusammenpassen (App zu alt für den Server oder Server zu alt für die App) und 
   Refresh-Token noch einmal benutzt, widerruft der Server die ganze Sitzung (Diebstahl-Erkennung).
 - Nur HTTPS, nur Zertifikate, denen das System traut (keine nachinstallierten Zertifizierungsstellen); kein
   Klartext im Release. Die Seite des APK läuft unter einer strengen Content-Security-Policy ohne `unsafe-eval`.
-- Berechtigungen: Internet und Benachrichtigungen. Die **Kamera** braucht keine eigene Berechtigung, Foto und
-  Selfie macht die Kamera-App des Geräts (für das Selfie wählst du dort die Frontkamera).
+- Berechtigungen: Internet, Benachrichtigungen und **Kamera**. Die App zeigt beim Check-in ein Live-Bild (Foto mit der
+  Rückkamera, Selfie mit der Frontkamera, wie im Browser) und fragt dafür beim ersten Mal nach der Kamera-Erlaubnis.
+  Lehnst du ab, bietet sie die Kamera-App des Geräts und die Fotoauswahl an; "Kamera erneut versuchen" fragt noch
+  einmal, hat Android die Frage gesperrt, hilft nur die App-Einstellung des Handys. Das Live-Bild ist etwas weniger
+  scharf als die Kamera-App (höchstens 2000 px, kein HDR, kein Nachtmodus). Aufnahmen verlassen die App nur als
+  Check-in.
 - Push-Nachrichten sind, wenn der Verteiler Schlüssel liefert, Ende-zu-Ende verschlüsselt und bleiben minimal;
   sonst enthält die Nachricht nur einen neutralen Text.
 - Der Standard-Build enthält keinen Google-Dienst, kein Firebase und keine Telemetrie. Der optionale FCM-Build
@@ -364,7 +369,7 @@ Team gründen, Fotos mit Bearer-Token laden, Abmelden, Token-Ablauf, Einladungsl
 Fehler; das Release wird beim Bauen mit `apksigner` geprüft.
 
 **Was noch nicht geprüft ist (bitte auf deinem Gerät testen).** Hier gibt es keinen Emulator und kein Handy.
-Ungetestet sind deshalb: Kamera-Ablauf, Safe-Area/Statusleiste auf deinem Handy, Push über ntfy (Anmeldung beim
+Ungetestet sind deshalb: Live-Kamera und Selfie auf dem Handy, Safe-Area/Statusleiste auf deinem Handy, Push über ntfy (Anmeldung beim
 Verteiler und Benachrichtigung), Push über FCM mit echten Google-Servern (die Serverseite ist gegen einen
 nachgebauten FCM-Dienst getestet, die Entschlüsselung gegen den Beispielwert aus RFC 8291), Deep-Links aus einem Mail- oder Chat-Programm, Teilen-Menü beim Export,
 Tastatur-Verhalten in den Formularen, Verhalten nach Neustart des Handys. Erst nach diesem Test sollte der Stand
