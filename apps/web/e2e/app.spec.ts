@@ -19,14 +19,14 @@ test('Team gründen, abmelden und wieder anmelden', async ({ browser }, testInfo
   await page.getByRole('radio', { name: 'Orchidee' }).click();
   await page.getByRole('button', { name: 'Team gründen' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
-  await expect(page.getByText('Dein Partner fehlt noch')).toBeVisible();
-  await expect(page.locator('.ds-lane')).toHaveCount(1);
-  await expect(page.locator('.ds-lane.ds-c-orchid')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Einladen', exact: true })).toBeVisible();
+  await expect(page.locator('.ds-wlane:not(.ds-wlane--empty)')).toHaveCount(1);
+  await expect(page.locator('.ds-wlane.ds-c-orchid')).toBeVisible();
 
   // Sitzung überlebt ein Neuladen (Cookie), Abmelden führt zur Anmeldung
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
   await page.goto('/more');
   await page.getByRole('button', { name: 'Abmelden' }).click();
   await expect(page.getByRole('heading', { name: 'Willkommen zurück.' })).toBeVisible();
@@ -40,7 +40,7 @@ test('Team gründen, abmelden und wieder anmelden', async ({ browser }, testInfo
   await expect(page.getByRole('alert')).toBeVisible();
   await page.getByLabel('Passwort').fill(PASSWORD);
   await page.getByRole('button', { name: 'Anmelden' }).click();
-  await expect(page.getByRole('heading', { name: 'Einsatz', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Abmachung', level: 1 })).toBeVisible();
   expect(problems).toEqual([]);
 });
 
@@ -85,16 +85,18 @@ test('Einladungslink erzeugen, Partner tritt bei, Farben bleiben verschieden', a
   await ben.page.getByLabel('E-Mail').fill(uniqueEmail('ben'));
   await ben.page.getByLabel('Passwort').fill(PASSWORD);
   await ben.page.getByRole('button', { name: 'Beitreten' }).click();
-  await expect(ben.page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
-  await expect(ben.page.locator('.ds-lane')).toHaveCount(2);
+  await expect(ben.page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
+  await expect(ben.page.locator('.ds-wlane:not(.ds-wlane--empty)')).toHaveCount(2);
   // Eigene Bahn zuerst, Platz 2 ist ein Quadrat
-  await expect(ben.page.locator('.ds-lane').first()).toContainText('Ben (Du)');
-  await expect(ben.page.locator('.ds-lane').first()).toHaveClass(/ds-p2/);
-  await expect(ben.page.locator('.ds-lane').nth(1)).toHaveClass(/ds-p1/);
+  await expect(ben.page.locator('.ds-wlane:not(.ds-wlane--empty)').first()).toContainText(
+    'Ben (Du)',
+  );
+  await expect(ben.page.locator('.ds-wlane:not(.ds-wlane--empty)').first()).toHaveClass(/ds-p2/);
+  await expect(ben.page.locator('.ds-wlane:not(.ds-wlane--empty)').nth(1)).toHaveClass(/ds-p1/);
 
   await anna.page.reload();
-  await expect(anna.page.locator('.ds-lane')).toHaveCount(2);
-  await expect(anna.page.getByText('Dein Partner fehlt noch')).toHaveCount(0);
+  await expect(anna.page.locator('.ds-wlane:not(.ds-wlane--empty)')).toHaveCount(2);
+  await expect(anna.page.getByRole('button', { name: 'Einladen', exact: true })).toHaveCount(0);
   expect(anna.problems).toEqual([]);
   expect(ben.problems).toEqual([]);
 });
@@ -105,8 +107,8 @@ test('Check-in mit Fake-Kamera, Foto im Feed, mehrere Check-ins am Tag zählen a
   const { annaEmail } = await makeCouple();
   const { page, problems } = await newUserContext(browser, testInfo);
   await loginViaUi(page, annaEmail);
-  await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
-  await page.getByRole('link', { name: 'Check-in' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
+  await page.getByRole('link', { name: 'Einchecken' }).first().click();
 
   await expect(page.getByTestId('camera')).toBeVisible();
   await page.getByRole('button', { name: 'Foto aufnehmen' }).click();
@@ -125,7 +127,7 @@ test('Check-in mit Fake-Kamera, Foto im Feed, mehrere Check-ins am Tag zählen a
     .locator('.ds-photo img')
     .evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0);
   expect(loaded).toBe(true);
-  await expect(page.locator('.ds-lane').first().locator('.ds-lane__done')).toHaveText('1');
+  await expect(page.locator('.ds-wlane:not(.ds-wlane--empty)').first()).toContainText('1 Tag');
 
   // Foto ansehen
   await page.getByRole('button', { name: /Foto ansehen/ }).click();
@@ -146,7 +148,7 @@ test('Check-in mit Fake-Kamera, Foto im Feed, mehrere Check-ins am Tag zählen a
   await expect(page.getByText('Das war dein 2. Check-in heute')).toBeVisible();
   await page.getByRole('link', { name: 'Zur Übersicht' }).click();
   await expect(page.locator('.ds-photo')).toHaveCount(2);
-  await expect(page.locator('.ds-lane').first().locator('.ds-lane__done')).toHaveText('1');
+  await expect(page.locator('.ds-wlane:not(.ds-wlane--empty)').first()).toContainText('1 Tag');
   expect(problems).toEqual([]);
 });
 
@@ -159,7 +161,7 @@ test('Check-in ohne Kamera: Foto auswählen als Fallback', async ({ browser }, t
     Object.defineProperty(navigator, 'mediaDevices', { value: undefined, configurable: true });
   });
   await loginViaUi(page, annaEmail);
-  await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
   await page.goto('/checkin');
   await expect(page.getByText('Die Kamera ist hier nicht verfügbar')).toBeVisible();
   const jpeg = await page.evaluate(async () => {
@@ -189,8 +191,8 @@ test('Ziel und Einsatz festlegen', async ({ browser }, testInfo) => {
   const { annaEmail } = await makeCouple();
   const { page, problems } = await newUserContext(browser, testInfo);
   await loginViaUi(page, annaEmail);
-  await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
-  await expect(page.getByText('Setze dein Wochenziel')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
+  await expect(page.getByText('Wochenziel setzen', { exact: true })).toBeVisible();
   await page.goto('/bet');
   const plus = page.getByRole('button', { name: 'Einen Tag mehr' });
   await plus.click();
@@ -199,8 +201,8 @@ test('Ziel und Einsatz festlegen', async ({ browser }, testInfo) => {
   // Das erste Ziel gilt sofort (Beitrittswoche wird nicht gewertet)
   await expect(page.getByText(/Dein Ziel von \d Tagen gilt ab sofort/)).toBeVisible();
   await page.goto('/');
-  await expect(page.getByText('Setze dein Wochenziel')).toHaveCount(0);
-  await expect(page.locator('.ds-lane').first()).toContainText('von 5');
+  await expect(page.getByText('Wochenziel setzen', { exact: true })).toHaveCount(0);
+  await expect(page.locator('.ds-wlane:not(.ds-wlane--empty)').first()).toContainText('von 5');
   await page.goto('/bet');
 
   // Die erste Karte ist der Einsatz; die Belohnung hat ein eigenes "Ändern"
@@ -225,7 +227,9 @@ test('Anstupsen: einmal pro Stunde, Partner sieht es im Postfach', async ({
 
   const ben = await newUserContext(browser, testInfo);
   await loginViaUi(ben.page, benEmail);
-  await expect(ben.page.getByRole('link', { name: /Benachrichtigungen, 1 neu/ })).toBeVisible();
+  await expect(
+    ben.page.getByRole('link', { name: /Benachrichtigungen(, 1 neu| Neu: 1)/ }),
+  ).toBeVisible();
   await ben.page.getByRole('link', { name: /Benachrichtigungen/ }).click();
   await expect(ben.page.getByText(/Anna stupst dich an/)).toBeVisible();
   await ben.page.getByRole('button', { name: 'Alle gelesen' }).click();
@@ -246,7 +250,7 @@ test('Farbe wählen: wirkt sofort, die des Partners ist gesperrt', async ({ brow
   await ben.page.goto('/more');
   await expect(ben.page.getByRole('radio', { name: 'Orchidee, vergeben von Anna' })).toBeDisabled();
   await ben.page.goto('/');
-  await expect(ben.page.locator('.ds-lane.ds-c-orchid')).toContainText('Anna');
+  await expect(ben.page.locator('.ds-wlane.ds-c-orchid')).toContainText('Anna');
 });
 
 test('Belohnung versprechen: Partner sieht sie und bekommt eine Mitteilung', async ({

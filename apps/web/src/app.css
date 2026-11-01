@@ -56,7 +56,8 @@ p {
 
 .app__main {
   min-width: 0;
-  padding-bottom: calc(var(--tabbar-h) + var(--space-8) + env(safe-area-inset-bottom, 0px));
+  /* Platz für die Tab-Leiste und die schwebende Check-in-Schaltfläche */
+  padding-bottom: calc(var(--tabbar-h) + var(--space-8) + 56px + env(safe-area-inset-bottom, 0px));
 }
 
 .page__bar {
@@ -97,6 +98,24 @@ p {
   .cols {
     gap: var(--space-6);
   }
+}
+
+/* Heute: schmale Spalte für die Karten, der Rest für die Fotos */
+@media (min-width: 1024px) {
+  .cols.cols--today {
+    grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+  }
+}
+
+/* Ab 1024 px steht das Postfach in der Seitenleiste; die Glocke in der Kopfzeile entfällt (ein Weg pro Inhalt) */
+@media (min-width: 1024px) {
+  .bell-mobile {
+    display: none;
+  }
+}
+
+.feed-title {
+  font: 700 22px / 28px var(--font-display);
 }
 
 @media (min-width: 1024px) {
@@ -145,6 +164,11 @@ p {
   .page__title {
     font: 800 28px / 32px var(--font-display);
     letter-spacing: -0.01em;
+  }
+
+  .page__sub {
+    font: 400 14px / 20px var(--font-body);
+    color: var(--ink-muted);
   }
 
   .page__body {

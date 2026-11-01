@@ -13,7 +13,7 @@ test('Navigation: mobil Tab-Leiste, Desktop Seitenleiste', async ({ browser }, t
   const { annaEmail } = await makeCouple();
   const { page } = await newUserContext(browser, testInfo);
   await loginViaUi(page, annaEmail);
-  await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
   if (testInfo.project.name === 'mobil') {
     await expect(page.locator('.ds-nav--bottom')).toBeVisible();
     await expect(page.locator('.ds-nav--side')).toBeHidden();
@@ -40,7 +40,7 @@ test('Dunkelmodus: folgt dem System und lässt sich umstellen', async ({ browser
   const { page, problems } = await newUserContext(browser, testInfo);
   await page.emulateMedia({ colorScheme: 'dark' });
   await loginViaUi(page, annaEmail);
-  await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
   expect(await bg(page)).toBe(DARK_BG);
   await page.screenshot({
     path: `e2e/screenshots/start-${testInfo.project.name}-dark.png`,
@@ -68,7 +68,7 @@ test('Schriften kommen vom eigenen Server', async ({ browser }, testInfo) => {
     if (!r.url().startsWith('http://127.0.0.1')) external.push(r.url());
   });
   await loginViaUi(page, annaEmail);
-  await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
   const fonts = await page.evaluate(async () => {
     await document.fonts.ready;
     return [...document.fonts]
@@ -101,12 +101,12 @@ for (const scheme of ['light', 'dark'] as const) {
     await expect(page.getByRole('heading', { name: 'Willkommen zurück.' })).toBeVisible();
     await scan('Anmeldung');
     await loginViaUi(page, annaEmail);
-    await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
     await scan('Start');
     for (const [path, title] of [
       ['/history', 'Verlauf'],
-      ['/bet', 'Einsatz'],
-      ['/more', 'Mehr'],
+      ['/bet', 'Abmachung'],
+      ['/more', 'Profil'],
       ['/notifications', 'Benachrichtigungen'],
     ] as const) {
       await page.goto(path);

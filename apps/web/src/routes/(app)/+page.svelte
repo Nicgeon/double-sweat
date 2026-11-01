@@ -1,33 +1,39 @@
 <script lang="ts">
   import { t, tn } from '#lib/i18n/index.svelte.ts';
   import { onMount } from 'svelte';
-  import { api, ApiError, type Checkin, type Dashboard, unwrap } from '#lib/api/client.ts';
+  import { api, ApiError, type Checkin, unwrap } from '#lib/api/client.ts';
   import Banner from '#lib/components/Banner.svelte';
   import Button from '#lib/components/Button.svelte';
-  import Card from '#lib/components/Card.svelte';
+  import HintCard from '#lib/components/HintCard.svelte';
+  import Icon from '#lib/components/Icon.svelte';
   import InviteSheet from '#lib/components/InviteSheet.svelte';
   import Page from '#lib/components/Page.svelte';
   import PhotoSheet from '#lib/components/PhotoSheet.svelte';
   import PhotoTile from '#lib/components/PhotoTile.svelte';
-  import Scoreboard from '#lib/components/Scoreboard.svelte';
+  import StartGuide from '#lib/components/StartGuide.svelte';
+  import TodayCard from '#lib/components/TodayCard.svelte';
+  import WeekCard from '#lib/components/WeekCard.svelte';
   import { session } from '#lib/state/session.svelte.ts';
-  import { addDays, weekdayDate, weekLabel } from '#lib/util/format.ts';
+  import { streakStore } from '#lib/state/streak.svelte.ts';
+  import { todayStore } from '#lib/state/today.svelte.ts';
+  import { addDays, weekdayDate, weekLabel, weekNumber } from '#lib/util/format.ts';
+  import { pickHint, startGuide } from '#lib/util/hint.ts';
   import { reactionMeta } from '#lib/util/reactions.ts';
   import { tagMeta } from '#lib/util/tags.ts';
   import { laneOf } from '#lib/util/week.ts';
   import { pushWidget } from '#lib/util/widget.ts';
-  import { streakStore } from '#lib/state/streak.svelte.ts';
 
-  let data = $state<Dashboard | null>(null);
   let error = $state<string | null>(null);
   let nudgeMessage = $state<{ tone: 'success' | 'info'; text: string } | null>(null);
   let nudging = $state(false);
   let inviteOpen = $state(false);
   let viewing = $state<Checkin | null>(null);
 
+  const data = $derived(todayStore.dashboard);
+
   async function load() {
     try {
-      data = unwrap(await api.GET('/api/v1/dashboard'));
+      await todayStore.load();
       error = null;
     } catch (e) {
       error = e instanceof ApiError ? e.message : t('common.failed');
@@ -36,9 +42,6 @@
   onMount(() => {
     void load();
     void streakStore.load();
-    const onVisible = () => document.visibilityState === 'visible' && void load();
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
   });
 
   // App: Widgets auf dem Startbildschirm mit dem aktuellen Stand versorgen (auch nach Sprachwechsel)
@@ -46,11 +49,24 @@
     if (data) void pushWidget(data, streakStore.team);
   });
 
-  const me = $derived(data?.members.find((m) => m.isMe));
-  const partner = $derived(data?.members.find((m) => !m.isMe));
+  const me = $derived(todayStore.me);
+  const partner = $derived(todayStore.partner);
   const lanes = $derived(data ? [...data.members].sort((a, b) => Number(b.isMe) - Number(a.isMe)).map(laneOf) : []);
   const canNudge = $derived(partner !== undefined && !partner.checkedInToday && partner.status !== 'done');
   const memberById = $derived(new Map((data?.members ?? []).map((m) => [m.userId, m])));
+  const guide = $derived(data ? startGuide(data) : null);
+  const hint = $derived(data && !guide?.visible ? pickHint(data) : null);
+  /** Heutiges Datum des Teams (Montag der Woche plus Tag-Nummer), für die Zeile unter dem Titel. */
+  const today = $derived.by(() => {
+    if (!me) return null;
+    const i = me.days.findIndex((d) => d.isToday);
+    return i < 0 ? null : addDays(me.weekStart, i);
+  });
+  const subtitle = $derived(me ? `${today ? `${weekdayDate(today)} · ` : ''}${weekNumber(me.weekStart)}` : undefined);
+  /** Das Foto, das der andere Mensch heute gemacht hat (für "Ansehen"). */
+  const partnerPhoto = $derived(
+    partner && today && partner.checkedInToday ? data?.feed.find((c) => c.userId === partner.userId && c.localDate === today) : undefined,
+  );
 
   async function nudge() {
     if (!partner) return;
@@ -72,9 +88,9 @@
   }
 </script>
 
-<Page title={t('home.title')}>
+<Page title={t('home.title')} {subtitle}>
   {#snippet actions()}
-    <Button variant="ghost" iconOnly icon={session.unread > 0 ? 'bell-ring' : 'bell'} href="/notifications">{session.unread > 0 ? t('home.notificationsNew', { n: session.unread }) : t('home.notifications')}</Button>
+    <Button class="bell-mobile" variant="ghost" iconOnly icon={session.unread > 0 ? 'bell-ring' : 'bell'} href="/notifications">{session.unread > 0 ? t('home.notificationsNew', { n: session.unread }) : t('home.notifications')}</Button>
   {/snippet}
 
   {#if error && !data}
@@ -83,104 +99,76 @@
       {#snippet action()}<Button variant="secondary" size="sm" onclick={load}>{t('common.retry')}</Button>{/snippet}
     </Banner>
   {:else if !data}
-    <p class="muted" role="status">{t('common.loading')}</p>
+    <div class="stack" role="status" aria-busy="true">
+      <span class="ds-sr">{t('common.loading')}</span>
+      <div class="ds-skel" style="height: 80px"></div>
+      <div class="ds-skel" style="height: 232px"></div>
+    </div>
   {:else}
-    {#if !data.team.full}
-      <Banner tone="info" title={t('home.partnerMissingTitle')}>
-        {t('home.partnerMissingBody')}
-        {#snippet action()}<Button variant="secondary" size="sm" icon="send" onclick={() => (inviteOpen = true)}>{t('home.invite')}</Button>{/snippet}
-      </Banner>
-    {/if}
-    {#if me && me.goalDays === null}
-      {#if me.nextGoalDays !== null}
-        <Banner tone="info" title={t('home.goalNextTitle')}>
-          {tn('home.goalNextBody', me.nextGoalDays, { date: weekdayDate(addDays(me.weekStart, 7)) })}
-          {#snippet action()}<Button variant="secondary" size="sm" href="/bet#ziel">{t('common.change')}</Button>{/snippet}
-        </Banner>
-      {:else}
-        <Banner tone="warning" title={t('home.goalSetTitle')}>
-          {t('home.goalSetBody')}
-          {#snippet action()}<Button variant="secondary" size="sm" href="/bet#ziel">{t('home.goalSet')}</Button>{/snippet}
-        </Banner>
-      {/if}
-    {/if}
-    {#if data.rewards.earned > 0}
-      <Banner tone="success" title={t('home.rewardEarnedTitle')}>
-        {t('home.rewardEarnedBody')} {partner ? t('home.rewardEarnedPartner', { name: partner.displayName }) : ''}
-        {#snippet action()}<Button variant="secondary" size="sm" href="/bet#belohnung">{t('home.view')}</Button>{/snippet}
-      </Banner>
-    {/if}
-    {#if me && me.goalDays !== null && !me.checkedInToday && me.remainingDays > 0}
-      <Banner tone={me.status === 'at_risk' ? 'warning' : 'info'} title={me.status === 'at_risk' ? t('home.todayRiskTitle') : t('home.todayOpenTitle')}>
-        {#if me.neededDays > 0}{tn('home.needed', me.neededDays)}{/if}
-        {#snippet action()}<Button size="sm" icon="camera" href="/checkin">{t('home.checkin')}</Button>{/snippet}
-      </Banner>
-    {/if}
-
-    <div class="cols">
+    <div class="cols cols--today">
       <div class="stack">
-        <Scoreboard weekLabel={me ? weekLabel(me.weekStart) : ''} streak={streakStore.team} {lanes}>
-          {#if canNudge && partner}
-            <Button variant="secondary" icon="hand" fullWidth loading={nudging} onclick={nudge}>{t('home.nudge', { name: partner.displayName })}</Button>
-          {/if}
-          {#if nudgeMessage}<Banner tone={nudgeMessage.tone}>{nudgeMessage.text}</Banner>{/if}
-        </Scoreboard>
-      </div>
+        {#if me}<TodayCard {me} partnerName={partner?.displayName} firstTime={!!guide && guide.visible && !guide.steps[2]?.done} />{/if}
 
-      <div class="stack">
-        <Card title={t('home.betCard')}>
-          {#snippet action()}<Button variant="ghost" size="sm" href="/bet">{t('common.change')}</Button>{/snippet}
-          <p>{data.bet ?? t('home.betNone')}</p>
-          {#if data.debts.owe > 0 || data.debts.owed > 0}
-            <p class="small muted">
-              {#if data.debts.owe > 0}{t('home.debtsOwe', { n: data.debts.owe })}{/if}
-              {#if data.debts.owed > 0}{t('home.debtsOwed', { n: data.debts.owed })}{/if}
-            </p>
-          {/if}
-        </Card>
+        <WeekCard
+          weekLabel={me ? weekLabel(me.weekStart) : ''}
+          streak={streakStore.team}
+          {lanes}
+          partnerMissing={!data.team.full}
+          checkedPartner={partnerPhoto ? partner?.displayName : undefined}
+          nudgeName={!partnerPhoto && canNudge ? partner?.displayName : undefined}
+          {nudging}
+          {nudgeMessage}
+          bet={data.bet}
+          onview={() => (viewing = partnerPhoto ?? null)}
+          onnudge={nudge}
+        />
 
-        {#if partner}
-          <Card title={t('home.rewardCard')}>
-            {#snippet action()}<Button variant="ghost" size="sm" href="/bet#belohnung">{t('common.change')}</Button>{/snippet}
-            <p>{data.reward ? t('home.rewardIf', { reward: data.reward }) : t('home.rewardNone', { name: partner.displayName })}</p>
-            {#if data.rewards.earned > 0 || data.rewards.toGive > 0}
-              <p class="small muted">
-                {#if data.rewards.earned > 0}{tn('home.rewardsEarned', data.rewards.earned)}{/if}
-                {#if data.rewards.toGive > 0}{t('home.rewardsToGive', { n: data.rewards.toGive })}{/if}
-              </p>
-            {/if}
-          </Card>
+        {#if guide?.visible}
+          <StartGuide steps={guide.steps} oninvite={() => (inviteOpen = true)} />
+        {:else if hint?.kind === 'open'}
+          <HintCard icon="gift" title={tn('hint.openTitle', hint.count)} body={partner ? t('hint.openBody', { name: partner.displayName }) : undefined}>
+            {#snippet action()}<Button variant="secondary" size="sm" href="/bet">{t('week.view')}</Button>{/snippet}
+          </HintCard>
+        {:else if hint?.kind === 'goalNext'}
+          <HintCard icon="info" title={t('home.goalNextTitle')} body={tn('home.goalNextBody', hint.days, { date: weekdayDate(addDays(hint.weekStart, 7)) })}>
+            {#snippet action()}<Button variant="secondary" size="sm" href="/bet#ziel">{t('common.change')}</Button>{/snippet}
+          </HintCard>
         {/if}
-
-        <section aria-labelledby="feed-title" class="stack">
-          <h2 class="ds-card__title" id="feed-title">{t('home.feedTitle')}</h2>
-          {#if data.feed.length === 0}
-            <p class="muted">{t('home.feedEmpty')}</p>
-          {:else}
-            <div class="grid-photos">
-              {#each data.feed as c (c.id)}
-                {@const m = memberById.get(c.userId)}
-                {@const tg = tagMeta(c.tag)}
-                {@const r = reactionMeta(c.reactions[0]?.kind)}
-                <PhotoTile
-                  src={c.photo.thumbUrl}
-                  alt={t('photo.of', { name: c.displayName })}
-                  selfieSrc={c.selfie?.thumbUrl}
-                  selfieAlt={t('photo.selfieOf', { name: c.displayName })}
-                  seat={m?.slot ?? 1}
-                  color={m?.color}
-                  name={c.displayName}
-                  dateLabel={weekdayDate(c.localDate)}
-                  tag={tg?.label}
-                  tagIcon={tg?.icon}
-                  reaction={r && c.reactions[0] ? { icon: r.icon, label: `${c.reactions[0].displayName}: ${r.label}` } : undefined}
-                  onclick={() => (viewing = c)}
-                />
-              {/each}
-            </div>
-          {/if}
-        </section>
       </div>
+
+      <section aria-labelledby="feed-title" class="stack">
+        <h2 class="ds-card__title feed-title" id="feed-title">{t('home.feedTitle')}</h2>
+        {#if data.feed.length === 0}
+          <div class="ds-empty">
+            <span class="ds-empty__icon"><Icon name="image" size={24} /></span>
+            <strong>{t('home.feedEmpty')}</strong>
+            <span class="small muted">{t('home.feedEmptyHint')}</span>
+            {#if todayStore.canCheckin}<Button variant="ghost" size="sm" href="/checkin">{t('home.feedEmptyAction')}</Button>{/if}
+          </div>
+        {:else}
+          <div class="grid-photos">
+            {#each data.feed as c (c.id)}
+              {@const m = memberById.get(c.userId)}
+              {@const tg = tagMeta(c.tag)}
+              {@const r = reactionMeta(c.reactions[0]?.kind)}
+              <PhotoTile
+                src={c.photo.thumbUrl}
+                alt={t('photo.of', { name: c.displayName })}
+                selfieSrc={c.selfie?.thumbUrl}
+                selfieAlt={t('photo.selfieOf', { name: c.displayName })}
+                seat={m?.slot ?? 1}
+                color={m?.color}
+                name={c.displayName}
+                dateLabel={weekdayDate(c.localDate)}
+                tag={tg?.label}
+                tagIcon={tg?.icon}
+                reaction={r && c.reactions[0] ? { icon: r.icon, label: `${c.reactions[0].displayName}: ${r.label}` } : undefined}
+                onclick={() => (viewing = c)}
+              />
+            {/each}
+          </div>
+        {/if}
+      </section>
     </div>
   {/if}
 </Page>
@@ -198,6 +186,11 @@
     const open = viewing;
     if (!open) return;
     viewing = { ...open, reactions };
-    if (data) data.feed = data.feed.map((c) => (c.id === open.id ? { ...c, reactions } : c));
+    if (todayStore.dashboard) {
+      todayStore.dashboard = {
+        ...todayStore.dashboard,
+        feed: todayStore.dashboard.feed.map((c) => (c.id === open.id ? { ...c, reactions } : c)),
+      };
+    }
   }}
 />

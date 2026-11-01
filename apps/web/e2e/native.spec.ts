@@ -74,7 +74,7 @@ test('Team gründen mit Token-Anmeldung, Fotos mit Anmeldung laden, abmelden', a
   await page.getByLabel('Passwort').fill(PASSWORD);
   await page.getByLabel('Setup-Token').fill(SETUP_TOKEN);
   await page.getByRole('button', { name: 'Team gründen' }).click();
-  await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
 
   // Tokens liegen im App-Speicher, es gibt keine Cookie-Sitzung
   const auth = await stored(page);
@@ -130,7 +130,7 @@ test('abgelaufenes Access-Token wird mit dem Refresh-Token erneuert; widerrufene
   await page.getByLabel('E-Mail').fill(founder.email);
   await page.getByLabel('Passwort').fill(PASSWORD);
   await page.getByRole('button', { name: 'Anmelden' }).click();
-  await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
   const before = await stored(page);
 
   // Access-Token ungültig machen: der nächste Start erneuert es mit dem Refresh-Token (Rotation)
@@ -140,7 +140,7 @@ test('abgelaufenes Access-Token wird mit dem Refresh-Token erneuert; widerrufene
     localStorage.setItem('ds_native_auth', JSON.stringify(a));
   });
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
   const after = await stored(page);
   expect(after.access).not.toBe('ungueltig-ungueltig-ungueltig');
   expect(after.access).not.toBe(before.access);
@@ -212,8 +212,8 @@ test('Einladungslink des eigenen Servers öffnet die Einladung direkt, Beitritt 
   await page.getByLabel('E-Mail').fill(uniqueEmail('ben'));
   await page.getByLabel('Passwort').fill(PASSWORD);
   await page.getByRole('button', { name: 'Beitreten' }).click();
-  await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
-  await expect(page.locator('.ds-lane')).toHaveCount(2);
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
+  await expect(page.locator('.ds-wlane:not(.ds-wlane--empty)')).toHaveCount(2);
   expect(problems).toEqual([]);
 });
 
@@ -227,7 +227,7 @@ test('Server wechseln in „Mehr“ meldet ab und fragt nach einem neuen Server'
   await page.getByLabel('E-Mail').fill(f.email);
   await page.getByLabel('Passwort').fill(PASSWORD);
   await page.getByRole('button', { name: 'Anmelden' }).click();
-  await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
   await page.goto('/more');
   await expect(page.getByText('Verbunden mit')).toBeVisible();
   await page.getByRole('button', { name: 'Server wechseln' }).click();

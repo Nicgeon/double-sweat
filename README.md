@@ -129,7 +129,7 @@ Die Daten (Datenbank, Fotos, Schlüssel) liegen im Volume `data` unter `/data`.
 ## Erste Schritte
 
 **Im Browser:** Öffne `PUBLIC_URL`, wähle „Neues Team gründen“ (mit dem `SETUP_TOKEN` aus der `.env`), setze dein
-Wochenziel und lade deinen Partner über **Start → Einladen** ein. Der Link (`/join/…`) führt ihn durch die
+Wochenziel und lade deinen Partner über **Heute → Einladen** (Starthilfe) ein. Der Link (`/join/…`) führt ihn durch die
 Anmeldung; hat er schon ein Konto, kommt er nach der Anmeldung zurück zur Einladung. Auf dem Handy lässt sich die
 Seite über das Browser-Menü als App installieren („Zum Startbildschirm“).
 
@@ -206,7 +206,7 @@ stehen in deren SMTP-Hilfe, Port 465 = `smtps://`, Port 587 = `smtp://` mit STAR
 
 ## Sprachen
 
-Die Oberfläche gibt es auf **Deutsch** und **Englisch**. Jedes Konto hat seine eigene Sprache (unter _Mehr →
+Die Oberfläche gibt es auf **Deutsch** und **Englisch**. Jedes Konto hat seine eigene Sprache (unter _Profil →
 Sprache_); Paare dürfen also verschiedene Sprachen nutzen.
 
 - **Oberfläche:** Vor der Anmeldung gilt die zuletzt gewählte Sprache, sonst die des Browsers, sonst
@@ -275,7 +275,7 @@ ein eigenes (kostenloses) Firebase-Projekt und eine App-Version mit FCM, die du 
    [Android-App](#android-app). Der Standard-Build und der FCM-Build haben (je nach Paketname) verschiedene App-IDs
    und sind getrennte Apps. Debug- und Release-Build des FCM-Builds sind verschieden signiert: beim Wechsel zuerst
    deinstallieren.
-5. Auf dem Handy "Mehr → Benachrichtigungen → Push": Ist keine UnifiedPush-App installiert, nutzt die App FCM
+5. Auf dem Handy "Profil → Benachrichtigungen → Push": Ist keine UnifiedPush-App installiert, nutzt die App FCM
    direkt. Sind beide Wege möglich, fragt sie nach.
 
 **Was Google sieht.** Die Nachrichten sind **Ende-zu-Ende verschlüsselt** (derselbe Standard wie bei Web Push,
@@ -328,7 +328,7 @@ etwas tut. (Eigene Schemata kann auch eine fremde App beanspruchen; deshalb gibt
 (so nennt sich die WebView der App). Mehr ist nicht nötig; der Server liefert für die App dieselbe API.
 
 **Push.** Installiere einen UnifiedPush-Verteiler, z. B. **ntfy** (F-Droid oder Play Store), und schalte unter
-"Mehr → Benachrichtigungen" Push ein. Bei mehreren Verteilern fragt die App, welchen sie nehmen soll. Wer keinen
+"Profil → Benachrichtigungen" Push ein. Bei mehreren Verteilern fragt die App, welchen sie nehmen soll. Wer keinen
 Verteiler möchte, nutzt die App-Version mit **FCM** (siehe [Push](#fcm-google-für-geräte-ohne-unifiedpush)). Ab
 Android 13 erscheint die Frage nach der Erlaubnis für Benachrichtigungen. Läuft ntfy in deinem Heimnetz, trage
 dessen Hostnamen in `PUSH_ALLOWED_HOSTS` des Servers ein. Anstupser, Abend-Erinnerung und Abrechnung bekommen eigene

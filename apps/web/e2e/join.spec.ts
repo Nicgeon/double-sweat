@@ -23,7 +23,7 @@ test.describe('Beitritt per Link ohne Anmelde-Schleife', () => {
     await page.getByLabel('E-Mail').fill(uniqueEmail('ben'));
     await page.getByLabel('Passwort').fill(PASSWORD);
     await page.getByRole('button', { name: 'Beitreten' }).click();
-    await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
     expect(problems).toEqual([]);
   });
 
@@ -46,8 +46,8 @@ test.describe('Beitritt per Link ohne Anmelde-Schleife', () => {
     await expect(page.getByText(/Du bist als Clara angemeldet/)).toBeVisible();
     await expect(page.getByLabel('E-Mail')).toHaveCount(0);
     await page.getByRole('button', { name: 'Beitreten' }).click();
-    await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
-    await expect(page.locator('.ds-lane')).toHaveCount(2);
+    await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
+    await expect(page.locator('.ds-wlane:not(.ds-wlane--empty)')).toHaveCount(2);
     expect(problems).toEqual([]);
   });
 
@@ -62,7 +62,7 @@ test.describe('Beitritt per Link ohne Anmelde-Schleife', () => {
     await page.goto(new URL(joinUrl).pathname);
     await expect(page.getByText(/Du bist als Clara angemeldet/)).toBeVisible();
     await page.getByRole('button', { name: 'Beitreten' }).click();
-    await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
   });
 
   test('angemeldeter Nutzer, der schon in einem Team ist', async ({ browser }, testInfo) => {
@@ -72,7 +72,7 @@ test.describe('Beitritt per Link ohne Anmelde-Schleife', () => {
     const { joinUrl } = await other.invite();
     const { page } = await newUserContext(browser, testInfo);
     await loginViaUi(page, benEmail);
-    await expect(page.getByRole('heading', { name: 'Diese Woche', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
     await page.goto(new URL(joinUrl).pathname);
     await expect(page.getByText('Du bist schon in einem Team')).toBeVisible();
   });

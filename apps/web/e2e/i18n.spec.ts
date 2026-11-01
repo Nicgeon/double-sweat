@@ -27,14 +27,16 @@ test('Englischer Browser: Konto anlegen, Oberfläche und Konto sind englisch', a
   await page.getByLabel('Setup token').fill(SETUP_TOKEN);
   await page.getByRole('button', { name: 'Create team' }).click();
 
-  await expect(page.getByRole('heading', { name: 'This week', level: 1 })).toBeVisible();
-  await expect(page.getByText('Your partner is still missing')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Today', level: 1 })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Invite', exact: true })).toBeVisible();
   const nav = page.getByRole('navigation', { name: 'Main navigation' }).first();
-  for (const label of ['Home', 'History', 'Check-in', 'Stakes', 'More'])
+  for (const label of ['Today', 'History', 'Agreement', 'Profile'])
     await expect(nav.getByRole('link', { name: label })).toBeVisible();
+  // Check-in ist keine Tab, sondern eine Schaltfläche über der Leiste (Desktop: oben in der Seitenleiste)
+  await expect(page.getByRole('link', { name: 'Check in' }).first()).toBeVisible();
   // Das Konto hat die Sprache des Browsers bekommen
   expect((await profile(page)).user.locale).toBe('en');
-  await expect(page.locator('.ds-lane')).toContainText('Anna');
+  await expect(page.locator('.ds-wlane:not(.ds-wlane--empty)')).toContainText('Anna');
 
   // Seiten mit Datum und Wochenzahl
   await page.goto('/history');
@@ -50,25 +52,25 @@ test('Sprache wechseln: sofort sichtbar, am Konto gespeichert, nach dem Neuladen
   const { page } = await newUserContext(browser, testInfo);
   await loginViaUi(page, annaEmail);
   await page.goto('/more');
-  await expect(page.getByRole('heading', { name: 'Mehr', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Profil', level: 1 })).toBeVisible();
 
   await page.getByRole('radio', { name: 'English' }).click();
-  await expect(page.getByRole('heading', { name: 'More', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Profile', level: 1 })).toBeVisible();
   await expect(page.getByText('Language saved.')).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   expect((await profile(page)).user.locale).toBe('en');
 
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'More', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Profile', level: 1 })).toBeVisible();
   await page.goto('/bet');
-  await expect(page.getByRole('heading', { name: 'Stakes', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Agreement', level: 1 })).toBeVisible();
   await expect(
     page.getByText('Whoever misses their weekly goal owes the other the stake.'),
   ).toBeVisible();
 
   await page.goto('/more');
   await page.getByRole('radio', { name: 'Deutsch' }).click();
-  await expect(page.getByRole('heading', { name: 'Mehr', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Profil', level: 1 })).toBeVisible();
   expect((await profile(page)).user.locale).toBe('de');
 });
 
@@ -113,7 +115,9 @@ test('Paar mit zwei Sprachen: Mitteilungen kommen in der Sprache des Empfängers
   await expect(annaPage.page.getByText('Ben wurde angestupst.')).toBeVisible();
 
   await benPage.page.goto('/');
-  await expect(benPage.page.getByRole('link', { name: /Notifications, 1 new/ })).toBeVisible();
+  await expect(
+    benPage.page.getByRole('link', { name: /Notifications(, 1 new| New: 1)/ }),
+  ).toBeVisible();
   await benPage.page.getByRole('link', { name: /Notifications/ }).click();
   await expect(
     benPage.page.getByRole('heading', { name: 'Notifications', level: 1 }),

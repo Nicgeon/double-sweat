@@ -145,7 +145,7 @@
   }
 </script>
 
-<Page title={t('bet.title')}>
+<Page title={t('nav.deal')}>
   {#if error}<Banner tone="error">{error}</Banner>{/if}
   <div class="cols">
     <div class="stack">

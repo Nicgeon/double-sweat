@@ -15,6 +15,7 @@
   import { tagList } from '#lib/util/tags.ts';
   import { pushWidget } from '#lib/util/widget.ts';
   import { streakStore } from '#lib/state/streak.svelte.ts';
+  import { todayStore } from '#lib/state/today.svelte.ts';
 
   type Step = 'loading' | 'already' | 'camera' | 'selfie' | 'file' | 'review' | 'done';
   const SELFIE_PREF = 'ds_selfie';
@@ -278,6 +279,7 @@
       result = await uploadCheckin(photo, tag, note, selfie);
       step = 'done';
       dash = unwrap(await api.GET('/api/v1/dashboard'));
+      todayStore.set(dash);
       void pushWidget(dash, streakStore.team);
     } catch (e) {
       error = e instanceof ApiError ? e.message : t('common.failed');

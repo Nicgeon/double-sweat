@@ -589,6 +589,282 @@ textarea.ds-field__input {
   transition: background-color var(--dur-base) var(--ease-out);
 }
 
+/* ---------- WeekStrip kompakt (Wochenkarte): nur Marker, 18 px, ohne Beschriftung ---------- */
+.ds-week--compact {
+  display: flex;
+  flex: none;
+  gap: 6px;
+}
+.ds-week--compact .ds-day {
+  gap: 0;
+}
+.ds-week--compact .ds-day__mark {
+  --ds-size: 18px;
+  border-width: 1.5px;
+}
+.ds-week--compact .ds-day.is-today .ds-day__mark {
+  border-width: 2px;
+}
+.ds-week--compact .ds-day__label {
+  display: none;
+}
+
+/* ---------- Heute-Karte (Status von heute) ---------- */
+.ds-today {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.ds-today__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.ds-today__icon--done {
+  background: var(--done-soft);
+  color: var(--done-ink);
+}
+.ds-today__icon--risk {
+  background: var(--risk-soft);
+  color: var(--risk-ink);
+}
+.ds-today__icon--alert {
+  background: var(--alert-soft);
+  color: var(--alert-ink);
+}
+.ds-today__text {
+  min-width: 0;
+}
+.ds-today__title {
+  margin: 0;
+  font: 700 18px / 24px var(--font-display);
+} /* h3 */
+.ds-today__body {
+  margin: 0;
+  font: 400 14px / 20px var(--font-body);
+  color: var(--ink-muted);
+} /* small */
+
+/* ---------- Wochenkarte (zwei schlanke Bahnen) ---------- */
+.ds-weekcard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.ds-weekcard__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 28px;
+}
+.ds-weekcard__streak {
+  text-decoration: none;
+  border-radius: var(--radius-pill);
+}
+.ds-weekcard__rule {
+  height: 1px;
+  margin: var(--space-1) 0;
+  border: 0;
+  background: var(--border);
+}
+.ds-weekcard__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap-min);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 400 14px / 20px var(--font-body);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.ds-weekcard__grow {
+  flex: 1;
+  min-width: 0;
+}
+.ds-wlane {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tap-min);
+}
+.ds-wlane .ds-avatar {
+  --ds-size: 32px;
+}
+.ds-wlane__who {
+  flex: 1;
+  min-width: 0;
+}
+.ds-wlane__who b {
+  display: block;
+  font: 700 14px / 20px var(--font-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ds-wlane__who span {
+  display: block;
+  font: 400 12px / 16px var(--font-body);
+  color: var(--ink-muted);
+}
+.ds-wlane__ghost {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--ds-radius);
+  color: var(--ink-muted);
+}
+
+/* ---------- Hinweis (ein Platz auf der Heute-Seite) ---------- */
+.ds-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.ds-hint__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+}
+.ds-hint__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font: 400 14px / 20px var(--font-body);
+}
+.ds-hint__text strong {
+  font-weight: 700;
+}
+.ds-hint__text span {
+  color: var(--ink-muted);
+}
+
+/* ---------- Starthilfe (neue Konten) ---------- */
+.ds-guide {
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.ds-guide__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+.ds-guide__title {
+  margin: 0;
+  font: 700 18px / 24px var(--font-display);
+} /* h3 */
+.ds-guide__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ds-guide__step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 52px;
+}
+.ds-guide__mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--ink-muted);
+  font: 800 14px / 1 var(--font-display);
+}
+.ds-guide__step.is-done .ds-guide__mark {
+  border-color: transparent;
+  background: var(--done-soft);
+  color: var(--done-ink);
+}
+.ds-guide__label {
+  flex: 1;
+  min-width: 0;
+  font: 700 14px / 20px var(--font-body);
+}
+.ds-guide__step.is-done .ds-guide__label {
+  font-weight: 400;
+  color: var(--ink-muted);
+}
+.ds-guide__hint {
+  font: 400 14px / 20px var(--font-body);
+  color: var(--ink-muted);
+}
+
+/* ---------- Leerer Zustand und Platzhalter beim Laden ---------- */
+.ds-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  text-align: center;
+}
+.ds-empty__icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+}
+.ds-skel {
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  animation: ds-skel 1.4s ease-in-out infinite;
+}
+@keyframes ds-skel {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ds-skel {
+    animation: none;
+  }
+}
+
 /* ---------- Scoreboard ---------- */
 .ds-board {
   display: flex;
@@ -915,6 +1191,51 @@ textarea.ds-field__input {
 .ds-nav--side .ds-nav__badge {
   margin-left: auto;
 }
+.ds-nav--side .ds-nav__list--secondary {
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- Schwebende Check-in-Schaltfläche (nur mobil, über der Tab-Leiste) ---------- */
+.ds-fab {
+  position: fixed;
+  right: var(--space-4);
+  bottom: calc(var(--tabbar-h) + var(--space-4) + env(safe-area-inset-bottom, 0px));
+  z-index: 19;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 52px;
+  padding: 0 var(--space-5) 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--action);
+  color: var(--on-action);
+  box-shadow: var(--shadow-pop);
+  font: 800 16px / 24px var(--font-display);
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.ds-fab:hover {
+  background: var(--action-hover);
+}
+.ds-fab:active {
+  transform: scale(0.98);
+}
+.ds-fab--quiet {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1.5px solid var(--border-strong);
+}
+.ds-fab--quiet:hover {
+  background: var(--surface-2);
+}
+@media (min-width: 1024px) {
+  .ds-fab {
+    display: none;
+  }
+}
 
 /* ---------- AppBar ---------- */
 .ds-appbar {
@@ -943,6 +1264,20 @@ textarea.ds-field__input {
   align-items: center;
   gap: var(--space-1);
 }
+.ds-appbar__heading {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) 0;
+}
+.ds-appbar__heading .ds-appbar__title {
+  flex: none;
+}
+.ds-appbar__sub {
+  font: 400 14px / 20px var(--font-body);
+  color: var(--ink-muted);
+} /* small */
 
 /* ---------- Banner ---------- */
 .ds-banner {

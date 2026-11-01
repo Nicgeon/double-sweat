@@ -17,6 +17,9 @@ Double Sweat ist eine selbst gehostete App für zwei Menschen, die gemeinsam tra
 | Wochen in Folge           | Serie                | Streak                  |
 | Erinnerung an den Partner | anstupsen            | pushen, nerven          |
 | Die zwei Menschen         | Team                 | Gruppe, Paar            |
+| Ziel, Einsatz, Belohnung  | Abmachung (der Tab)  | Wette, Deal, Vertrag    |
+| Startseite                | Heute                | Start, Dashboard        |
+| Einstellungen             | Profil               | Mehr                    |
 
 Echte Texte der App:
 
@@ -43,7 +46,7 @@ Echte Texte der App:
 - **Typografie.** Archivo für Anzeige, Titel, Zahlen und Navigation (`display`, `h1`, `h2`, `h3`, `overline`, `numeral-*`); Atkinson Hyperlegible Next für allen Text (`lead`, `body`, `body-strong`, `small`, `small-strong`, `caption`). Die große Zahl der Anzeigetafel ist `numeral-xl` mit tabellarischen Ziffern in der Breite 112 (Klasse `ds-num`). Kleinste Größe ist 12 px (`caption`); Fließtext 16 px. Beide Schriften liegen als Dateien in `fonts/` und werden nie von einem CDN geladen.
 - **Abstände.** 4-px-Raster (`space-1` bis `space-16`). Seitenrand mobil `space-4`, ab 768 px `space-6`. Karten stehen mit `space-3` (mobil) bzw. `space-6` (Desktop) Abstand. Inhalt auf Desktop höchstens `content-max`, Fließtext und Formulare höchstens `readable-max`.
 - **Formen.** `radius-md` für Buttons und Felder, `radius-lg` für Karten und Fotos, `radius-xl` für Sheets, `radius-pill` für Chips, Schalter und die Marker von Slot 1. Slot 2 verwendet 30 % der Kantenlänge als Radius.
-- **Linien statt Schatten.** Karten haben eine Haarlinie (`border`) und keinen Schatten. Schatten gibt es nur für Sheets und Dialoge (`shadow-sheet`) und für schwebende Elemente wie die Check-in-Scheibe der Tab-Leiste (`shadow-pop`). Keine farbige Seitenkante an Karten, keine Verläufe.
+- **Linien statt Schatten.** Karten haben eine Haarlinie (`border`) und keinen Schatten. Schatten gibt es nur für Sheets und Dialoge (`shadow-sheet`) und für schwebende Elemente wie die Check-in-Schaltfläche über der Tab-Leiste (`shadow-pop`). Keine farbige Seitenkante an Karten, keine Verläufe.
 - **Fotos.** Format 3:4, `object-fit: cover`. Text auf einem Foto steht immer im Band `scrim` mit `on-scrim`, nie direkt auf dem Bild. Ohne Foto: `surface-2` mit Icon `image` und Text.
 - **Zustände.** Hover: Hintergrund zu `action-hover` bzw. `surface-2`. Gedrückt: Skalierung auf 0,98. Gesperrt: `surface-2` mit `ink-faint`. Lädt: Icon `loader-circle`, Button gesperrt, gleiche Breite. Fokus: 2 px Ring in `focus`, 2 px Abstand, an jedem Bedienelement, nie entfernen.
 - **Bewegung.** `dur-fast` (120 ms) für Hover und Druck, `dur-base` (200 ms) für Marker und Schalter, `dur-slow` (320 ms) für Sheets, jeweils `ease-out`. Keine Konfetti, keine Dauerschleifen. Bei `prefers-reduced-motion` entfällt jede Bewegung.
@@ -51,9 +54,9 @@ Echte Texte der App:
 
 ### Layout
 
-- **Mobil (bis 767 px).** Oben `AppBar` (56 px), darunter der Inhalt in einer Spalte, unten die `NavBar` als Tab-Leiste (64 px plus `safe-area-inset-bottom`). Fünf Einträge: Start, Verlauf, **Check-in** (Scheibe in `action`, mittig), Einsatz, Mehr.
+- **Mobil (bis 767 px).** Oben `AppBar` (56 px), darunter der Inhalt in einer Spalte, unten die `NavBar` als Tab-Leiste (64 px plus `safe-area-inset-bottom`). Vier Ziele: Heute, Verlauf, Abmachung, Profil. **Einchecken** ist keine Tab, sondern eine schwebende Schaltfläche mit Text (`ds-fab`) über der Leiste auf Heute, Verlauf und Abmachung; nach dem ersten Check-in des Tages tritt sie zurück (`ds-fab--quiet`, „Noch ein Check-in“). Abzeichen: Zahl auf Abmachung (Einlösungen, die auf dich warten), Zahl auf der Glocke (ungelesen).
 - **Tablet (ab 768 px).** Seitenrand `space-6`, Sheets erscheinen zentriert als Dialog.
-- **Desktop (ab 1024 px).** Links die Seitenleiste (`NavBar variant="side"`, 248 px) mit Logo, Check-in als großer Button oben; rechts der Inhalt, höchstens 1120 px breit. Start: Anzeigetafel links, Einsatz und Fotos rechts. Die App-Leiste entfällt, der Titel steht im Inhalt.
+- **Desktop (ab 1024 px).** Links die Seitenleiste (`NavBar variant="side"`, 248 px) mit Logo, Einchecken als großer Button oben und dem Postfach unten; rechts der Inhalt, höchstens 1120 px breit. Start: Anzeigetafel links, Einsatz und Fotos rechts. Die App-Leiste entfällt, der Titel steht im Inhalt.
 - Fertige Bildschirme (Start, Check-in in drei Schritten, Einsatz, Mehr mit Farbwahl, Einladung) stehen unter den Komponenten in der Gruppe **Screens** und gelten als Vorlage.
 
 ## Ikonografie und Marke
