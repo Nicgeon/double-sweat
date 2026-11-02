@@ -6,6 +6,8 @@ import { api, type Dashboard, unwrap } from '#lib/api/client.ts';
  */
 class TodayStore {
   dashboard = $state<Dashboard | null>(null);
+  /** Der erste Abruf ist durch (auch wenn er scheiterte): erst dann entscheidet sich, ob der Einsatz-Dialog kommt. */
+  settled = $state(false);
   private inflight: Promise<void> | null = null;
 
   /** Holt den Stand; gleichzeitige Aufrufe teilen sich eine Anfrage. */
@@ -14,6 +16,7 @@ class TodayStore {
       try {
         this.dashboard = unwrap(await api.GET('/api/v1/dashboard'));
       } finally {
+        this.settled = true;
         this.inflight = null;
       }
     })();
@@ -27,6 +30,7 @@ class TodayStore {
 
   clear(): void {
     this.dashboard = null;
+    this.settled = false;
   }
 
   get me() {

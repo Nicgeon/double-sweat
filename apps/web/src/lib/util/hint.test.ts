@@ -75,10 +75,10 @@ describe('startGuide', () => {
     expect(g?.visible).toBe(false);
   });
 
-  it('verlangt den Einsatz: ohne ihn bleibt die Starthilfe sichtbar', () => {
+  it('führt den Einsatz als Schritt auf, hält die Starthilfe aber nicht allein deswegen offen', () => {
     const g = startGuide(dashboard({ bet: null }));
-    expect(g?.visible).toBe(true);
     expect(g?.steps.find((s) => s.id === 'bet')?.done).toBe(false);
+    expect(g?.visible).toBe(false); // Pflicht wird er erst mit der ersten vollen Woche (Dialog der App)
     expect(betMissing(dashboard({ bet: null }))).toBe(true);
   });
 

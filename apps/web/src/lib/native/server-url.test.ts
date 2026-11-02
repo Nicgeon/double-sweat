@@ -40,8 +40,8 @@ describe('probeServer', () => {
   const health = (over: object = {}) => ({
     app: 'double-sweat',
     version: '0.1.0',
-    apiVersion: 1,
-    minClientApi: 1,
+    apiVersion: 2,
+    minClientApi: 2,
     signup: { mode: 'token', requiresSetupToken: true },
     features: { mail: false },
     ...over,
@@ -55,7 +55,7 @@ describe('probeServer', () => {
   it('akzeptiert einen passenden Server', async () => {
     stub(Response.json(health()));
     await expect(probeServer('https://s.example')).resolves.toMatchObject({
-      apiVersion: 1,
+      apiVersion: 2,
       signup: { mode: 'token' },
     });
   });
@@ -64,8 +64,8 @@ describe('probeServer', () => {
     ['fremder Dienst', Response.json({ app: 'anderes' }), 'not_double_sweat'],
     ['Webseite statt API', new Response('<html>', { status: 200 }), 'not_double_sweat'],
     ['HTTP-Fehler', new Response('nope', { status: 404 }), 'not_double_sweat'],
-    ['App zu alt', Response.json(health({ minClientApi: 2, apiVersion: 2 })), 'client_too_old'],
-    ['Server zu alt', Response.json(health({ apiVersion: 0, minClientApi: 0 })), 'server_too_old'],
+    ['App zu alt', Response.json(health({ minClientApi: 3, apiVersion: 3 })), 'client_too_old'],
+    ['Server zu alt', Response.json(health({ apiVersion: 1, minClientApi: 1 })), 'server_too_old'],
   ])('lehnt ab: %s', async (_name, res, code) => {
     stub(res);
     await expect(probeServer('https://s.example')).rejects.toMatchObject({ code });

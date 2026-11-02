@@ -27,6 +27,8 @@ const DELIVERY: Record<NotificationType, DeliveryOptions> = {
   nudge: { ttlSec: 3600, urgency: 'high' },
   reminder: { ttlSec: 7200, urgency: 'normal' },
   debt_created: { ttlSec: 86_400, urgency: 'normal' },
+  bet_set: { ttlSec: 86_400, urgency: 'normal' },
+  bet_changed: { ttlSec: 86_400, urgency: 'normal' },
   reward_set: { ttlSec: 86_400, urgency: 'normal' },
   reward_earned: { ttlSec: 86_400, urgency: 'normal' },
   reaction: { ttlSec: 3600, urgency: 'low' },

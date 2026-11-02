@@ -57,11 +57,18 @@ export function dashboardRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
           z.object({
             team: z.object({ id: z.string(), full: z.boolean() }),
             maxCheckinsPerDay: z.number().describe('Wie viele Check-ins pro Tag möglich sind'),
-            bet: z.string().nullable(),
+            bet: z.string().nullable().describe('Dein Einsatz für die laufende Woche'),
             betUpcoming: z
               .object({ text: z.string(), effectiveFrom: z.string() })
               .nullable()
-              .describe('Einsatz, der erst ab dem genannten Montag gilt'),
+              .describe('Dein nächster, für eine spätere Woche festgelegter Einsatz'),
+            partnerBet: z
+              .string()
+              .nullable()
+              .describe('Einsatz deines Partners für seine laufende Woche'),
+            betRequired: z
+              .boolean()
+              .describe('Du musst jetzt deinen Einsatz festlegen (ab der ersten vollen Woche)'),
             debts: z.object({ owe: z.number(), owed: z.number() }),
             reward: z
               .string()

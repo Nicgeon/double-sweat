@@ -56,7 +56,11 @@ export async function pair(
   await anna.put('/goals/next', { days: options.annaGoal ?? 3 });
   await ben.put('/goals/next', { days: options.benGoal ?? 2 });
   const bet = options.bet === undefined ? 'Der Verlierer kocht' : options.bet;
-  if (bet) await anna.put('/bets', { text: bet });
+  // Jede Person hat ihren eigenen Einsatz; hier derselbe Text, gültig ab der Beitrittswoche
+  if (bet) {
+    await anna.put('/bets', { text: bet });
+    await ben.put('/bets', { text: bet });
+  }
   return { env, anna, ben };
 }
 

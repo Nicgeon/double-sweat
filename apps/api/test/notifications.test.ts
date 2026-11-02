@@ -107,8 +107,10 @@ describe('Benachrichtigungen bei Abrechnung und Team-Auflösung', () => {
     await ben.get('/me');
     settleWeeksJob(env.ctx);
     await env.ctx.idle();
-    const forBen = (await ben.get('/notifications')).body.notifications;
-    const forAnna = (await anna.get('/notifications')).body.notifications;
+    // Der Einsatz selbst löst auch Mitteilungen aus (bet_set); hier geht es um die Schuld
+    const debtOnly = (list: { type: string }[]) => list.filter((n) => n.type === 'debt_created');
+    const forBen = debtOnly((await ben.get('/notifications')).body.notifications);
+    const forAnna = debtOnly((await anna.get('/notifications')).body.notifications);
     expect(forBen).toHaveLength(1);
     expect(forBen[0]).toMatchObject({
       type: 'debt_created',
@@ -136,11 +138,15 @@ describe('Benachrichtigungen bei Abrechnung und Team-Auflösung', () => {
     await ben.get('/me');
     settleWeeksJob(env.ctx);
     await env.ctx.idle();
-    expect((await ben.get('/notifications')).body.notifications).toHaveLength(2);
+    const settlement = async () =>
+      (await ben.get('/notifications')).body.notifications.filter(
+        (n: { type: string }) => n.type !== 'bet_set',
+      );
+    expect(await settlement()).toHaveLength(2);
     settleWeeksJob(env.ctx);
     settleWeeksJob(env.ctx);
     await env.ctx.idle();
-    expect((await ben.get('/notifications')).body.notifications).toHaveLength(2);
+    expect(await settlement()).toHaveLength(2);
   });
 
   it('Team auflösen informiert den Partner, nicht den Auflösenden', async () => {

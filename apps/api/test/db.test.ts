@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
@@ -116,5 +116,55 @@ describe('Datenbank', () => {
     expect(statSync(target).mode & 0o777).toBe(0o600);
     const copy = new Database(target, { readonly: true });
     expect(copy.prepare('SELECT email FROM users').get()).toEqual({ email: 'a@x.org' });
+  });
+
+  it('Migration 0009: der bisherige Einsatz pro Team gilt danach bei beiden Personen', () => {
+    const folder = join(__dirname, '..', 'drizzle');
+    const files = readdirSync(folder)
+      .filter((f) => /^\d{4}_.*\.sql$/.test(f))
+      .sort();
+    const run = (db: Database.Database, file: string) => {
+      for (const statement of readFileSync(join(folder, file), 'utf8').split(
+        '--> statement-breakpoint',
+      )) {
+        if (statement.trim()) db.exec(statement);
+      }
+    };
+    const db = new Database(':memory:');
+    db.pragma('foreign_keys = ON');
+    for (const file of files.filter((f) => f < '0009')) run(db, file);
+    db.exec(`
+      INSERT INTO teams (id, name, created_at) VALUES ('t1', 'Team', 1);
+      INSERT INTO users (id, email, password_hash, password_changed_at, display_name, timezone, created_at)
+        VALUES ('u1', 'a@example.org', 'x', 1, 'Anna', 'Europe/Berlin', 1),
+               ('u2', 'b@example.org', 'x', 1, 'Ben', 'Europe/Berlin', 1);
+      INSERT INTO memberships (team_id, user_id, slot, joined_at) VALUES ('t1', 'u1', 1, 1), ('t1', 'u2', 2, 1);
+      INSERT INTO bets (id, team_id, text, effective_from, created_by, created_at)
+        VALUES ('b1', 't1', 'Kaffee', '2026-03-09', 'u1', 5), ('b2', 't1', 'Kino', '2026-03-16', 'u2', 6);
+    `);
+    run(db, '0009_bets_per_person.sql');
+    const rows = db
+      .prepare(
+        'SELECT user_id AS u, text, effective_from AS f FROM bets ORDER BY user_id, effective_from',
+      )
+      .all();
+    expect(rows).toEqual([
+      { u: 'u1', text: 'Kaffee', f: '2026-03-09' },
+      { u: 'u1', text: 'Kino', f: '2026-03-16' },
+      { u: 'u2', text: 'Kaffee', f: '2026-03-09' },
+      { u: 'u2', text: 'Kino', f: '2026-03-16' },
+    ]);
+    // Pro Person und Montag genau ein Einsatz
+    expect(() =>
+      db
+        .prepare(
+          "INSERT INTO bets (id, team_id, user_id, text, effective_from, created_at) VALUES ('x','t1','u1','Doppelt','2026-03-09',1)",
+        )
+        .run(),
+    ).toThrow();
+    // Löscht man ein Konto, verschwinden dessen Einsätze mit
+    db.prepare("DELETE FROM memberships WHERE user_id = 'u2'").run();
+    db.prepare("DELETE FROM users WHERE id = 'u2'").run();
+    expect(db.prepare('SELECT COUNT(*) AS n FROM bets').get()).toEqual({ n: 2 });
   });
 });

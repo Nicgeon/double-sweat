@@ -5,6 +5,8 @@ export type NotificationType =
   | 'nudge'
   | 'reminder'
   | 'debt_created'
+  | 'bet_set'
+  | 'bet_changed'
   | 'reward_set'
   | 'reward_earned'
   | 'reaction'
@@ -78,6 +80,14 @@ const TEMPLATES: Record<NotificationType, Record<Locale, Template>> = {
       p.role === 'debtor'
         ? `Goal missed: this week you owe ${p.other} “${p.bet}”.`
         : `${p.other} missed the goal and owes you “${p.bet}”.`,
+  },
+  bet_set: {
+    de: (p) => `${p.name} legt den eigenen Einsatz fest: „${p.bet}“.`,
+    en: (p) => `${p.name} sets their own stake: “${p.bet}”.`,
+  },
+  bet_changed: {
+    de: (p) => `${p.name} ändert den eigenen Einsatz: „${p.bet}“.`,
+    en: (p) => `${p.name} changes their own stake: “${p.bet}”.`,
   },
   reward_set: {
     de: (p) => `${p.name} verspricht dir eine Belohnung für dein Wochenziel: „${p.reward}“.`,

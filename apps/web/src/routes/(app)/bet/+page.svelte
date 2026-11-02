@@ -14,13 +14,16 @@
   import Stepper from '#lib/components/Stepper.svelte';
   import { session } from '#lib/state/session.svelte.ts';
   import { todayStore } from '#lib/state/today.svelte.ts';
-  import { longDate, weekNumber } from '#lib/util/format.ts';
+  import { addDays, isoWeek, longDate, weekdayDate, weekNumber } from '#lib/util/format.ts';
 
   type Goals = { currentWeekStart: string; currentGoal: number | null; nextWeekStart: string; nextGoal: number | null; newGoalStartsNow: boolean };
   type Debt = { id: string; weekStart: string; betText: string; redeemedAt: number | null; direction: 'owe' | 'owed'; debtorName: string; creditorName: string };
   let goals = $state<Goals | null>(null);
   let nextGoal = $state(3);
-  let bet = $state<{ current: string | null; upcoming: { text: string; effectiveFrom: string } | null } | null>(null);
+  type BetEntry = { text: string; effectiveFrom: string };
+  type PersonBet = { current: string | null; currentFrom: string | null; upcoming: BetEntry[] };
+  type BetOverview = { currentWeekStart: string; mine: PersonBet; partner: (PersonBet & { displayName: string }) | null; required: boolean };
+  let bet = $state<BetOverview | null>(null);
   type Pledge = { current: string | null; upcoming: { text: string | null; effectiveFrom: string } | null };
   type Rewards = { mine: Pledge; partner: (Pledge & { displayName: string }) | null };
   type Claim = { id: string; weekStart: string; rewardText: string; redeemedAt: number | null; direction: 'earned' | 'give'; recipientName: string; giverName: string };
@@ -37,12 +40,24 @@
   let savingGoal = $state(false);
   let betOpen = $state(false);
   let betText = $state('');
+  let betFrom = $state('');
   let savingBet = $state(false);
   let redeeming = $state<string | null>(null);
 
   const me = $derived(session.me);
-  /** Es gibt weder einen gültigen noch einen vorgemerkten Einsatz. Er ist Pflicht: ohne ihn zählt keine Woche. */
-  const betMissing = $derived(bet !== null && bet.current === null && bet.upcoming === null);
+  /** Du hast weder einen gültigen noch einen vorgemerkten Einsatz. */
+  const betMissing = $derived(bet !== null && bet.mine.current === null && bet.mine.upcoming.length === 0);
+  const partnerName = $derived(bet?.partner?.displayName);
+  /** Wochen, ab denen ein Einsatz gelten kann: diese, die nächste und bis zu 12 Wochen voraus. */
+  const weekOptions = $derived.by(() => {
+    if (!bet) return [];
+    return Array.from({ length: 13 }, (_, i) => {
+      const value = addDays(bet?.currentWeekStart ?? '', i * 7);
+      const n = isoWeek(value);
+      const label = i === 0 ? t('bet.weekThis', { n }) : i === 1 ? t('bet.weekNext', { n }) : t('bet.weekLater', { n, date: weekdayDate(value) });
+      return { value, label };
+    });
+  });
   const fail = (e: unknown) => (error = e instanceof ApiError ? e.message : t('common.failed'));
 
   async function loadDebts() {
@@ -57,7 +72,7 @@
     try {
       goals = unwrap(await api.GET('/api/v1/goals')) as Goals;
       nextGoal = goals.nextGoal ?? goals.currentGoal ?? 3;
-      bet = unwrap(await api.GET('/api/v1/bets')) as typeof bet;
+      bet = unwrap(await api.GET('/api/v1/bets')) as BetOverview;
       rewards = unwrap(await api.GET('/api/v1/rewards')) as Rewards;
     } catch (e) {
       fail(e);
@@ -118,24 +133,35 @@
     }
   }
 
-  function openBet() {
-    betText = bet?.upcoming?.text ?? bet?.current ?? '';
+  /** Fenster zum Festlegen öffnen: Standard ist die laufende Woche, für später mit `from`. */
+  function openBet(from?: string, text?: string) {
+    if (!bet) return;
+    betFrom = from ?? bet.currentWeekStart;
+    betText = text ?? bet.mine.upcoming.find((u) => u.effectiveFrom === betFrom)?.text ?? bet.mine.current ?? '';
     betOpen = true;
   }
   async function saveBet() {
     savingBet = true;
     error = null;
     try {
-      const first = betMissing;
-      bet = unwrap(await api.PUT('/api/v1/bets', { body: { text: betText } })) as typeof bet;
+      bet = unwrap(await api.PUT('/api/v1/bets', { body: { text: betText, from: betFrom } })) as BetOverview;
       betOpen = false;
-      if (first) notice = t('bet.savedFirst');
+      notice = partnerName ? t('bet.saved', { name: partnerName }) : t('bet.savedAlone');
       // Heute, Abzeichen und Starthilfe sollen den neuen Stand sehen
       void todayStore.load().catch(() => {});
     } catch (e) {
       fail(e);
     } finally {
       savingBet = false;
+    }
+  }
+  async function removeUpcoming(from: string) {
+    error = null;
+    try {
+      bet = unwrap(await api.DELETE('/api/v1/bets/{from}', { params: { path: { from } } })) as BetOverview;
+      void todayStore.load().catch(() => {});
+    } catch (e) {
+      fail(e);
     }
   }
 
@@ -156,21 +182,55 @@
   {#if error}<Banner tone="error">{error}</Banner>{/if}
   <div class="cols">
     <div class="stack">
-      <Card title={t('bet.title')} id="einsatz">
+      <Card title={t('bet.mine')} id="einsatz">
         {#snippet action()}
-          {#if betMissing}<Button size="sm" icon="send" onclick={openBet}>{t('bet.set')}</Button>
-          {:else}<Button variant="ghost" size="sm" icon="send" onclick={openBet}>{t('common.change')}</Button>{/if}
+          {#if betMissing}<Button size="sm" icon="send" onclick={() => openBet()}>{t('bet.set')}</Button>
+          {:else}<Button variant="ghost" size="sm" icon="send" onclick={() => openBet()}>{t('common.change')}</Button>{/if}
         {/snippet}
-        {#if betMissing}
-          <Banner tone="warning" title={t('bet.requiredTitle')}>{t('bet.requiredBody')}</Banner>
-        {:else if bet?.current}
-          <p>{bet.current}</p>
-        {/if}
-        {#if bet?.upcoming}
-          <p class="small muted">{t('bet.from', { date: longDate(bet.upcoming.effectiveFrom), text: bet.upcoming.text })}</p>
+        {#if bet?.mine.current}
+          <p>{bet.mine.current}</p>
+        {:else if betMissing}
+          <Banner tone="info" title={t('bet.noneTitle')}>{t('bet.noneBody')}</Banner>
         {/if}
         <p class="small muted">{t('bet.rule')}</p>
       </Card>
+
+      <Card title={t('bet.plan')}>
+        <div class="stack">
+          {#if bet && bet.mine.upcoming.length > 0}
+            <ul class="list">
+              {#each bet.mine.upcoming as u (u.effectiveFrom)}
+                <li class="line">
+                  <span>
+                    <span class="small muted">{t('bet.planLine', { n: isoWeek(u.effectiveFrom), date: weekdayDate(u.effectiveFrom) })}</span><br />
+                    {u.text}
+                  </span>
+                  <span class="row">
+                    <Button variant="ghost" size="sm" onclick={() => openBet(u.effectiveFrom, u.text)}>{t('common.change')}</Button>
+                    <Button variant="ghost" size="sm" icon="trash-2" iconOnly onclick={() => removeUpcoming(u.effectiveFrom)}>{t('bet.remove')}</Button>
+                  </span>
+                </li>
+              {/each}
+            </ul>
+          {:else}
+            <p class="small muted">{t('bet.planEmpty')}</p>
+          {/if}
+          <Button variant="secondary" icon="plus" onclick={() => openBet(addDays(bet?.currentWeekStart ?? '', 7))}>{t('bet.planButton')}</Button>
+        </div>
+      </Card>
+
+      {#if bet?.partner}
+        <Card title={t('bet.partnerCard', { name: bet.partner.displayName })}>
+          {#if bet.partner.current}
+            <p>{bet.partner.current}</p>
+          {:else}
+            <p class="muted">{t('bet.partnerNone', { name: bet.partner.displayName })}</p>
+          {/if}
+          {#each bet.partner.upcoming as u (u.effectiveFrom)}
+            <p class="small muted">{t('bet.from', { date: weekdayDate(u.effectiveFrom), text: u.text })}</p>
+          {/each}
+        </Card>
+      {/if}
 
       <Card title={t('goal.card')} id="ziel">
         {#if goals}
@@ -260,7 +320,15 @@
 
 <Sheet open={betOpen} title={t('bet.sheetTitle')} onclose={() => (betOpen = false)}>
   <form class="form" onsubmit={(e) => { e.preventDefault(); void saveBet(); }}>
-    <Field label={t('bet.fieldLabel')} bind:value={betText} maxlength={140} hint={betMissing ? t('bet.fieldHintFirst') : t('bet.fieldHint')} required />
+    <Field label={t('bet.fieldLabel', { name: partnerName ?? t('gate.anyone') })} bind:value={betText} maxlength={140} hint={t('bet.fieldHint')} required />
+    <div class="ds-field">
+      <label class="ds-field__label" for="bet-from">{t('bet.fromLabel')}</label>
+      <div class="ds-field__control">
+        <select id="bet-from" class="ds-field__input" bind:value={betFrom}>
+          {#each weekOptions as o (o.value)}<option value={o.value}>{o.label}</option>{/each}
+        </select>
+      </div>
+    </div>
   </form>
   {#snippet footer()}
     <Button variant="ghost" onclick={() => (betOpen = false)}>{t('common.cancel')}</Button>

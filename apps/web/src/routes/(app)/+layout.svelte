@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
+  import BetGate from '#lib/components/BetGate.svelte';
   import CheckinFab from '#lib/components/CheckinFab.svelte';
   import Logo from '#lib/components/Logo.svelte';
   import NavBar, { type NavItem } from '#lib/components/NavBar.svelte';
@@ -73,6 +74,11 @@
 {#if session.user}
   {#if !session.team}
     <NoTeam />
+  {:else if !todayStore.settled}
+    <!-- Erst wenn der Stand da ist, steht fest, ob die Person zuerst ihren Einsatz festlegen muss -->
+    <div class="ds-sr" role="status">{t('common.loading')}</div>
+  {:else if todayStore.dashboard?.betRequired}
+    <BetGate partnerName={todayStore.partner?.displayName} partnerBet={todayStore.dashboard.partnerBet} />
   {:else}
     <div class="app">
       <div class="app__side">

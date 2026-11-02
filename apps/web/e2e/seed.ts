@@ -56,3 +56,17 @@ export function seedSettledWeek(opts: {
     db.close();
   }
 }
+
+/** Schiebt den Zeitpunkt, an dem das Team vollständig wurde, um `weeks` Wochen zurück: die erste volle Woche läuft schon. */
+export function backdateTeam(teamId: string, weeks: number) {
+  const db = new Database(join(DATA_DIR, 'double-sweat.db'));
+  db.pragma('busy_timeout = 5000');
+  try {
+    db.prepare('UPDATE teams SET full_since = full_since - ? WHERE id = ?').run(
+      weeks * 7 * 24 * 3600 * 1000,
+      teamId,
+    );
+  } finally {
+    db.close();
+  }
+}

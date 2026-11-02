@@ -69,11 +69,11 @@
 
   <hr class="ds-weekcard__rule" />
   <a class="ds-weekcard__row" href={bet === null && betUpcoming === null ? '/bet#einsatz' : '/bet'}>
-    <Icon name={bet === null && betUpcoming === null ? 'triangle-alert' : 'target'} size={20} />
+    <Icon name="target" size={20} />
     <span class="ds-weekcard__grow">
       {#if bet !== null}<span class="muted">{t('week.betLine')}</span> {bet}
       {:else if betUpcoming}<span class="muted">{t('week.betLine')}</span> {t('week.betFrom', { date: weekdayDate(betUpcoming.effectiveFrom), text: betUpcoming.text })}
-      {:else}<strong>{t('week.betMissing')}</strong>{/if}
+      {:else}{t('week.betMissing')}{/if}
     </span>
     <Icon name="chevron-right" size={20} />
   </a>

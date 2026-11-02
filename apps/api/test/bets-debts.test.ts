@@ -4,102 +4,116 @@ import { settleDueWeeks } from '../src/modules/settlement/service.js';
 import { createCouple, createTestEnv, PASSWORD } from './helpers.js';
 import { afterWeek, checkinDays, noon, pair, W1, W2, W3 } from './scenario.js';
 
-describe('Wetteinsatz', () => {
-  it('ohne Einsatz ist alles leer; der erste Einsatz gilt sofort, Freitext wird getrimmt', async () => {
+describe('Einsatz (pro Person)', () => {
+  it('ohne Einsatz ist alles leer; der eigene gilt ab sofort, Freitext wird getrimmt', async () => {
     const env = createTestEnv();
     const { anna, ben } = await createCouple(env);
-    expect((await anna.get('/bets')).body).toEqual({ current: null, upcoming: null });
+    expect((await anna.get('/bets')).body).toMatchObject({
+      currentWeekStart: '2026-03-02',
+      mine: { current: null, currentFrom: null, upcoming: [] },
+      partner: { displayName: 'Ben', current: null, upcoming: [] },
+      required: false, // die Beitrittswoche zählt nicht, die App lässt sich erst kennenlernen
+    });
     const res = await anna.put('/bets', { text: '  Der Verlierer kocht Abendessen  ' });
     expect(res.status).toBe(200);
-    // Der erste Einsatz gilt sofort, für die laufende Woche (heute Mo 02.03.), nicht erst ab nächstem Montag
-    expect(res.body).toEqual({ current: 'Der Verlierer kocht Abendessen', upcoming: null });
-    expect((await ben.get('/bets')).body.current).toBe('Der Verlierer kocht Abendessen');
+    expect(res.body.mine).toEqual({
+      current: 'Der Verlierer kocht Abendessen',
+      currentFrom: '2026-03-02',
+      upcoming: [],
+    });
+    // Jeder hat seinen eigenen: Ben sieht Annas, hat selbst noch keinen
+    const forBen = (await ben.get('/bets')).body;
+    expect(forBen.mine.current).toBeNull();
+    expect(forBen.partner.current).toBe('Der Verlierer kocht Abendessen');
     expect((await anna.get('/dashboard')).body).toMatchObject({
       bet: 'Der Verlierer kocht Abendessen',
       betUpcoming: null,
+      partnerBet: null,
+      betRequired: false,
     });
   });
 
-  it('ein vorab beschlossener Einsatz bleibt über den Wochenwechsel erhalten und gilt dann für alle', async () => {
+  it('der Einsatz bleibt editierbar: auch für die laufende Woche, und der Partner erfährt davon', async () => {
+    const { env, anna, ben } = await pair({ bet: 'Kaffee' });
+    env.clock.set(noon(W1));
+    const changed = await anna.put('/bets', { text: 'Massage' }); // gilt sofort, ab dieser Woche
+    expect(changed.body.mine).toEqual({ current: 'Massage', currentFrom: W1, upcoming: [] });
+    expect((await ben.get('/bets')).body.partner.current).toBe('Massage');
+    const types = (await ben.get('/notifications')).body.notifications.map(
+      (n: { type: string }) => n.type,
+    );
+    expect(types).toContain('bet_changed');
+    // Zurück auf denselben Montag überschreibt, es entsteht keine zweite Zeile
+    await anna.put('/bets', { text: 'Pizza' });
+    expect(
+      (
+        env.ctx.db.$client
+          .prepare("SELECT COUNT(*) AS n FROM bets WHERE effective_from = ? AND text = 'Pizza'")
+          .get(W1) as { n: number }
+      ).n,
+    ).toBe(1);
+  });
+
+  it('Einsätze lassen sich für kommende Wochen vorab festlegen, bleiben bis dahin vorgemerkt und gelten dann', async () => {
     const { env, anna, ben } = await pair({ bet: 'Kaffee' });
     env.clock.set(noon('2026-03-11')); // Mittwoch in Woche 1
-    await ben.put('/bets', { text: 'Kino' });
-    // Bis Sonntag bleibt der alte gültig, der neue steht vorgemerkt in der Übersicht und im Dashboard
+    await ben.put('/bets', { text: 'Kino', from: W2 });
+    await ben.put('/bets', { text: 'Sushi', from: W3 });
     for (const day of ['2026-03-11', '2026-03-15']) {
       env.clock.set(noon(day));
-      for (const who of [anna, ben]) {
-        expect((await who.get('/bets')).body).toEqual({
-          current: 'Kaffee',
-          upcoming: { text: 'Kino', effectiveFrom: W2 },
-        });
-        expect((await who.get('/dashboard')).body).toMatchObject({
-          bet: 'Kaffee',
-          betUpcoming: { text: 'Kino', effectiveFrom: W2 },
-        });
-      }
+      const b = (await ben.get('/bets')).body;
+      expect(b.mine.current).toBe('Kaffee');
+      expect(b.mine.upcoming).toEqual([
+        { text: 'Kino', effectiveFrom: W2 },
+        { text: 'Sushi', effectiveFrom: W3 },
+      ]);
+      // Der Partner sieht den vorgemerkten Plan, im Dashboard den nächsten
+      expect((await anna.get('/bets')).body.partner.upcoming).toHaveLength(2);
+      expect((await ben.get('/dashboard')).body).toMatchObject({
+        bet: 'Kaffee',
+        betUpcoming: { text: 'Kino', effectiveFrom: W2 },
+      });
     }
-    // Kurz nach Mitternacht und danach: gilt, nichts ist vorgemerkt, nichts verschwindet
-    for (const instant of [afterWeek(W1), noon(W2), noon('2026-03-20'), noon(W3)]) {
+    // Der Wochenwechsel löscht nichts: Woche 2 gilt Kino, Woche 3 Sushi, Annas bleibt unberührt
+    for (const [instant, expected] of [
+      [afterWeek(W1), 'Kino'],
+      [noon(W2), 'Kino'],
+      [noon('2026-03-20'), 'Kino'],
+      [noon(W3), 'Sushi'],
+    ] as const) {
       env.clock.set(instant);
-      for (const who of [anna, ben]) {
-        expect((await who.get('/bets')).body).toEqual({ current: 'Kino', upcoming: null });
-        expect((await who.get('/dashboard')).body).toMatchObject({
-          bet: 'Kino',
-          betUpcoming: null,
-        });
-      }
+      const b = (await ben.get('/bets')).body;
+      expect(b.mine.current).toBe(expected);
+      expect((await anna.get('/bets')).body.mine.current).toBe('Kaffee');
     }
+    expect((await ben.get('/dashboard')).body).toMatchObject({ bet: 'Sushi', betUpcoming: null });
   });
 
-  it('ein Einsatz aus der Zeit, als jeder Einsatz erst ab nächstem Montag galt, gilt beim erneuten Setzen sofort', async () => {
-    const env = createTestEnv();
-    const { anna } = await createCouple(env);
-    // Alter Stand: eine Zeile, die erst ab W1 gilt (Heute ist noch die Beitrittswoche)
-    env.ctx.db.$client
-      .prepare(
-        "INSERT INTO bets (id, team_id, text, effective_from, created_at) SELECT 'old', id, 'Alt', ?, 0 FROM teams",
-      )
-      .run(W1);
-    expect((await anna.get('/bets')).body).toEqual({
-      current: null,
-      upcoming: { text: 'Alt', effectiveFrom: W1 },
-    });
-    const res = await anna.put('/bets', { text: 'Neu' });
-    // Der neue gilt sofort und die alte, spätere Zeile löst ihn nicht wieder ab
-    expect(res.body).toEqual({ current: 'Neu', upcoming: null });
-    env.clock.set(noon(W1));
-    expect((await anna.get('/bets')).body).toEqual({ current: 'Neu', upcoming: null });
-  });
-
-  it('die Änderung greift erst ab dem nächsten Montag; die laufende Woche behält den alten Einsatz', async () => {
+  it('einen vorgemerkten Einsatz kann man zurücknehmen, den laufenden nicht', async () => {
     const { env, anna } = await pair({ bet: 'Kaffee' });
     env.clock.set(noon(W1));
-    expect((await anna.get('/bets')).body).toEqual({ current: 'Kaffee', upcoming: null });
-    const changed = await anna.put('/bets', { text: 'Massage' });
-    expect(changed.body).toEqual({
-      current: 'Kaffee',
-      upcoming: { text: 'Massage', effectiveFrom: W2 },
-    });
+    await anna.put('/bets', { text: 'Später', from: W3 });
+    const removed = await anna.delete(`/bets/${W3}`);
+    expect(removed.status).toBe(200);
+    expect(removed.body.mine.upcoming).toEqual([]);
+    expect((await anna.delete(`/bets/${W3}`)).status).toBe(404);
+    expect((await anna.delete(`/bets/${W1}`)).status).toBe(400); // laufende Woche
+    expect((await anna.get('/bets')).body.mine.current).toBe('Kaffee');
+  });
+
+  it('prüft den Wochenstart: ein Montag, nicht vergangen, höchstens 12 Wochen voraus', async () => {
+    const { env, anna } = await pair({ bet: 'Kaffee' });
+    env.clock.set(noon(W1));
+    await anna.get('/me'); // aktiv bleiben, sonst läuft die Sitzung nach 14 Tagen Pause ab
     env.clock.set(noon(W2));
-    expect((await anna.get('/bets')).body).toEqual({ current: 'Massage', upcoming: null });
+    expect((await anna.put('/bets', { text: 'x', from: '2026-03-18' })).status).toBe(400); // Mittwoch
+    expect((await anna.put('/bets', { text: 'x', from: 'morgen' })).status).toBe(400);
+    expect((await anna.put('/bets', { text: 'x', from: W1 })).status).toBe(400); // vergangen
+    expect((await anna.put('/bets', { text: 'x', from: '2026-06-15' })).status).toBe(400); // zu weit
+    expect((await anna.put('/bets', { text: 'x', from: '2026-06-08' })).status).toBe(200); // genau 12 Wochen
   });
 
-  it('mehrere Änderungen vor Inkrafttreten überschreiben sich', async () => {
-    const env = createTestEnv();
-    const { anna, ben } = await createCouple(env);
-    await anna.put('/bets', { text: 'A' }); // erster Einsatz: gilt sofort
-    await ben.put('/bets', { text: 'B' }); // Änderung: ab nächstem Montag
-    await anna.put('/bets', { text: 'C' }); // überschreibt B
-    expect((await anna.get('/bets')).body).toEqual({
-      current: 'A',
-      upcoming: { text: 'C', effectiveFrom: W1 },
-    });
-    expect(
-      (env.ctx.db.$client.prepare('SELECT COUNT(*) AS n FROM bets').get() as { n: number }).n,
-    ).toBe(2);
-  });
-
-  it('der erste Einsatz gilt für beide sofort, eine Änderung erst, wenn die Woche bei keinem begonnen hat (Zeitzonen)', async () => {
+  it('jede Person hat ihre Zeitzone: "laufende Woche" ist die eigene', async () => {
     const { env, anna, ben } = await pair({
       annaTz: 'Europe/Berlin',
       benTz: 'Pacific/Auckland',
@@ -108,12 +122,44 @@ describe('Wetteinsatz', () => {
     // So 15.03. 12:00 UTC: Berlin noch Woche 03-09, Auckland (UTC+13) bereits Woche 03-16
     env.clock.set(Date.parse('2026-03-15T12:00:00Z'));
     await anna.get('/me');
-    const first = await anna.put('/bets', { text: 'Pizza' });
-    // Gilt in beiden laufenden Wochen
-    expect(first.body).toEqual({ current: 'Pizza', upcoming: null });
-    expect((await ben.get('/bets')).body.current).toBe('Pizza');
-    const change = await anna.put('/bets', { text: 'Sushi' });
-    expect(change.body.upcoming).toEqual({ text: 'Sushi', effectiveFrom: '2026-03-23' });
+    await ben.get('/me');
+    expect((await anna.put('/bets', { text: 'Pizza' })).body.mine.currentFrom).toBe('2026-03-09');
+    expect((await ben.put('/bets', { text: 'Sushi' })).body.mine.currentFrom).toBe('2026-03-16');
+  });
+
+  it('Pflicht: ab der ersten vollen Woche muss jede Person einen Einsatz für die laufende Woche haben', async () => {
+    const { env, anna, ben } = await pair({ bet: null });
+    // Beitrittswoche (Mo 02.03.): nichts erforderlich, man kann die App kennenlernen
+    expect((await anna.get('/bets')).body.required).toBe(false);
+    env.clock.set(noon(W1));
+    await anna.get('/me');
+    await ben.get('/me');
+    for (const who of [anna, ben]) {
+      expect((await who.get('/bets')).body.required).toBe(true);
+      expect((await who.get('/dashboard')).body.betRequired).toBe(true);
+    }
+    await anna.put('/bets', { text: 'Pizza' });
+    expect((await anna.get('/bets')).body.required).toBe(false);
+    expect((await ben.get('/bets')).body.required).toBe(true); // jede Person für sich
+    // Wer vorab für diese Woche festlegt, wird gar nicht gefragt
+    env.clock.set(noon(W2));
+    await ben.get('/me');
+    await anna.get('/me');
+    expect((await anna.get('/bets')).body.required).toBe(false); // Annas Pizza gilt weiter
+    expect((await ben.get('/bets')).body.required).toBe(true);
+    await ben.put('/bets', { text: 'Kino', from: W3 });
+    expect((await ben.get('/bets')).body.required).toBe(true); // W2 hat noch keinen
+    env.clock.set(noon(W3));
+    await ben.get('/me');
+    expect((await ben.get('/bets')).body.required).toBe(false);
+  });
+
+  it('wer vor der ersten vollen Woche für sie festlegt, sieht das Pop-up nie', async () => {
+    const { env, anna } = await pair({ bet: null });
+    await anna.put('/bets', { text: 'Pizza', from: W1 }); // in der Beitrittswoche vorab für Woche 1
+    env.clock.set(noon(W1));
+    await anna.get('/me');
+    expect((await anna.get('/bets')).body.required).toBe(false);
   });
 
   it('prüft Länge und Inhalt, braucht Team und Anmeldung', async () => {
@@ -132,7 +178,18 @@ describe('Wetteinsatz', () => {
     const { anna } = await createCouple(env);
     const payload = '<img src=x onerror=alert(1)> {{7*7}}';
     await anna.put('/bets', { text: payload });
-    expect((await anna.get('/bets')).body.current).toBe(payload);
+    expect((await anna.get('/bets')).body.mine.current).toBe(payload);
+  });
+
+  it('der bisherige Einsatz pro Team gilt nach der Umstellung für beide weiter', async () => {
+    // Zeilen im alten Format (ein Einsatz pro Team) stehen nach der Migration bei beiden Personen
+    const { env, anna, ben } = await pair({ bet: 'Kaffee' });
+    const rows = env.ctx.db.$client
+      .prepare('SELECT user_id AS u, text FROM bets ORDER BY user_id')
+      .all() as { u: string; text: string }[];
+    expect(rows.map((r) => r.text)).toEqual(['Kaffee', 'Kaffee']);
+    expect((await anna.get('/bets')).body.mine.current).toBe('Kaffee');
+    expect((await ben.get('/bets')).body.mine.current).toBe('Kaffee');
   });
 });
 
@@ -197,12 +254,11 @@ describe('Schulden', () => {
   });
 
   it('der Einsatztext bleibt in der Schuld stehen, auch wenn der Einsatz später geändert wird', async () => {
-    const { env, anna, id } = await withDebt();
-    // Es ist bereits Montag nach Woche 1 (Woche 2 läuft), die Änderung gilt daher erst ab Woche 3
-    await anna.put('/bets', { text: 'Etwas ganz anderes' });
+    const { env, anna, ben, id } = await withDebt();
+    // Ben schuldet mit seinem eigenen Einsatz; ändert er ihn danach, bleibt der Text der Schuld stehen
+    await ben.put('/bets', { text: 'Etwas ganz anderes' });
     env.clock.set(noon(W3));
     await anna.get('/me');
-    expect((await anna.get('/bets')).body.current).toBe('Etwas ganz anderes');
     expect(
       (await anna.get('/debts')).body.debts.find((d: { id: string }) => d.id === id).betText,
     ).toBe('Der Verlierer kocht');

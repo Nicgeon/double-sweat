@@ -12,7 +12,7 @@ import {
   weekStartOf,
 } from '../../domain/weeks.js';
 import { forbidden } from '../../util/errors.js';
-import { betForWeek, upcomingBet } from '../bets/service.js';
+import { betForUserWeek, betRequired, getBetOverview } from '../bets/service.js';
 import { type CheckinDto, listTeamCheckins, MAX_CHECKINS_PER_DAY } from '../checkins/service.js';
 import { goalForWeek } from '../goals/service.js';
 import { currentTimezone } from '../me/timezone.js';
@@ -56,6 +56,10 @@ export interface Dashboard {
   bet: string | null;
   /** Beschlossener Einsatz, der erst ab dem genannten Montag gilt (nur ohne laufenden Einsatz sichtbar nötig). */
   betUpcoming: { text: string; effectiveFrom: string } | null;
+  /** Einsatz deines Partners für seine laufende Woche (er gilt für dich, wenn er verfehlt). */
+  partnerBet: string | null;
+  /** Du musst jetzt deinen Einsatz festlegen, sonst geht es nicht weiter (ab der ersten vollen Woche). */
+  betRequired: boolean;
   /** Offene Schulden: wie viele ich schulde und wie viele mir geschuldet werden. */
   debts: { owe: number; owed: number };
   /** Belohnung, die mein Partner mir für das Wochenziel der laufenden Woche verspricht. */
@@ -152,6 +156,9 @@ export function getDashboard(ctx: AppContext, viewer: User): Dashboard {
   const weeks = [...new Set(members.map((m) => m.weekStart))];
   const mine = members.find((m) => m.isMe) as MemberProgress;
   const partnerId = members.find((m) => !m.isMe)?.userId;
+  const betOverview = getBetOverview(ctx, viewer);
+  const myBets = betOverview.mine;
+  const partnerBet = betOverview.partner;
   const open = ctx.db
     .select({ debtorId: debts.debtorId, creditorId: debts.creditorId })
     .from(debts)
@@ -160,8 +167,10 @@ export function getDashboard(ctx: AppContext, viewer: User): Dashboard {
   return {
     team: { id: membership.teamId, full: people.length === 2 },
     maxCheckinsPerDay: MAX_CHECKINS_PER_DAY,
-    bet: betForWeek(ctx.db, membership.teamId, mine.weekStart),
-    betUpcoming: upcomingBet(ctx.db, membership.teamId, mine.weekStart),
+    bet: betForUserWeek(ctx.db, viewer.id, mine.weekStart),
+    betUpcoming: myBets.upcoming[0] ?? null,
+    partnerBet: partnerBet?.current ?? null,
+    betRequired: betRequired(ctx, viewer),
     debts: {
       owe: open.filter((d) => d.debtorId === viewer.id).length,
       owed: open.filter((d) => d.creditorId === viewer.id).length,

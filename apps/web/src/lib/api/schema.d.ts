@@ -2840,12 +2840,17 @@ export interface paths {
                             };
                             /** @description Wie viele Check-ins pro Tag möglich sind */
                             maxCheckinsPerDay: number;
+                            /** @description Dein Einsatz für die laufende Woche */
                             bet: string | null;
-                            /** @description Einsatz, der erst ab dem genannten Montag gilt */
+                            /** @description Dein nächster, für eine spätere Woche festgelegter Einsatz */
                             betUpcoming: {
                                 text: string;
                                 effectiveFrom: string;
                             } | null;
+                            /** @description Einsatz deines Partners für seine laufende Woche */
+                            partnerBet: string | null;
+                            /** @description Du musst jetzt deinen Einsatz festlegen (ab der ersten vollen Woche) */
+                            betRequired: boolean;
                             debts: {
                                 owe: number;
                                 owed: number;
@@ -2960,7 +2965,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Aktueller Einsatz des Teams und eine ggf. bereits beschlossene Änderung */
+        /** Dein Einsatz und der deines Partners, jeweils mit den für später festgelegten Änderungen */
         get: {
             parameters: {
                 query?: never;
@@ -3035,7 +3040,7 @@ export interface paths {
                 };
             };
         };
-        /** Einsatz festlegen (Freitext). Der erste Einsatz gilt sofort, spätere Änderungen erst für Wochen, die noch bei keinem Partner begonnen haben. Ohne Einsatz wird keine Woche gewertet. */
+        /** Eigenen Einsatz festlegen (Freitext). Er gilt ab dem Montag `from` (Standard: laufende Woche, höchstens 12 Wochen im Voraus) und bleibt gültig, bis ein späterer ihn ablöst. Ohne Einsatz wird keine Woche gewertet. */
         put: {
             parameters: {
                 query?: never;
@@ -3047,6 +3052,8 @@ export interface paths {
                 content: {
                     "application/json": {
                         text: string;
+                        /** @description Montag (YYYY-MM-DD), ab dem er gilt */
+                        from?: string;
                     };
                 };
             };
@@ -3118,6 +3125,98 @@ export interface paths {
         };
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bets/{from}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Einen für eine spätere Woche festgelegten Einsatz zurücknehmen */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    from: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Zurückgenommen */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Bet"];
+                    };
+                };
+                /** @description Ungültige Eingabe */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht angemeldet */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht erlaubt */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht gefunden */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Konflikt */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Zu viele Anfragen (Retry-After beachten) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -5187,13 +5286,37 @@ export interface components {
             displayName: string;
         };
         Bet: {
-            /** @description Einsatz der laufenden Woche */
-            current: string | null;
-            /** @description Beschlossene Änderung, die erst ab dem genannten Montag gilt */
-            upcoming: {
-                text: string;
-                effectiveFrom: string;
+            /** @description Montag deiner laufenden Woche */
+            currentWeekStart: string;
+            /** @description Dein Einsatz: was du deinem Partner schuldest, wenn du verfehlst */
+            mine: {
+                /** @description Einsatz für die laufende Woche */
+                current: string | null;
+                /** @description Seit welchem Montag der aktuelle Einsatz gilt */
+                currentFrom: string | null;
+                /** @description Festgelegte Änderungen für spätere Wochen, aufsteigend */
+                upcoming: {
+                    text: string;
+                    /** @description Montag, ab dem dieser Einsatz gilt */
+                    effectiveFrom: string;
+                }[];
+            };
+            /** @description Der Einsatz deines Partners (null, solange du keinen hast) */
+            partner: {
+                /** @description Einsatz für die laufende Woche */
+                current: string | null;
+                /** @description Seit welchem Montag der aktuelle Einsatz gilt */
+                currentFrom: string | null;
+                /** @description Festgelegte Änderungen für spätere Wochen, aufsteigend */
+                upcoming: {
+                    text: string;
+                    /** @description Montag, ab dem dieser Einsatz gilt */
+                    effectiveFrom: string;
+                }[];
+                displayName: string;
             } | null;
+            /** @description Du musst jetzt einen Einsatz für diese Woche festlegen (ab der ersten vollen Woche) */
+            required: boolean;
         };
         Debt: {
             id: string;

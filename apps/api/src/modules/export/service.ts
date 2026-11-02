@@ -144,7 +144,7 @@ function collect(ctx: AppContext, userId: string) {
       ? ctx.db
           .select({ effectiveFrom: bets.effectiveFrom, text: bets.text })
           .from(bets)
-          .where(eq(bets.teamId, team.id))
+          .where(eq(bets.userId, userId))
           .orderBy(bets.effectiveFrom)
           .all()
       : [],

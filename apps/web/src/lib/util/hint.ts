@@ -23,13 +23,14 @@ export function pickHint(d: Dashboard): Hint {
 
 export type GuideStep = { id: 'goal' | 'bet' | 'invite' | 'checkin'; done: boolean };
 
-/** Fehlt der Einsatz (weder gültig noch vorgemerkt)? Er ist Pflicht: ohne ihn zählt keine Woche. */
+/** Hat die Person noch keinen Einsatz (weder gültig noch vorgemerkt)? */
 export const betMissing = (d: Dashboard): boolean => d.bet === null && d.betUpcoming === null;
 
 /**
- * Starthilfe für neue Konten: Wochenziel setzen, Einsatz festlegen (Pflicht), Partner einladen, ersten
- * Check-in machen. Sie erscheint, solange Ziel, Einsatz oder Partner fehlen, und verschwindet danach (der
- * Check-in ist kein Muss).
+ * Starthilfe für neue Konten: Wochenziel setzen, Einsatz festlegen, Partner einladen, ersten Check-in machen.
+ * Sie erscheint, solange Ziel oder Partner fehlen, und verschwindet danach. Der Einsatz steht als Schritt dabei,
+ * hält sie aber nicht offen: Zur Pflicht wird er erst mit der ersten vollen Woche (dann fragt ihn die App ab,
+ * siehe `betRequired`), vorher soll man die App erst kennenlernen können.
  */
 export function startGuide(d: Dashboard): { steps: GuideStep[]; visible: boolean } | null {
   const me = d.members.find((m) => m.isMe);
@@ -45,6 +46,6 @@ export function startGuide(d: Dashboard): { steps: GuideStep[]; visible: boolean
       { id: 'invite', done: inviteDone },
       { id: 'checkin', done: checkinDone },
     ],
-    visible: !goalDone || !betDone || !inviteDone,
+    visible: !goalDone || !inviteDone,
   };
 }

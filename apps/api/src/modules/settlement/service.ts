@@ -16,7 +16,7 @@ import { addWeeks, firstScoredWeek, type LocalDate, weekStartAt } from '../../do
 export { firstScoredWeek };
 
 import { newId } from '../../util/ids.js';
-import { betForWeek } from '../bets/service.js';
+import { betForUserWeek } from '../bets/service.js';
 import { goalForWeek } from '../goals/service.js';
 import { currentTimezone } from '../me/timezone.js';
 import { rewardForWeek } from '../rewards/service.js';
@@ -54,9 +54,10 @@ function settleWeek(
         .where(and(eq(weekResults.userId, user.id), eq(weekResults.weekStart, weekStart)))
         .get();
       if (existing) return null;
-      // Der Einsatz ist Pflicht: Solange das Team keinen hat, zählt keine Woche (es entsteht auch keine Zeile,
-      // damit sich nichts "verpasst" anfühlt). Setzt es ihn später, gilt er erst ab der laufenden Woche.
-      if (betForWeek(tx, team.id, weekStart) === null) return null;
+      // Der Einsatz ist Pflicht: Wer für diese Woche keinen hat, wird nicht gewertet (es entsteht auch keine
+      // Zeile). Ab der ersten vollen Woche fragt die App danach, bevor man weiterkommt.
+      const ownBet = betForUserWeek(tx, user.id, weekStart);
+      if (ownBet === null) return null;
 
       const goalDays = goalForWeek(tx, user.id, weekStart);
       const doneDays =
@@ -84,7 +85,7 @@ function settleWeek(
       let debtId: string | null = null;
       let betText: string | null = null;
       if (met === false) {
-        betText = betForWeek(tx, team.id, weekStart);
+        betText = ownBet;
         if (betText) {
           debtId = newId(now);
           tx.insert(debts)

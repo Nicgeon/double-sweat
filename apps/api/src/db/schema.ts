@@ -209,6 +209,7 @@ export const weekResults = sqliteTable(
   ],
 );
 
+/** Einsatz einer Person: was sie ihrem Partner schuldet, wenn sie ihr Wochenziel verfehlt. */
 export const bets = sqliteTable(
   'bets',
   {
@@ -216,13 +217,15 @@ export const bets = sqliteTable(
     teamId: text('team_id')
       .notNull()
       .references(() => teams.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     text: text('text').notNull(),
-    /** Erster Montag (lokales Datum), für den dieser Einsatz gilt. */
+    /** Erster Montag (lokales Datum), ab dem dieser Einsatz gilt, bis ein späterer ihn ablöst. */
     effectiveFrom: text('effective_from').notNull(),
-    createdBy: text('created_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: integer('created_at').notNull(),
   },
-  (t) => [unique('bets_team_effective').on(t.teamId, t.effectiveFrom)],
+  (t) => [unique('bets_user_effective').on(t.userId, t.effectiveFrom)],
 );
 
 export const debts = sqliteTable(

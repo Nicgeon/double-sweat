@@ -20,6 +20,13 @@ const EN: Record<string, string> = {
   'Das FCM-Token ist ungültig': 'The FCM token is invalid',
   'Das Passwort ist falsch': 'The password is wrong',
   'Das ist bereits deine E-Mail-Adresse': 'That is already your email address',
+  'Der Einsatz kann nur ab einem Montag gelten': 'The stake can only apply from a Monday',
+  'Der Einsatz lässt sich höchstens 12 Wochen im Voraus festlegen':
+    'The stake can be set at most 12 weeks ahead',
+  'Für vergangene Wochen lässt sich nichts mehr ändern': 'Past weeks can no longer be changed',
+  'Für diese Woche ist kein Einsatz festgelegt': 'No stake is set for this week',
+  'Nur Einsätze für spätere Wochen lassen sich zurücknehmen':
+    'Only stakes for later weeks can be withdrawn',
   'Das war etwas viel. Versuche es später noch einmal.': 'That was a lot. Please try again later.',
   'Dein Team hat noch keinen Partner': 'Your team has no partner yet',
   'Dein Team ist bereits vollständig': 'Your team is already complete',

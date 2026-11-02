@@ -162,7 +162,7 @@ describe('Wochenabschluss', () => {
     expect(debtRows(env)).toEqual([]);
   });
 
-  it('setzt das Team den Einsatz später, zählt es ab der laufenden Woche, nicht rückwirkend', async () => {
+  it('setzt jemand den Einsatz später, zählt seine Woche ab der laufenden, nicht rückwirkend; die andere Person bleibt unbewertet', async () => {
     const { env, anna } = await pair({ bet: null });
     env.clock.set(afterWeek(W1)); // Anfang Woche 2, Woche 1 ist vorbei und ohne Einsatz
     settleDueWeeks(env.ctx);
@@ -172,8 +172,9 @@ describe('Wochenabschluss', () => {
     expect(results(env)).toEqual([]);
     env.clock.set(afterWeek(W2));
     settleDueWeeks(env.ctx);
-    expect(results(env).map((r) => r.week)).toEqual([W2, W2]);
-    expect(debtRows(env).map((d) => d.bet)).toEqual(['Pizza', 'Pizza']);
+    // Nur Anna hat einen Einsatz: nur ihre Woche zählt (Ben hat keinen, also keine Wertung für ihn)
+    expect(results(env).map((r) => [r.name, r.week])).toEqual([['Anna', W2]]);
+    expect(debtRows(env).map((d) => [d.debtor, d.bet])).toEqual([['Anna', 'Pizza']]);
   });
 
   it('jeder Partner wird zum Ende seiner eigenen Woche abgerechnet (Auckland vor Berlin)', async () => {
@@ -209,6 +210,7 @@ describe('Wochenabschluss', () => {
     const carla = env.client({ ip: '203.0.113.77' });
     await carla.registerWithInvite(code, 'carla@example.org', 'Carla');
     await carla.put('/goals/next', { days: 2 });
+    await carla.put('/bets', { text: 'Pizza' });
     await anna.put('/goals/next', { days: 3 });
     env.clock.set(afterWeek(W2));
     expect(settleDueWeeks(env.ctx)).toEqual([]); // W2 war die Beitrittswoche

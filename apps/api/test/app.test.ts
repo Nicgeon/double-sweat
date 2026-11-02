@@ -9,8 +9,8 @@ describe('System', () => {
     expect(res.body).toEqual({
       app: 'double-sweat',
       version: '0.1.0',
-      apiVersion: 1,
-      minClientApi: 1,
+      apiVersion: 2,
+      minClientApi: 2,
       signup: { mode: 'token', requiresSetupToken: true },
       features: { mail: false },
       defaultLocale: 'de',
