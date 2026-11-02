@@ -54,6 +54,9 @@ function settleWeek(
         .where(and(eq(weekResults.userId, user.id), eq(weekResults.weekStart, weekStart)))
         .get();
       if (existing) return null;
+      // Der Einsatz ist Pflicht: Solange das Team keinen hat, zählt keine Woche (es entsteht auch keine Zeile,
+      // damit sich nichts "verpasst" anfühlt). Setzt es ihn später, gilt er erst ab der laufenden Woche.
+      if (betForWeek(tx, team.id, weekStart) === null) return null;
 
       const goalDays = goalForWeek(tx, user.id, weekStart);
       const doneDays =

@@ -38,7 +38,7 @@ export function betRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
       path: '/bets',
       tags,
       summary:
-        'Einsatz festlegen (Freitext). Er gilt erst für Wochen, die noch bei keinem Partner begonnen haben.',
+        'Einsatz festlegen (Freitext). Der erste Einsatz gilt sofort, spätere Änderungen erst für Wochen, die noch bei keinem Partner begonnen haben. Ohne Einsatz wird keine Woche gewertet.',
       ...auth,
       request: { body: jsonBody(z.object({ text: z.string().trim().min(1).max(BET_MAX_LENGTH) })) },
       responses: { 200: jsonResponse(betSchema, 'Gesetzt'), ...errorResponses },

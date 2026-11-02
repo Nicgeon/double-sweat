@@ -2841,6 +2841,11 @@ export interface paths {
                             /** @description Wie viele Check-ins pro Tag möglich sind */
                             maxCheckinsPerDay: number;
                             bet: string | null;
+                            /** @description Einsatz, der erst ab dem genannten Montag gilt */
+                            betUpcoming: {
+                                text: string;
+                                effectiveFrom: string;
+                            } | null;
                             debts: {
                                 owe: number;
                                 owed: number;
@@ -3030,7 +3035,7 @@ export interface paths {
                 };
             };
         };
-        /** Einsatz festlegen (Freitext). Er gilt erst für Wochen, die noch bei keinem Partner begonnen haben. */
+        /** Einsatz festlegen (Freitext). Der erste Einsatz gilt sofort, spätere Änderungen erst für Wochen, die noch bei keinem Partner begonnen haben. Ohne Einsatz wird keine Woche gewertet. */
         put: {
             parameters: {
                 query?: never;

@@ -6,6 +6,7 @@
   import Icon from './Icon.svelte';
   import type { Lane } from './Scoreboard.svelte';
   import Streak from './Streak.svelte';
+  import { weekdayDate } from '#lib/util/format.ts';
   import WeekStrip from './WeekStrip.svelte';
 
   type Props = {
@@ -20,10 +21,12 @@
     nudging?: boolean;
     nudgeMessage?: { tone: 'success' | 'info'; text: string } | null;
     bet: string | null;
+    /** Einsatz, der erst ab einem späteren Montag gilt (nur relevant, solange `bet` fehlt). */
+    betUpcoming?: { text: string; effectiveFrom: string } | null;
     onview?: () => void;
     onnudge?: () => void;
   };
-  let { weekLabel, streak = 0, lanes, partnerMissing = false, checkedPartner, nudgeName, nudging = false, nudgeMessage = null, bet, onview, onnudge }: Props = $props();
+  let { weekLabel, streak = 0, lanes, partnerMissing = false, checkedPartner, nudgeName, nudging = false, nudgeMessage = null, bet, betUpcoming = null, onview, onnudge }: Props = $props();
 
   const progress = (l: Lane) =>
     l.goal === null ? (l.done > 0 ? tn('week.noGoalDays', l.done) : t('scoreboard.noGoal')) : tn('days.progress', l.goal, { done: l.done });
@@ -65,9 +68,13 @@
   {#if nudgeMessage}<Banner tone={nudgeMessage.tone}>{nudgeMessage.text}</Banner>{/if}
 
   <hr class="ds-weekcard__rule" />
-  <a class="ds-weekcard__row" href="/bet">
-    <Icon name="target" size={20} />
-    <span class="ds-weekcard__grow"><span class="muted">{t('week.betLine')}</span> {bet ?? t('week.betNone')}</span>
+  <a class="ds-weekcard__row" href={bet === null && betUpcoming === null ? '/bet#einsatz' : '/bet'}>
+    <Icon name={bet === null && betUpcoming === null ? 'triangle-alert' : 'target'} size={20} />
+    <span class="ds-weekcard__grow">
+      {#if bet !== null}<span class="muted">{t('week.betLine')}</span> {bet}
+      {:else if betUpcoming}<span class="muted">{t('week.betLine')}</span> {t('week.betFrom', { date: weekdayDate(betUpcoming.effectiveFrom), text: betUpcoming.text })}
+      {:else}<strong>{t('week.betMissing')}</strong>{/if}
+    </span>
     <Icon name="chevron-right" size={20} />
   </a>
 </section>

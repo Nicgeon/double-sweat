@@ -425,8 +425,11 @@ der Android-App).
   Eine Zeitzonenänderung gilt ab dem nächsten Wochenstart (ohne bisherige Check-ins sofort).
 - Das Wochenziel (1 bis 7 Tage) ist nur für die **kommende** Woche änderbar. Ausnahme: Das allererste Ziel gilt
   sofort, solange die laufende Woche noch nicht gewertet wird (Team nicht vollständig oder Beitrittswoche).
-- Der Einsatz ist Freitext pro Team; eine Änderung gilt erst für Wochen, die bei **keinem** Partner schon
-  begonnen haben. Er lässt sich also nicht kurz vor der Abrechnung ändern.
+- Der Einsatz ist **Pflicht** und Freitext pro Team: **Ohne Einsatz wird keine Woche gewertet.** Der erste Einsatz
+  gilt sofort, für die laufende Woche (ältere, nur vorgemerkte Einsätze werden dabei ersetzt). Jede spätere
+  Änderung gilt erst für Wochen, die bei **keinem** Partner schon begonnen haben und steht bis dahin vorgemerkt
+  da; der Einsatz lässt sich also nicht kurz vor der Abrechnung ändern. Setzt ein Team ihn später, zählt es ab der
+  laufenden Woche, nicht rückwirkend. Die Heute-Seite führt in der Starthilfe zum Einsatz, bis er festgelegt ist.
 - **Belohnung** als Gegenstück zum Einsatz: Jede Person kann dem Partner eine Belohnung für dessen Wochenziel
   versprechen (Freitext, für den Partner sichtbar, gilt wie der Einsatz erst für Wochen, die noch bei niemandem
   begonnen haben; leer lassen zieht sie zurück). Schafft jemand sein Ziel, wird bei der Abrechnung die Belohnung

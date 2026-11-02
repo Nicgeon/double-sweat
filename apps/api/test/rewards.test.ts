@@ -45,7 +45,7 @@ describe('Belohnung: Versprechen', () => {
   });
 
   it('eine Änderung greift erst ab dem nächsten Montag; die laufende Woche behält die alte Belohnung', async () => {
-    const { env, anna, ben } = await pair({ bet: null });
+    const { env, anna, ben } = await pair();
     await anna.put('/rewards', { text: 'Kaffee' });
     env.clock.set(noon(W1));
     expect((await anna.get('/rewards')).body.mine).toEqual({ current: 'Kaffee', upcoming: null });
@@ -86,7 +86,7 @@ describe('Belohnung: Versprechen', () => {
 describe('Belohnung: Abrechnung', () => {
   /** Ben verspricht Anna eine Belohnung. Woche 1: Anna erreicht ihr Ziel (3 Tage), Ben nicht. */
   async function annaEarned() {
-    const ctx = await pair({ bet: null });
+    const ctx = await pair();
     await ctx.ben.put('/rewards', { text: 'Ben kocht' });
     await checkinDays(ctx.env, ctx.anna, W1, 3);
     await checkinDays(ctx.env, ctx.ben, W1, 1);
@@ -119,7 +119,7 @@ describe('Belohnung: Abrechnung', () => {
   });
 
   it('beide erreichen ihr Ziel: jeder bekommt, was der andere versprochen hat', async () => {
-    const { env, anna, ben } = await pair({ bet: null });
+    const { env, anna, ben } = await pair();
     await anna.put('/rewards', { text: 'Massage' });
     await ben.put('/rewards', { text: 'Eis' });
     await checkinDays(env, anna, W1, 3);
@@ -141,11 +141,12 @@ describe('Belohnung: Abrechnung', () => {
     const { anna, ben } = await annaEarned();
     const forAnna = (await anna.get('/notifications')).body.notifications;
     const forBen = (await ben.get('/notifications')).body.notifications;
-    expect(forAnna.at(0)).toMatchObject({
+    // Mit Einsatz entsteht bei Ben zusätzlich eine Schuld: die Belohnung gezielt nach Art suchen
+    expect(forAnna.find((n: { type: string }) => n.type === 'reward_earned')).toMatchObject({
       type: 'reward_earned',
       body: 'Wochenziel geschafft! Deine Belohnung von Ben: „Ben kocht“.',
     });
-    expect(forBen.at(0)).toMatchObject({
+    expect(forBen.find((n: { type: string }) => n.type === 'reward_earned')).toMatchObject({
       type: 'reward_earned',
       body: 'Anna hat das Wochenziel geschafft. Deine Belohnung ist fällig: „Ben kocht“.',
     });
@@ -159,7 +160,7 @@ describe('Belohnung: Abrechnung', () => {
 
   it('verfehltes oder nicht gesetztes Ziel und zurückgezogene Belohnung ergeben nichts', async () => {
     // Ben hat verfehlt (Anna hatte etwas versprochen, Ben bekommt aber nichts)
-    const a = await pair({ bet: null });
+    const a = await pair();
     await a.anna.put('/rewards', { text: 'Massage' });
     await checkinDays(a.env, a.anna, W1, 3);
     await checkinDays(a.env, a.ben, W1, 1);
@@ -170,7 +171,7 @@ describe('Belohnung: Abrechnung', () => {
     expect((await a.anna.get('/reward-claims?status=all')).body.claims).toEqual([]);
 
     // Belohnung vor Wochenbeginn zurückgezogen
-    const b = await pair({ bet: null });
+    const b = await pair();
     await b.ben.put('/rewards', { text: 'Ben kocht' });
     await b.ben.put('/rewards', { text: '' });
     await checkinDays(b.env, b.anna, W1, 3);
@@ -191,7 +192,7 @@ describe('Belohnung: Abrechnung', () => {
 
 describe('Belohnung: Einlösen', () => {
   async function earned() {
-    const ctx = await pair({ bet: null });
+    const ctx = await pair();
     await ctx.ben.put('/rewards', { text: 'Ben kocht' });
     await checkinDays(ctx.env, ctx.anna, W1, 3);
     ctx.env.clock.set(afterWeek(W1));

@@ -193,6 +193,8 @@ test('Ziel und Einsatz festlegen', async ({ browser }, testInfo) => {
   await loginViaUi(page, annaEmail);
   await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
   await expect(page.getByText('Wochenziel setzen', { exact: true })).toBeVisible();
+  // Auch der Einsatz steht in der Starthilfe (Pflicht)
+  await expect(page.getByText('Einsatz festlegen', { exact: true })).toBeVisible();
   await page.goto('/bet');
   const plus = page.getByRole('button', { name: 'Einen Tag mehr' });
   await plus.click();
@@ -205,12 +207,32 @@ test('Ziel und Einsatz festlegen', async ({ browser }, testInfo) => {
   await expect(page.locator('.ds-wlane:not(.ds-wlane--empty)').first()).toContainText('von 5');
   await page.goto('/bet');
 
-  // Die erste Karte ist der Einsatz; die Belohnung hat ein eigenes "Ändern"
-  await page.getByRole('button', { name: 'Ändern' }).first().click();
+  // Der Einsatz ist Pflicht: ohne ihn steht hier die Aufforderung, und der erste gilt sofort
+  await expect(page.getByText('Der Einsatz ist Pflicht')).toBeVisible();
+  await page.getByRole('button', { name: 'Einsatz festlegen' }).click();
+  await expect(
+    page.getByText('Der erste Einsatz gilt sofort, auch für diese Woche.'),
+  ).toBeVisible();
   await page.getByLabel('Was steht auf dem Spiel?').fill('Wer verliert, kocht am Sonntag');
   await page.getByRole('button', { name: 'Speichern', exact: true }).click();
-  await expect(page.getByText('Wer verliert, kocht am Sonntag')).toBeVisible();
+  await expect(page.getByText('Gespeichert. Der Einsatz gilt ab sofort.')).toBeVisible();
+  await expect(page.getByText('Wer verliert, kocht am Sonntag').first()).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByText('Der Einsatz ist Pflicht')).toHaveCount(0);
+  await expect(page.getByText(/Ab .*: /)).toHaveCount(0); // nichts vorgemerkt, er gilt schon
+
+  // Heute zeigt ihn gleich, die Starthilfe verlangt nichts mehr
+  await page.goto('/');
+  await expect(page.getByText('Wer verliert, kocht am Sonntag')).toBeVisible();
+  await expect(page.getByText('Das fehlt noch zum Start')).toHaveCount(0);
+
+  // Jede spätere Änderung gilt erst ab der nächsten Woche und steht bis dahin vorgemerkt da
+  await page.goto('/bet');
+  await page.getByRole('button', { name: 'Ändern' }).first().click();
+  await page.getByLabel('Was steht auf dem Spiel?').fill('Kino zahlen');
+  await page.getByRole('button', { name: 'Speichern', exact: true }).click();
+  await expect(page.getByText(/Ab .*: Kino zahlen/)).toBeVisible();
+  await expect(page.getByText('Wer verliert, kocht am Sonntag').first()).toBeVisible();
   expect(problems).toEqual([]);
 });
 

@@ -21,24 +21,30 @@ export function pickHint(d: Dashboard): Hint {
   return null;
 }
 
-export type GuideStep = { id: 'goal' | 'invite' | 'checkin'; done: boolean };
+export type GuideStep = { id: 'goal' | 'bet' | 'invite' | 'checkin'; done: boolean };
+
+/** Fehlt der Einsatz (weder gültig noch vorgemerkt)? Er ist Pflicht: ohne ihn zählt keine Woche. */
+export const betMissing = (d: Dashboard): boolean => d.bet === null && d.betUpcoming === null;
 
 /**
- * Starthilfe für neue Konten: Wochenziel setzen, Partner einladen, ersten Check-in machen.
- * Sie erscheint, solange Ziel oder Partner fehlen, und verschwindet danach (der Check-in ist kein Muss).
+ * Starthilfe für neue Konten: Wochenziel setzen, Einsatz festlegen (Pflicht), Partner einladen, ersten
+ * Check-in machen. Sie erscheint, solange Ziel, Einsatz oder Partner fehlen, und verschwindet danach (der
+ * Check-in ist kein Muss).
  */
 export function startGuide(d: Dashboard): { steps: GuideStep[]; visible: boolean } | null {
   const me = d.members.find((m) => m.isMe);
   if (!me) return null;
   const goalDone = me.goalDays !== null || me.nextGoalDays !== null;
+  const betDone = !betMissing(d);
   const inviteDone = d.team.full;
   const checkinDone = d.feed.some((c) => c.userId === me.userId);
   return {
     steps: [
       { id: 'goal', done: goalDone },
+      { id: 'bet', done: betDone },
       { id: 'invite', done: inviteDone },
       { id: 'checkin', done: checkinDone },
     ],
-    visible: !goalDone || !inviteDone,
+    visible: !goalDone || !betDone || !inviteDone,
   };
 }

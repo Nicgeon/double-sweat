@@ -95,7 +95,8 @@ describe('Datenexport', () => {
     // Das erste Ziel gilt sofort, also ab der Beitrittswoche (Mo 2.3.), nicht erst ab W1
     expect(data.goals).toEqual([{ effectiveFrom: '2026-03-02', days: 2 }]);
     expect(data.weekResults).toEqual([{ weekStart: W1, goalDays: 2, doneDays: 2, met: true }]);
-    expect(data.bets).toEqual([{ effectiveFrom: W1, text: 'Der Verlierer kocht' }]);
+    // Der erste Einsatz gilt sofort, ebenfalls ab der Beitrittswoche
+    expect(data.bets).toEqual([{ effectiveFrom: '2026-03-02', text: 'Der Verlierer kocht' }]);
     expect(data.debts).toEqual([
       expect.objectContaining({
         weekStart: W1,

@@ -13,6 +13,7 @@
   import Sheet from '#lib/components/Sheet.svelte';
   import Stepper from '#lib/components/Stepper.svelte';
   import { session } from '#lib/state/session.svelte.ts';
+  import { todayStore } from '#lib/state/today.svelte.ts';
   import { longDate, weekNumber } from '#lib/util/format.ts';
 
   type Goals = { currentWeekStart: string; currentGoal: number | null; nextWeekStart: string; nextGoal: number | null; newGoalStartsNow: boolean };
@@ -40,6 +41,8 @@
   let redeeming = $state<string | null>(null);
 
   const me = $derived(session.me);
+  /** Es gibt weder einen gültigen noch einen vorgemerkten Einsatz. Er ist Pflicht: ohne ihn zählt keine Woche. */
+  const betMissing = $derived(bet !== null && bet.current === null && bet.upcoming === null);
   const fail = (e: unknown) => (error = e instanceof ApiError ? e.message : t('common.failed'));
 
   async function loadDebts() {
@@ -123,8 +126,12 @@
     savingBet = true;
     error = null;
     try {
+      const first = betMissing;
       bet = unwrap(await api.PUT('/api/v1/bets', { body: { text: betText } })) as typeof bet;
       betOpen = false;
+      if (first) notice = t('bet.savedFirst');
+      // Heute, Abzeichen und Starthilfe sollen den neuen Stand sehen
+      void todayStore.load().catch(() => {});
     } catch (e) {
       fail(e);
     } finally {
@@ -149,9 +156,16 @@
   {#if error}<Banner tone="error">{error}</Banner>{/if}
   <div class="cols">
     <div class="stack">
-      <Card title={t('bet.title')}>
-        {#snippet action()}<Button variant="ghost" size="sm" icon="send" onclick={openBet}>{t('common.change')}</Button>{/snippet}
-        <p>{bet?.current || t('bet.none')}</p>
+      <Card title={t('bet.title')} id="einsatz">
+        {#snippet action()}
+          {#if betMissing}<Button size="sm" icon="send" onclick={openBet}>{t('bet.set')}</Button>
+          {:else}<Button variant="ghost" size="sm" icon="send" onclick={openBet}>{t('common.change')}</Button>{/if}
+        {/snippet}
+        {#if betMissing}
+          <Banner tone="warning" title={t('bet.requiredTitle')}>{t('bet.requiredBody')}</Banner>
+        {:else if bet?.current}
+          <p>{bet.current}</p>
+        {/if}
         {#if bet?.upcoming}
           <p class="small muted">{t('bet.from', { date: longDate(bet.upcoming.effectiveFrom), text: bet.upcoming.text })}</p>
         {/if}
@@ -246,7 +260,7 @@
 
 <Sheet open={betOpen} title={t('bet.sheetTitle')} onclose={() => (betOpen = false)}>
   <form class="form" onsubmit={(e) => { e.preventDefault(); void saveBet(); }}>
-    <Field label={t('bet.fieldLabel')} bind:value={betText} maxlength={140} hint={t('bet.fieldHint')} required />
+    <Field label={t('bet.fieldLabel')} bind:value={betText} maxlength={140} hint={betMissing ? t('bet.fieldHintFirst') : t('bet.fieldHint')} required />
   </form>
   {#snippet footer()}
     <Button variant="ghost" onclick={() => (betOpen = false)}>{t('common.cancel')}</Button>

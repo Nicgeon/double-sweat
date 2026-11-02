@@ -107,7 +107,7 @@
   {:else}
     <div class="cols cols--today">
       <div class="stack">
-        {#if me}<TodayCard {me} partnerName={partner?.displayName} firstTime={!!guide && guide.visible && !guide.steps[2]?.done} />{/if}
+        {#if me}<TodayCard {me} partnerName={partner?.displayName} firstTime={!!guide && guide.visible && !guide.steps.find((s) => s.id === 'checkin')?.done} />{/if}
 
         <WeekCard
           weekLabel={me ? weekLabel(me.weekStart) : ''}
@@ -119,6 +119,7 @@
           {nudging}
           {nudgeMessage}
           bet={data.bet}
+          betUpcoming={data.betUpcoming}
           onview={() => (viewing = partnerPhoto ?? null)}
           onnudge={nudge}
         />

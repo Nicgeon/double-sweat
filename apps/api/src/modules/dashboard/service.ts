@@ -12,7 +12,7 @@ import {
   weekStartOf,
 } from '../../domain/weeks.js';
 import { forbidden } from '../../util/errors.js';
-import { betForWeek } from '../bets/service.js';
+import { betForWeek, upcomingBet } from '../bets/service.js';
 import { type CheckinDto, listTeamCheckins, MAX_CHECKINS_PER_DAY } from '../checkins/service.js';
 import { goalForWeek } from '../goals/service.js';
 import { currentTimezone } from '../me/timezone.js';
@@ -54,6 +54,8 @@ export interface Dashboard {
   maxCheckinsPerDay: number;
   /** Einsatz der laufenden Woche des Betrachters. */
   bet: string | null;
+  /** Beschlossener Einsatz, der erst ab dem genannten Montag gilt (nur ohne laufenden Einsatz sichtbar nötig). */
+  betUpcoming: { text: string; effectiveFrom: string } | null;
   /** Offene Schulden: wie viele ich schulde und wie viele mir geschuldet werden. */
   debts: { owe: number; owed: number };
   /** Belohnung, die mein Partner mir für das Wochenziel der laufenden Woche verspricht. */
@@ -159,6 +161,7 @@ export function getDashboard(ctx: AppContext, viewer: User): Dashboard {
     team: { id: membership.teamId, full: people.length === 2 },
     maxCheckinsPerDay: MAX_CHECKINS_PER_DAY,
     bet: betForWeek(ctx.db, membership.teamId, mine.weekStart),
+    betUpcoming: upcomingBet(ctx.db, membership.teamId, mine.weekStart),
     debts: {
       owe: open.filter((d) => d.debtorId === viewer.id).length,
       owed: open.filter((d) => d.creditorId === viewer.id).length,

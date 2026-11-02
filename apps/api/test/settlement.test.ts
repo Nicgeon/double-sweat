@@ -154,12 +154,26 @@ describe('Wochenabschluss', () => {
     expect(debtRows(env)).toEqual([]);
   });
 
-  it('ohne Einsatz gibt es das Ergebnis, aber keine Schuld', async () => {
+  it('ohne Einsatz wird keine Woche gewertet (der Einsatz ist Pflicht)', async () => {
     const { env } = await pair({ bet: null });
     env.clock.set(afterWeek(W1));
-    settleDueWeeks(env.ctx);
-    expect(results(env).map((r) => r.met)).toEqual([0, 0]);
+    expect(settleDueWeeks(env.ctx)).toEqual([]);
+    expect(results(env)).toEqual([]);
     expect(debtRows(env)).toEqual([]);
+  });
+
+  it('setzt das Team den Einsatz später, zählt es ab der laufenden Woche, nicht rückwirkend', async () => {
+    const { env, anna } = await pair({ bet: null });
+    env.clock.set(afterWeek(W1)); // Anfang Woche 2, Woche 1 ist vorbei und ohne Einsatz
+    settleDueWeeks(env.ctx);
+    await anna.get('/me');
+    await anna.put('/bets', { text: 'Pizza' }); // gilt sofort, für Woche 2
+    settleDueWeeks(env.ctx);
+    expect(results(env)).toEqual([]);
+    env.clock.set(afterWeek(W2));
+    settleDueWeeks(env.ctx);
+    expect(results(env).map((r) => r.week)).toEqual([W2, W2]);
+    expect(debtRows(env).map((d) => d.bet)).toEqual(['Pizza', 'Pizza']);
   });
 
   it('jeder Partner wird zum Ende seiner eigenen Woche abgerechnet (Auckland vor Berlin)', async () => {

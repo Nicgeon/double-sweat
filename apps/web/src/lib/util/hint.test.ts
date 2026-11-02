@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { Dashboard } from '#lib/api/client.ts';
-import { pickHint, startGuide } from './hint.ts';
+import { betMissing, pickHint, startGuide } from './hint.ts';
 
 type Overrides = {
+  /** Einsatz gilt in der laufenden Woche (Standard: ja) */
+  bet?: string | null;
+  betUpcoming?: { text: string; effectiveFrom: string } | null;
   goalDays?: number | null;
   nextGoalDays?: number | null;
   teamFull?: boolean;
@@ -23,6 +26,8 @@ function dashboard(o: Overrides = {}): Dashboard {
   return {
     members: [me],
     team: { full: o.teamFull ?? true },
+    bet: o.bet === undefined ? 'Kinoabend' : o.bet,
+    betUpcoming: o.betUpcoming ?? null,
     debts: { owe: 0, owed: o.owed ?? 0 },
     rewards: { earned: o.earned ?? 0, toGive: 0 },
     feed: o.mineInFeed ? [{ userId: 'u1' }] : [],
@@ -55,13 +60,13 @@ describe('startGuide', () => {
   it('erscheint, solange das Ziel fehlt', () => {
     const g = startGuide(dashboard({ goalDays: null, nextGoalDays: null }));
     expect(g?.visible).toBe(true);
-    expect(g?.steps.map((s) => s.done)).toEqual([false, true, false]);
+    expect(g?.steps.map((s) => s.done)).toEqual([false, true, true, false]);
   });
 
   it('erscheint, solange der Partner fehlt', () => {
     const g = startGuide(dashboard({ teamFull: false }));
     expect(g?.visible).toBe(true);
-    expect(g?.steps.map((s) => s.done)).toEqual([true, false, false]);
+    expect(g?.steps.map((s) => s.done)).toEqual([true, true, false, false]);
   });
 
   it('zählt ein Ziel, das erst ab Montag gilt, als gesetzt', () => {
@@ -70,13 +75,26 @@ describe('startGuide', () => {
     expect(g?.visible).toBe(false);
   });
 
+  it('verlangt den Einsatz: ohne ihn bleibt die Starthilfe sichtbar', () => {
+    const g = startGuide(dashboard({ bet: null }));
+    expect(g?.visible).toBe(true);
+    expect(g?.steps.find((s) => s.id === 'bet')?.done).toBe(false);
+    expect(betMissing(dashboard({ bet: null }))).toBe(true);
+  });
+
+  it('zählt einen vorgemerkten Einsatz als festgelegt', () => {
+    const d = dashboard({ bet: null, betUpcoming: { text: 'Kino', effectiveFrom: '2026-11-09' } });
+    expect(betMissing(d)).toBe(false);
+    expect(startGuide(d)?.visible).toBe(false);
+  });
+
   it('verschwindet, sobald Ziel und Partner da sind, auch ohne ersten Check-in', () => {
     const g = startGuide(dashboard());
     expect(g?.visible).toBe(false);
-    expect(g?.steps[2]?.done).toBe(false);
+    expect(g?.steps[3]?.done).toBe(false);
   });
 
   it('hakt den ersten Check-in ab, sobald ein eigenes Foto im Feed liegt', () => {
-    expect(startGuide(dashboard({ mineInFeed: true }))?.steps[2]?.done).toBe(true);
+    expect(startGuide(dashboard({ mineInFeed: true }))?.steps[3]?.done).toBe(true);
   });
 });
