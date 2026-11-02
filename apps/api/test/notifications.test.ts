@@ -108,7 +108,8 @@ describe('Benachrichtigungen bei Abrechnung und Team-Auflösung', () => {
     settleWeeksJob(env.ctx);
     await env.ctx.idle();
     // Der Einsatz selbst löst auch Mitteilungen aus (bet_set); hier geht es um die Schuld
-    const debtOnly = (list: { type: string }[]) => list.filter((n) => n.type === 'debt_created');
+    const debtOnly = (list: { type: string; body: string; data?: unknown }[]) =>
+      list.filter((n) => n.type === 'debt_created');
     const forBen = debtOnly((await ben.get('/notifications')).body.notifications);
     const forAnna = debtOnly((await anna.get('/notifications')).body.notifications);
     expect(forBen).toHaveLength(1);
@@ -116,10 +117,10 @@ describe('Benachrichtigungen bei Abrechnung und Team-Auflösung', () => {
       type: 'debt_created',
       body: 'Ziel verfehlt: Du schuldest Anna diese Woche „Der Verlierer kocht“.',
     });
-    expect(forAnna[0].body).toBe(
+    expect(forAnna[0]?.body).toBe(
       'Ben hat das Ziel verfehlt und schuldet dir „Der Verlierer kocht“.',
     );
-    expect(forAnna[0].data).toMatchObject({ weekStart: W1 });
+    expect(forAnna[0]?.data).toMatchObject({ weekStart: W1 });
   });
 
   it('wer sein Ziel erreicht oder keinen Einsatz hat, bekommt nichts', async () => {
