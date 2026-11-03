@@ -21,7 +21,11 @@ prop() { sed -n "s/^$1=//p" "$PROPS" | head -1; }
 # Zeigt Fingerabdruck und die Befehle, mit denen der Schlüssel als GitHub-Secret hinterlegt wird.
 info() {
   PASSWORD="$(prop storePassword)"
+  KEYPASSWORD="$(prop keyPassword)"
   ALIAS="$(prop keyAlias)"
+  FILE="$(prop storeFile)"
+  STORE="$DIR/$FILE"
+  [ -f "$STORE" ] || { echo "In $PROPS steht storeFile=$FILE, die Datei fehlt in $DIR." >&2; exit 1; }
   # Dieselbe Schreibweise, die "apksigner" zeigt: Kleinbuchstaben ohne Doppelpunkte.
   FP="$(keytool -list -keystore "$STORE" -storepass "$PASSWORD" 2>/dev/null \
     | sed -n 's/.*(SHA-256): *//p' | head -1 | tr -d ':' | tr 'A-F' 'a-f')"
@@ -33,21 +37,21 @@ SHA-256 des Zertifikats (das zeigt auch jedes damit signierte APK):
 Für den Release-Workflow (GitHub: Settings → Secrets and variables → Actions) brauchst du vier Secrets und eine
 Variable. Mit der GitHub-CLI ('gh auth login' einmalig) geht es so, im Projektordner:
 
-  # Linux, Git Bash, WSL (macOS: "base64 -i apps/android/signing/double-sweat.jks" statt "base64 -w0 …")
-  base64 -w0 apps/android/signing/double-sweat.jks | gh secret set KEYSTORE_BASE64
+  # Linux, Git Bash, WSL (macOS: "base64 -i apps/android/signing/$FILE" statt "base64 -w0 …")
+  base64 -w0 apps/android/signing/$FILE | gh secret set KEYSTORE_BASE64
   echo '$PASSWORD' | gh secret set KEYSTORE_PASSWORD
-  echo '$PASSWORD' | gh secret set KEY_PASSWORD
+  echo '$KEYPASSWORD' | gh secret set KEY_PASSWORD
   echo '$ALIAS' | gh secret set KEY_ALIAS
   gh variable set APK_CERT_SHA256 --body '$FP'
 
   # Windows PowerShell
-  [Convert]::ToBase64String([IO.File]::ReadAllBytes("apps\android\signing\double-sweat.jks")) | gh secret set KEYSTORE_BASE64
+  [Convert]::ToBase64String([IO.File]::ReadAllBytes("apps\\android\\signing\\$FILE")) | gh secret set KEYSTORE_BASE64
   '$PASSWORD' | gh secret set KEYSTORE_PASSWORD
-  '$PASSWORD' | gh secret set KEY_PASSWORD
+  '$KEYPASSWORD' | gh secret set KEY_PASSWORD
   '$ALIAS' | gh secret set KEY_ALIAS
   gh variable set APK_CERT_SHA256 --body '$FP'
 
-Ohne GitHub-CLI legst du im Browser dieselben Namen an. Der Wert von KEYSTORE_BASE64 ist die Datei double-sweat.jks
+Ohne GitHub-CLI legst du im Browser dieselben Namen an. Der Wert von KEYSTORE_BASE64 ist die Datei $FILE
 als Base64-Text (eine Zeile). APK_CERT_SHA256 gehört unter "Variables", nicht unter "Secrets".
 
 Die Passwörter stehen in $PROPS und oben in dieser Ausgabe: Lösche sie aus dem Terminal-Verlauf, wenn andere
@@ -56,7 +60,7 @@ INFO
 }
 
 if [ "${1:-}" = "--info" ]; then
-  [ -f "$STORE" ] && [ -f "$PROPS" ] || { echo "Es gibt noch keinen Schlüssel in $DIR. Erzeuge ihn mit ./scripts/gen-keystore.sh" >&2; exit 1; }
+  [ -f "$PROPS" ] || { echo "Es gibt noch keinen Schlüssel in $DIR. Erzeuge ihn mit ./scripts/gen-keystore.sh" >&2; exit 1; }
   info
   exit 0
 elif [ -n "${1:-}" ]; then

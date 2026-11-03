@@ -579,7 +579,13 @@ Ein Tag `v<Version>` löst `.github/workflows/release.yml` aus: Der Workflow bau
 
 1. Signaturschlüssel erzeugen: `./scripts/gen-keystore.sh`. **Sichere den Ordner `apps/android/signing/` an einem
    zweiten Ort**; ohne den Schlüssel lässt sich kein Update mehr signieren, das Nutzer installieren können.
-2. Die Ausgabe des Skripts nennt die fertigen Befehle (`./scripts/gen-keystore.sh --info` zeigt sie erneut). Sie
+   **Du hast schon einen Schlüssel** (zum Beispiel aus Android Studio, "Generate Signed Bundle")? Dann brauchst du das
+   Skript nicht: Kopiere die `.jks`-Datei nach `apps/android/signing/` und lege dort `keystore.properties` an mit den
+   Zeilen `storeFile=<Dateiname>`, `storePassword=…`, `keyAlias=…`, `keyPassword=…` (Store- und Schlüsselpasswort
+   dürfen verschieden sein). Nicht verwenden: den Debug-Schlüssel `debug.keystore` von Android Studio. Hast du mit einem
+   anderen Schlüssel schon eine Release-APK installiert, muss diese App einmal deinstalliert werden, weil Android
+   Updates nur bei gleichem Schlüssel annimmt.
+2. Die Ausgabe des Skripts (`--info`) nennt die fertigen Befehle (`./scripts/gen-keystore.sh --info` zeigt sie erneut). Sie
    legen im Repository diese **Secrets** an: `KEYSTORE_BASE64` (die `.jks`-Datei als Base64), `KEYSTORE_PASSWORD`,
    `KEY_PASSWORD`, `KEY_ALIAS`, sowie die **Variable** `APK_CERT_SHA256` (der erwartete Fingerabdruck; der Workflow
    bricht ab, wenn ein verwechselter Schlüssel ein anderes Zertifikat ergäbe).
