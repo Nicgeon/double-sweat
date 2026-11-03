@@ -129,7 +129,8 @@ jobs:
           APK="apps/android/dist/double-sweat-$VERSION.apk"
           APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)"
           "$APKSIGNER" verify --verbose --print-certs "$APK" | tee "$RUNNER_TEMP/apksigner.txt"
-          FP="$(sed -n 's/^Signer #1 certificate SHA-256 digest: *//p' "$RUNNER_TEMP/apksigner.txt" | head -1 | tr 'A-F' 'a-f')"
+          # Je nach Signaturverfahren heißt die Zeile "Signer #1 …" (v1) oder "V2 Signer: …" (nur v2, wie bei uns)
+          FP="$(grep -m1 'certificate SHA-256 digest:' "$RUNNER_TEMP/apksigner.txt" | sed 's/.*digest: *//' | tr 'A-F' 'a-f')"
           if [ -z "$FP" ]; then echo "::error::Kein Zertifikat-Fingerabdruck im APK gefunden."; exit 1; fi
           # Ein falscher Schlüssel (verwechseltes Secret) würde allen Nutzern das Update verbauen: lieber hier abbrechen.
           if [ -n "${ERWARTET:-}" ]; then

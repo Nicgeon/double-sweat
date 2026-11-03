@@ -87,7 +87,7 @@ case "$MODE" in
     cp "$ANDROID/android/app/build/outputs/apk/$FLAVOR/release/app-$FLAVOR-release.apk" "$OUT"
     APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)"
     if [ -n "$APKSIGNER" ]; then
-      "$APKSIGNER" verify --verbose --print-certs "$OUT" | grep -E "^(Verifies|Verified using|Signer #1 certificate (DN|SHA-256))" || true
+      "$APKSIGNER" verify --verbose --print-certs "$OUT" | grep -E "^(Verifies|Verified using|Signer #1 certificate (DN|SHA-256)|V[0-9.]+ Signer: certificate (DN|SHA-256))" || true
     fi
     echo "Fertig: apps/android/dist/$(basename "$OUT")"
     ;;
