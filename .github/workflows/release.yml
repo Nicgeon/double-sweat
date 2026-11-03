@@ -1,0 +1,235 @@
+name: Release
+
+# Baut die signierte Android-App und veröffentlicht sie als GitHub-Release.
+#
+#   Ablauf für ein Release (auf main, nach deinem Test):
+#     node scripts/bump-version.mjs 0.2.0     # Version überall setzen, committen, nach main bringen
+#     git tag v0.2.0 && git push origin v0.2.0
+#
+#   Probelauf ohne Release: Actions → Release → "Run workflow". Er baut und prüft alles und legt das APK nur als
+#   Artefakt des Laufs ab (die APKs sind damit schon signiert: nicht weitergeben).
+#
+# Geheimnisse (Settings → Secrets and variables → Actions), Anleitung im README und am Ende von scripts/gen-keystore.sh:
+#   KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD   Signaturschlüssel (Pflicht)
+#   GOOGLE_SERVICES_JSON                                          Firebase-Datei (nur für die optionale FCM-Variante)
+# Variable (kein Geheimnis):
+#   APK_CERT_SHA256                                               erwarteter Zertifikat-Fingerabdruck (empfohlen)
+#
+# Das Release enthält nur die Standard-Variante (foss, ohne Google-Dienste). Die FCM-Variante hängt am eigenen
+# Firebase-Projekt, nützt anderen also nichts: Sie entsteht nur, wenn GOOGLE_SERVICES_JSON gesetzt ist, und bleibt ein
+# Artefakt des Laufs (14 Tage; wer Lesezugriff aufs Repository hat, kann es laden, bei einem öffentlichen Repository
+# also jedes angemeldete GitHub-Konto).
+on:
+  push:
+    tags: ["v[0-9]*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  pruefen:
+    name: Tag und Version prüfen
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.pruefen.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: pruefen
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -eu
+          if [ "$REF_TYPE" = tag ]; then
+            # Der Tag muss zur Version im Code passen (sonst trägt das APK eine andere Nummer als das Release).
+            VERSION="$(node scripts/bump-version.mjs --check "$TAG" | sed 's/^Version //')"
+            # Ein stabiles Release (ohne "-") kommt nur von main, ein Vorab-Release (v0.2.0-rc.1) auch von develop.
+            git fetch --no-tags origin main develop || true
+            case "$VERSION" in
+              *-*) BRANCHES="origin/main origin/develop" ;;
+              *)   BRANCHES="origin/main" ;;
+            esac
+            OK=false
+            for b in $BRANCHES; do
+              if git rev-parse --verify -q "$b" >/dev/null && git merge-base --is-ancestor "$GITHUB_SHA" "$b"; then OK=true; fi
+            done
+            if [ "$OK" != true ]; then
+              echo "::error::Der Tag $TAG liegt nicht auf $BRANCHES. Stabile Releases entstehen nur auf main (nach dem Test), Vorab-Releases mit Suffix (z. B. -rc.1) auch auf develop."
+              exit 1
+            fi
+          else
+            VERSION="$(node scripts/bump-version.mjs --check | sed 's/^Version //')"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version $VERSION"
+
+  apk:
+    name: APK bauen und prüfen
+    needs: pruefen
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      fingerprint: ${{ steps.pruefsumme.outputs.fingerprint }}
+    env:
+      VERSION: ${{ needs.pruefen.outputs.version }}
+    steps:
+      # Bewusst ohne Cache (pnpm, Gradle): Das Release soll nur aus dem Quelltext und der Lockdatei entstehen.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: pnpm install --frozen-lockfile
+      - name: Android-SDK einrichten
+        run: |
+          set -eu
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" >/dev/null
+
+      - name: Signaturschlüssel bereitstellen
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -eu
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "$(printenv "$name")" ]; then
+              echo "::error::Das Secret $name fehlt. Anleitung: README, Abschnitt Release-Prozess (oder ./scripts/gen-keystore.sh ausführen, es nennt die Befehle)."
+              exit 1
+            fi
+          done
+          mkdir -p apps/android/signing
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > apps/android/signing/double-sweat.jks
+          printf 'storeFile=double-sweat.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > apps/android/signing/keystore.properties
+
+      - name: Standard-Variante bauen (foss)
+        run: sh scripts/android-build.sh release
+
+      - name: Signatur prüfen, Prüfsumme bilden
+        id: pruefsumme
+        env:
+          ERWARTET: ${{ vars.APK_CERT_SHA256 }}
+        run: |
+          set -eu
+          APK="apps/android/dist/double-sweat-$VERSION.apk"
+          APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)"
+          "$APKSIGNER" verify --verbose --print-certs "$APK" | tee "$RUNNER_TEMP/apksigner.txt"
+          FP="$(sed -n 's/^Signer #1 certificate SHA-256 digest: *//p' "$RUNNER_TEMP/apksigner.txt" | head -1 | tr 'A-F' 'a-f')"
+          if [ -z "$FP" ]; then echo "::error::Kein Zertifikat-Fingerabdruck im APK gefunden."; exit 1; fi
+          # Ein falscher Schlüssel (verwechseltes Secret) würde allen Nutzern das Update verbauen: lieber hier abbrechen.
+          if [ -n "${ERWARTET:-}" ]; then
+            WANT="$(printf '%s' "$ERWARTET" | tr -d ': ' | tr 'A-F' 'a-f')"
+            if [ "$FP" != "$WANT" ]; then
+              echo "::error::Das APK ist mit einem anderen Schlüssel signiert als erwartet (APK_CERT_SHA256). Gefunden: $FP"
+              exit 1
+            fi
+          else
+            echo "::warning::Die Variable APK_CERT_SHA256 ist nicht gesetzt: Der Fingerabdruck ($FP) wird nicht gegen den erwarteten Wert geprüft."
+          fi
+          echo "fingerprint=$FP" >> "$GITHUB_OUTPUT"
+          (cd apps/android/dist && sha256sum "double-sweat-$VERSION.apk" | tee SHA256SUMS)
+
+      - name: APK als Artefakt ablegen
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apk-foss
+          path: |
+            apps/android/dist/double-sweat-${{ needs.pruefen.outputs.version }}.apk
+            apps/android/dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: FCM-Variante bauen (nur mit Secret GOOGLE_SERVICES_JSON)
+        id: fcm
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          set -eu
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "Das Secret GOOGLE_SERVICES_JSON ist nicht gesetzt: Die FCM-Variante entfällt."
+            exit 0
+          fi
+          mkdir -p apps/android/firebase
+          printf '%s' "$GOOGLE_SERVICES_JSON" > apps/android/firebase/google-services.json
+          sh scripts/android-build.sh release fcm
+          echo "gebaut=true" >> "$GITHUB_OUTPUT"
+
+      - name: FCM-Variante als Artefakt ablegen
+        if: steps.fcm.outputs.gebaut == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: apk-fcm
+          path: apps/android/dist/double-sweat-${{ needs.pruefen.outputs.version }}-fcm.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  veroeffentlichen:
+    name: Release auf GitHub anlegen
+    # Nur bei einem Tag; der Probelauf per Hand legt kein Release an.
+    if: github.ref_type == 'tag'
+    needs: [pruefen, apk]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.pruefen.outputs.version }}
+      FINGERPRINT: ${{ needs.apk.outputs.fingerprint }}
+      TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: apk-foss
+          path: release
+      - name: Release anlegen
+        run: |
+          set -eu
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::error::Zu $TAG gibt es schon ein Release. Lösche es auf GitHub (den Tag behalten) und starte den Lauf neu."
+            exit 1
+          fi
+          SUMME="$(cut -d' ' -f1 release/SHA256SUMS)"
+          PREV="$(git describe --tags --abbrev=0 --match 'v[0-9]*' "$TAG^" 2>/dev/null || true)"
+          if [ -n "$PREV" ]; then RANGE="$PREV..$TAG"; else RANGE="$TAG"; fi
+          {
+            echo "## Installation"
+            echo
+            echo "\`double-sweat-$VERSION.apk\` auf das Handy laden, öffnen und \"Unbekannte Apps installieren\" erlauben."
+            echo "Beim ersten Start fragt die App nach der Adresse deines Servers. Ein Update installierst du einfach über die"
+            echo "alte Version. Einrichtung und Hinweise: [README](https://github.com/$GITHUB_REPOSITORY#android-app)."
+            echo
+            echo "Das ist die Standard-Variante ohne Google-Dienste (Push über UnifiedPush, z. B. ntfy)."
+            echo
+            echo "## Prüfen"
+            echo
+            echo "- SHA-256 der Datei: \`$SUMME\`"
+            echo "- SHA-256 des Signaturzertifikats: \`$FINGERPRINT\`"
+            echo "  (muss bei jedem Release gleich sein; sonst lässt sich ein Update nicht installieren)"
+            echo
+            echo "## Änderungen"
+            echo
+            git log --no-merges --pretty='- %s' "$RANGE" | head -60
+          } > notes.md
+          case "$VERSION" in *-*) PRE="--prerelease" ;; *) PRE="" ;; esac
+          # shellcheck disable=SC2086
+          gh release create "$TAG" release/double-sweat-"$VERSION".apk release/SHA256SUMS \
+            --verify-tag --title "Double Sweat $VERSION" --notes-file notes.md $PRE

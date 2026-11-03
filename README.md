@@ -28,7 +28,8 @@ sind optional und im Abschnitt [Datenschutz](#datenschutz) beschrieben.
 - [Betrieb: Updates, Backup, Wiederherstellung](#betrieb)
 - [Wochenlogik und Wetteinsatz](#wochenlogik-und-wetteinsatz)
 - [Sicherheit](#sicherheit) · [Datenschutz](#datenschutz)
-- [Entwicklung](#entwicklung)
+- [Entwicklung](#entwicklung) · [Release veröffentlichen](#release-veröffentlichen-github)
+- [Lizenz](#lizenz)
 - [Roadmap](#roadmap)
 
 ## Schnellstart mit Docker
@@ -286,6 +287,16 @@ einschaltest, löscht es beim Ausschalten und beim Abmelden und schaltet die Ana
 Der FCM-Build funktioniert nur auf Geräten mit Google Play-Diensten (nicht auf Geräten ohne Google) und enthält
 zusätzliche Google-Bibliotheken; der Standard-Build enthält keine.
 
+**Warum gibt es keine fertige FCM-APK zum Herunterladen?** Eine FCM-App ist fest an _ein_ Firebase-Projekt gebunden
+(die `google-services.json` steckt im APK), und Nachrichten an sie darf nur senden, wer den Dienstkonto-Schlüssel
+genau dieses Projekts hat. Eine fertige APK würde also nur auf Servern Push bekommen, die den Schlüssel des
+Veröffentlichenden besitzen, und den gibt niemand heraus. Apps im Play Store umgehen das, weil _eine_ Firma App und
+Server betreibt: ein Firebase-Projekt, ein Server. Selbst gehostete Apps haben drei Wege: das eigene Firebase-Projekt
+(dieser Abschnitt), ein zentrales Push-Relay, das der Hersteller für alle betreibt (ein zusätzlicher Dienst, der von
+jedem Server Metadaten sähe; hier bewusst nicht vorgesehen) oder UnifiedPush ohne Google. Deshalb
+veröffentlicht das Release nur den Standard-Build; die FCM-Variante baust du selbst oder mit deinem Fork (siehe
+[Release veröffentlichen](#release-veröffentlichen-github)).
+
 ## Android-App
 
 **Widgets:** Zwei Widgets für den Startbildschirm: _klein_ (2×1: Serie und ob du heute schon eingecheckt hast) und
@@ -296,8 +307,32 @@ mit 24-dp-Radius); bei kleinen Rastern fallen zuerst Symbol und Kopfzeile weg, n
 Widgets → Double Sweat.
 
 Die App ist ein Capacitor-Wrapper um dieselbe Web-Oberfläche. Die Oberfläche steckt **im APK** (die App lädt
-keine Seiten vom Server nach), nur die Daten kommen von deinem Server. Es gibt keinen Play-Store-Eintrag: du baust
-das APK selbst und installierst es auf den Handys.
+keine Seiten vom Server nach), nur die Daten kommen von deinem Server. Es gibt keinen Play-Store-Eintrag: du
+installierst die fertige APK aus den GitHub-Releases oder baust sie selbst.
+
+### Fertige APK installieren
+
+1. Auf GitHub unter [Releases](https://github.com/Nicgeon/double-sweat/releases) die neueste Datei
+   `double-sweat-<Version>.apk` laden (die Standard-Variante ohne Google-Dienste, Push über UnifiedPush/ntfy; eine
+   Version mit "rc" im Namen ist eine Vorabversion zum Testen).
+2. Auf dem Handy öffnen und "Unbekannte Apps installieren" für den Browser oder Dateimanager erlauben, den Android
+   dabei nennt. Installieren.
+3. App öffnen, die Adresse deines Servers eintragen (`https://…`) und anmelden. Deinen Server brauchst du vorher
+   (siehe [Schnellstart](#schnellstart-mit-docker)); die App und die Version deines Servers müssen zusammenpassen.
+4. **Prüfen (empfohlen).** Jedes Release nennt die SHA-256-Prüfsumme der Datei (`sha256sum double-sweat-<Version>.apk`
+   muss sie ergeben) und den SHA-256-Fingerabdruck des Signaturzertifikats
+   (`apksigner verify --print-certs double-sweat-<Version>.apk`). Der Fingerabdruck ist bei **jedem** Release gleich;
+   weicht er ab, wurde mit einem anderen Schlüssel signiert, und Android lässt das Update ohnehin nicht zu. Notiere
+   ihn dir beim ersten Mal. Die Prüfsumme schützt vor einem beschädigten Download; gegen ein gekapertes GitHub-Konto
+   hilft nur der Fingerabdruck, den du dir schon vorher gemerkt hast.
+5. **Update:** die neue APK einfach über die alte installieren (Daten und Anmeldung bleiben). Nach jedem Update der
+   App auch den Server aktualisieren (`git pull` und neu bauen, siehe [Betrieb](#betrieb)); bei einer
+   Nichtübereinstimmung zeigt die App einen Hinweis.
+
+Wer der Fertig-APK nicht vertraut, baut sie selbst (nächster Abschnitt) und erhält dieselbe App mit eigenem Schlüssel.
+Das Repository muss öffentlich sein, damit andere die Release-Dateien ohne GitHub-Konto laden können.
+
+### Selbst bauen
 
 **Voraussetzungen zum Bauen:** JDK 21 und das Android-SDK (Plattform 36, Build-Tools 36). Die Kommandozeilen-Tools
 reichen (`sdkmanager "platforms;android-36" "build-tools;36.0.0"`). Setze `ANDROID_HOME` auf das SDK.
@@ -316,6 +351,8 @@ hat, kann Updates in deinem Namen signieren.
 **Installieren (Sideloading):** APK aufs Handy kopieren, öffnen und "Unbekannte Apps installieren" für die
 öffnende App erlauben. Oder per Kabel: `adb install double-sweat-0.1.0.apk`. Zur Kontrolle auf dem Rechner:
 `apksigner verify --print-certs double-sweat-0.1.0.apk` (zeigt dasselbe Zertifikat wie beim Bauen).
+
+### Die App im Alltag
 
 **Erster Start.** Die App fragt nach der Adresse deines Servers (`https://...`, **nur HTTPS**). Bevor sie
 Zugangsdaten sendet, ruft sie `/api/v1/health` ab und prüft, ob dort wirklich ein Double-Sweat-Server in einer
@@ -339,8 +376,8 @@ du siehst die Meldungen dann in der App unter "Benachrichtigungen".
 `app.doublesweat.mobile.debug`, läuft neben dem Release). Nur dieser Build erlaubt `http://`-Serveradressen
 (z. B. `http://192.168.1.20:3000`) und Web-Debugging über `chrome://inspect`. Das Release enthält beides nicht.
 
-**Update der App.** Version in `apps/android/package.json` erhöhen, `pnpm android:apk` ausführen, das neue APK
-über das alte installieren. Beim Einrichten des Servers prüft die App per Health-Check, ob App und Server
+**Update der App** (selbst gebaut): `node scripts/bump-version.mjs <Version>` setzt die Version überall, dann
+`pnpm android:apk` ausführen und das neue APK über das alte installieren. Beim Einrichten des Servers prüft die App per Health-Check, ob App und Server
 zusammenpassen (App zu alt für den Server oder Server zu alt für die App) und zeigt dann einen Hinweis.
 
 **Sicherheit der App.**
@@ -529,14 +566,73 @@ scripts/       Backup-Skript, Design-Werkzeuge, Android-Bau (Schlüssel, APK)
 
 Branches: `main` (stabil, getestet) und `develop` (Integration). Änderungen laufen über `develop`.
 
+**CI.** `.github/workflows/ci.yml` prüft jede Änderung auf `develop`, `main` und jeden Pull Request: Lint, Typen,
+Designsystem, Vitest, die Ende-zu-Ende-Tests im Browser (Playwright), die Kotlin-Tests der App und ob alle
+Versionsnummern gleich sind. Sie braucht keine Geheimnisse.
+
+### Release veröffentlichen (GitHub)
+
+Ein Tag `v<Version>` löst `.github/workflows/release.yml` aus: Der Workflow baut die signierte Standard-APK
+(`foss`), prüft Signatur und Fingerabdruck und legt ein GitHub-Release mit APK, Prüfsumme und Änderungsliste an.
+
+**Einmalig einrichten**
+
+1. Signaturschlüssel erzeugen: `./scripts/gen-keystore.sh`. **Sichere den Ordner `apps/android/signing/` an einem
+   zweiten Ort**; ohne den Schlüssel lässt sich kein Update mehr signieren, das Nutzer installieren können.
+2. Die Ausgabe des Skripts nennt die fertigen Befehle (`./scripts/gen-keystore.sh --info` zeigt sie erneut). Sie
+   legen im Repository diese **Secrets** an: `KEYSTORE_BASE64` (die `.jks`-Datei als Base64), `KEYSTORE_PASSWORD`,
+   `KEY_PASSWORD`, `KEY_ALIAS`, sowie die **Variable** `APK_CERT_SHA256` (der erwartete Fingerabdruck; der Workflow
+   bricht ab, wenn ein verwechselter Schlüssel ein anderes Zertifikat ergäbe).
+3. Optional, nur für die FCM-Variante: Secret `GOOGLE_SERVICES_JSON` mit dem Inhalt der Firebase-Datei
+   (`gh secret set GOOGLE_SERVICES_JSON < apps/android/firebase/google-services.json`). Der Lauf legt die FCM-APK
+   dann als **Artefakt** des Laufs ab (14 Tage, nicht im Release); wer Lesezugriff aufs Repository hat, kann es laden.
+4. Das Repository öffentlich machen, wenn andere die APK ohne Konto laden sollen.
+
+**Ein Release**
+
+```bash
+git checkout main && git pull
+node scripts/bump-version.mjs 0.2.0     # setzt die Version in allen Paketen und in der API
+git commit -am "Version 0.2.0" && git push
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+- Ein **stabiles** Release (`v0.2.0`) muss auf `main` liegen, also erst nach deinem Test auf dem Gerät. Eine
+  **Vorabversion** (`v0.2.0-rc.1`, GitHub zeigt sie als "Pre-release") darf auch von `develop` kommen.
+- Der Tag muss zur Version im Code passen; sonst bricht der Lauf ab, bevor etwas gebaut wird.
+  Versionscode der App: `Major*10000 + Minor*100 + Patch` (0.2.0 → 200); ein Suffix wie `-rc.1` steht nur im Namen.
+- **Probelauf ohne Release:** Actions → Release → "Run workflow". Er baut und prüft alles und legt die APK nur als
+  Artefakt ab. Das empfiehlt sich vor dem ersten echten Release (die Workflows sind noch nie auf GitHub gelaufen).
+- Ist ein Tag falsch gesetzt: `git push --delete origin v0.2.0 && git tag -d v0.2.0`, dazu ein bereits angelegtes
+  Release auf GitHub löschen.
+- Den Server liefert das Release nicht aus: Er läuft weiter per `git pull` und `docker compose up -d --build`.
+
+**Forks.** Wer einen Fork betreibt, setzt die Secrets im eigenen Repository, trägt in `apps/web/src/lib/util/source.ts`
+den eigenen Quelltext-Link ein (siehe [Lizenz](#lizenz)) und ändert die App-ID (`app.doublesweat.mobile`) nur, wenn
+beide Apps nebeneinander laufen sollen.
+
+## Lizenz
+
+Double Sweat steht unter der **GNU Affero General Public License, Version 3 oder neuer** (AGPL-3.0-or-later), Text in
+[LICENSE](LICENSE). Kurz: Du darfst die Software nutzen, verändern und weitergeben. Wer eine **veränderte** Fassung als
+Dienst im Netz anbietet, muss den Nutzern den Quelltext dieser Fassung unter derselben Lizenz anbieten (§13). Deshalb
+zeigt die Profilseite der App einen Link zum Quelltext; wer verändert und für andere betreibt, trägt dort seine eigene
+Adresse ein (`apps/web/src/lib/util/source.ts`). Wer die unveränderte Software für sich und seinen Partner betreibt,
+hat keine zusätzliche Pflicht. (Das ist eine Zusammenfassung, keine Rechtsberatung; maßgeblich ist der Lizenztext.)
+
+Mitgelieferte Fremdkomponenten behalten ihre Lizenz: die Schriften Archivo und Atkinson Hyperlegible Next
+(SIL Open Font License 1.1) und die Icons von Lucide (ISC), jeweils mit Lizenztext in `design/licenses/`. Die
+Abhängigkeiten aus `pnpm-lock.yaml` stehen unter ihren eigenen Lizenzen.
+
 ## Roadmap
 
-Umgesetzt (auf `develop`): Serien-Benachrichtigungen und Android-Widgets, siehe [Push](#push-benachrichtigungen) und
-[Android-App](#android-app). Geplant, in dieser Reihenfolge:
+Umgesetzt (auf `develop`): Serien-Benachrichtigungen, Android-Widgets, Überarbeitung von Navigation und Heute-Seite,
+Einsatz pro Person, AGPL-Lizenz sowie CI und Release-Workflow für die Android-App (die Workflows sind noch nicht auf
+GitHub gelaufen: erst per Probelauf prüfen), siehe [Push](#push-benachrichtigungen), [Android-App](#android-app) und
+[Release veröffentlichen](#release-veröffentlichen-github).
+Geplant, in dieser Reihenfolge:
 
-1. **Veröffentlichung der Android-App:** signierte `foss`-Release-APK als GitHub-Release (die FCM-Variante bleibt
-   privat, sie hängt am eigenen Firebase-Projekt).
-2. **GitHub-Action:** Bei einem Tag baut sie automatisch die signierte APK und hängt sie an den Release (Schlüssel
-   als verschlüsseltes Secret).
-3. **LICENSE-Datei** und ein README-Abschnitt für Nutzer der APK (Installation, Server-Adresse, Updates).
-4. **Health Connect** (Android): Workout-Vorschläge aus Wearables, nur auf dem Gerät, das Foto bleibt Pflicht.
+1. **Übersicht und Navigation, Fortsetzung:** Abmachung als eigener Bereich (Offenes, Wenn-dann-Karten),
+   Benachrichtigungen (neue Anlässe, Einstellungen pro Art, Postfach mit Links, Android-Kanäle), Check-in-Feinschliff
+   und Profil in Unterseiten.
+2. **Health Connect** (Android): Workout-Vorschläge aus Wearables, nur auf dem Gerät, das Foto bleibt Pflicht.

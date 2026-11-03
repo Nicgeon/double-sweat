@@ -478,6 +478,8 @@ export const de = {
   'more.changePassword': 'Passwort ändern',
   'more.export': 'Meine Daten exportieren',
   'more.deleteAccount': 'Konto löschen',
+  'more.about': 'Double Sweat {version}',
+  'more.source': 'Quellcode und Lizenz ({license})',
   'more.serverCard': 'Server',
   'more.connectedTo': 'Verbunden mit',
   'more.switchServer': 'Server wechseln',

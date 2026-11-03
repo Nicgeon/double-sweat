@@ -470,6 +470,8 @@ export const en: Record<MessageKey, string> = {
   'more.changePassword': 'Change password',
   'more.export': 'Export my data',
   'more.deleteAccount': 'Delete account',
+  'more.about': 'Double Sweat {version}',
+  'more.source': 'Source code and licence ({license})',
   'more.serverCard': 'Server',
   'more.connectedTo': 'Connected to',
   'more.switchServer': 'Switch server',

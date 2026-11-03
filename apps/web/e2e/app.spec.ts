@@ -28,6 +28,10 @@ test('Team gründen, abmelden und wieder anmelden', async ({ browser }, testInfo
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
   await page.goto('/more');
+  // AGPL-3.0 §13: Link zum Quelltext in der Oberfläche
+  await expect(
+    page.getByRole('link', { name: /Quellcode und Lizenz \(AGPL-3\.0\)/ }),
+  ).toHaveAttribute('href', 'https://github.com/Nicgeon/double-sweat');
   await page.getByRole('button', { name: 'Abmelden' }).click();
   await expect(page.getByRole('heading', { name: 'Willkommen zurück.' })).toBeVisible();
 

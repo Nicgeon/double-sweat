@@ -19,6 +19,7 @@
   import { dateAndTime, longDate } from '#lib/util/format.ts';
   import { downloadExport } from '#lib/util/export.ts';
   import { NATIVE } from '#lib/native/flag.ts';
+  import { APP_VERSION, LICENSE_NAME, SOURCE_URL } from '#lib/util/source.ts';
   import type { PushDistributor } from '#lib/native/plugins.ts';
   import { describeAgent, deviceLabel, PUSH_PROVIDER, pushActive, pushSupported, togglePushState } from '#lib/util/push.ts';
 
@@ -359,6 +360,12 @@
           {/each}
         </ul>
       </Card>
+
+      <!-- AGPL-3.0 §13: Link zum Quelltext. In der App öffnet ihn das System im Browser, im Web ein neuer Tab. -->
+      <p class="small muted about">
+        {t('more.about', { version: APP_VERSION })} ·
+        <a href={SOURCE_URL} target={NATIVE ? undefined : '_blank'} rel="noopener noreferrer">{t('more.source', { license: LICENSE_NAME })}</a>
+      </p>
     </div>
   </div>
 </Page>
@@ -391,3 +398,17 @@
     <Button onclick={changePassword}>{t('more.changePassword')}</Button>
   {/snippet}
 </Sheet>
+
+<style>
+  .about {
+    text-align: center;
+  }
+
+  /* Textlink, aber mit Trefferfläche für den Daumen */
+  .about a {
+    display: inline-block;
+    padding: var(--space-3) var(--space-1);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+</style>
