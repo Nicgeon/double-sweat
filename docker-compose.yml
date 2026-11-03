@@ -1,14 +1,18 @@
 # Double Sweat, ein Container. Konfiguration über .env (Vorlage: .env.example).
 #
 #   cp .env.example .env     # PUBLIC_URL und SETUP_TOKEN setzen
-#   docker compose up -d --build
+#   docker compose pull      # fertiges Image aus der GitHub-Registry (amd64 und arm64) ...
+#   docker compose up -d     # ... und starten. Update: dieselben zwei Befehle.
+#
+# Ohne "pull" (oder mit "up -d --build") baut Compose das Image selbst aus dem Quelltext (build). Eigener Fork oder
+# feste Version: DS_IMAGE in der .env setzen, z. B. ghcr.io/nicgeon/double-sweat:0.2 (siehe README, Abschnitt Betrieb).
 #
 # Der Port ist nur lokal (127.0.0.1) erreichbar. HTTPS macht der Reverse-Proxy davor (Kamera und Push brauchen
 # zwingend HTTPS), Beispiele in deploy/. Es darf nur EINE Instanz laufen (SQLite und Scheduler im Prozess).
 services:
   app:
     build: .
-    image: double-sweat:local
+    image: ${DS_IMAGE:-ghcr.io/nicgeon/double-sweat:latest}
     container_name: double-sweat
     init: true
     restart: unless-stopped

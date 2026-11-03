@@ -1,0 +1,172 @@
+name: Docker-Image
+
+# Baut das Server-Image (amd64 und arm64, also auch für Raspberry Pi und ARM-Server) und legt es in die GitHub-
+# Registry (ghcr.io). Ein Update des Servers ist dann "docker compose pull" statt "git pull" und neu bauen.
+#
+#   Tag v0.2.0       →  :0.2.0, :0.2 und :latest   (stabil; Tag muss zur Version im Code passen und auf main liegen)
+#   Tag v0.2.0-rc.1  →  :0.2.0-rc.1                (Vorabversion, nie :latest)
+#   Push auf develop →  :develop                   (nur wenn sich etwas am Server ändert, nicht bei Doku, Tests, App)
+#
+# Vor dem Veröffentlichen wird das Image einmal gestartet und der Health-Check abgefragt (Smoke-Test). Es braucht
+# keine Geheimnisse: Der Workflow meldet sich mit dem eingebauten GITHUB_TOKEN an.
+on:
+  push:
+    branches: [develop]
+    tags: ["v[0-9]*"]
+    paths-ignore:
+      - "**.md"
+      - "apps/android/**"
+      - "apps/web/e2e/**"
+      - "scripts/**"
+      - "LICENSE"
+      - ".github/workflows/ci.yml"
+      - ".github/workflows/release.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-${{ github.ref }}
+  # Ein neuerer Push auf develop ersetzt den laufenden Bau; ein Release-Tag wird nie abgebrochen
+  cancel-in-progress: ${{ github.ref_type == 'branch' }}
+
+jobs:
+  image:
+    name: Image bauen, testen, veröffentlichen
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Tag prüfen
+        if: github.ref_type == 'tag'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -eu
+          # Der Tag muss zur Version im Code passen (dieselbe Regel wie beim APK-Release)
+          VERSION="$(node scripts/bump-version.mjs --check "$TAG" | sed 's/^Version //')"
+          git fetch --no-tags origin main develop || true
+          case "$VERSION" in
+            *-*) BRANCHES="origin/main origin/develop" ;;
+            *)   BRANCHES="origin/main" ;;
+          esac
+          OK=false
+          for b in $BRANCHES; do
+            if git rev-parse --verify -q "$b" >/dev/null && git merge-base --is-ancestor "$GITHUB_SHA" "$b"; then OK=true; fi
+          done
+          if [ "$OK" != true ]; then
+            echo "::error::Der Tag $TAG liegt nicht auf $BRANCHES. Stabile Images entstehen nur von main, Vorabversionen (-rc.1) auch von develop."
+            exit 1
+          fi
+
+      - name: Name des Images (klein geschrieben, wie die Registry es verlangt)
+        id: name
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      # arm64 wird auf dem x86-Runner emuliert (Repositories ohne öffentliche Sichtbarkeit haben keine ARM-Runner)
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tags und Beschriftungen festlegen
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ steps.name.outputs.image }}
+          flavor: |
+            latest=false
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ !contains(github.ref_name, '-') }}
+            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
+          labels: |
+            org.opencontainers.image.title=Double Sweat
+            org.opencontainers.image.description=Selbst gehostete Paar-Fitness-Accountability-App
+            org.opencontainers.image.licenses=AGPL-3.0-or-later
+
+      # Erst ein Image für diesen Runner (amd64) bauen und starten, bevor etwas veröffentlicht wird
+      - name: Zum Testen bauen (amd64)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          tags: ds-smoke:ci
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=docker
+          cache-to: type=gha,scope=docker,mode=max
+
+      - name: Smoke-Test (Image starten, Health-Check und Oberfläche abfragen)
+        run: |
+          set -eu
+          docker volume create ds-smoke >/dev/null
+          # Dieselben Härtungsoptionen wie in docker-compose.yml
+          docker run -d --name ds-smoke \
+            --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges:true \
+            -e PUBLIC_URL=http://localhost:3000 \
+            -e "SETUP_TOKEN=ci-$(openssl rand -hex 16)" \
+            -v ds-smoke:/data -p 127.0.0.1:3000:3000 ds-smoke:ci >/dev/null
+          ok=false
+          for _ in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:3000/api/v1/health -o health.json 2>/dev/null; then ok=true; break; fi
+            sleep 2
+          done
+          if [ "$ok" != true ]; then
+            echo "::error::Der Container antwortet nicht auf /api/v1/health. Log:"
+            docker logs ds-smoke
+            exit 1
+          fi
+          cat health.json; echo
+          WANT="$(node -p "require('./apps/api/package.json').version")"
+          GOT="$(jq -r .version health.json)"
+          APP="$(jq -r .app health.json)"
+          if [ "$APP" != "double-sweat" ] || [ "$GOT" != "$WANT" ]; then
+            echo "::error::Health meldet app=$APP version=$GOT, erwartet double-sweat $WANT"
+            exit 1
+          fi
+          # Die Web-Oberfläche steckt im Image und wird von der API ausgeliefert
+          curl -fsS http://127.0.0.1:3000/ | grep -qi '<html'
+          docker rm -f ds-smoke >/dev/null
+
+      - name: Veröffentlichen (amd64 und arm64)
+        id: push
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=docker
+          cache-to: type=gha,scope=docker,mode=max
+
+      - name: Zusammenfassung
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          {
+            echo "### Image veröffentlicht"
+            echo
+            echo "Plattformen: amd64, arm64 · Digest: \`$DIGEST\`"
+            echo
+            echo "$TAGS" | sed 's/^/- `/; s/$/`/'
+            echo
+            echo "Auf dem Server: \`docker compose pull && docker compose up -d\`"
+          } >> "$GITHUB_STEP_SUMMARY"

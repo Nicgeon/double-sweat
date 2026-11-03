@@ -83,6 +83,12 @@ docker compose logs -f app
 Ohne Caddy (du hast schon einen Reverse-Proxy) reicht `docker compose up -d --build`. Der Port ist dann nur
 lokal erreichbar (`127.0.0.1:3000`) und dein Proxy leitet dorthin weiter.
 
+**Fertiges Image statt selbst bauen.** Jedes Release erzeugt automatisch ein Image (für x86-Server und für ARM,
+etwa Raspberry Pi) in der GitHub-Registry. Vor dem Starten `docker compose pull` (mit denselben `-f`-Dateien) holt
+es, `up -d` startet es; das Bauen auf dem Server und das Warten darauf entfallen. Solange das Image nicht öffentlich
+ist (siehe [Betrieb](#betrieb)), meldest du den Server einmal an:
+`docker login ghcr.io -u <GitHub-Name>` mit einem Personal Access Token (classic, Recht `read:packages`) als Passwort.
+
 > **Es darf nur eine Instanz laufen.** SQLite und der Scheduler (Wochenabschluss, Erinnerungen) arbeiten im
 > Prozess. Nicht skalieren, nicht zwei Container auf dieselbe Datenbank richten.
 
@@ -419,12 +425,33 @@ nach `main`.
 
 **Updates**
 
+Mit dem fertigen Image (kein Bauen auf dem Server, ein paar Sekunden Ausfall beim Neustart):
+
 ```bash
-git pull
-docker compose -f docker-compose.yml -f deploy/docker-compose.caddy.yml up -d --build
+docker compose -f docker-compose.yml -f deploy/docker-compose.caddy.yml pull
+docker compose -f docker-compose.yml -f deploy/docker-compose.caddy.yml up -d
 ```
 
+`git pull` brauchst du nur, wenn sich Compose-Dateien oder `.env.example` geändert haben. Welche Version Compose holt,
+bestimmt `DS_IMAGE` in der `.env` (Standard `:latest`, die neueste **stabile** Version):
+
+| Tag                   | Bedeutung                                                         |
+| --------------------- | ----------------------------------------------------------------- |
+| `latest`              | neueste stabile Version                                           |
+| `0.2`                 | bleibt in der Linie 0.2 (nur kleine Updates, kein Sprung auf 0.3) |
+| `0.2.0`, `0.2.0-rc.1` | genau diese Version (auch Vorabversionen; sie sind nie `latest`)  |
+| `develop`             | jüngster Stand von `develop`, zum Testen                          |
+
+Wer lieber selbst baut (Fork, eigene Änderungen): `git pull` und `up -d --build`, wie bei der Erstinstallation.
+Ein Dienst, der den Server selbständig aktualisiert (Watchtower), ist möglich, aber nicht empfohlen: Ein neuer Server
+kann ältere App-Versionen aussperren (siehe unten) und sollte erst nach einem Backup laufen.
+
 Datenbank-Migrationen laufen beim Start automatisch. Sichere vorher.
+
+**Das Image in der Registry.** Es liegt unter `ghcr.io/nicgeon/double-sweat` (Name in Kleinbuchstaben). Das
+Repository ist privat und damit auch das Paket: Zum Ziehen brauchst du den Login aus dem Schnellstart. Willst du es
+ohne Anmeldung ladbar machen, stelle das Paket auf öffentlich (GitHub → dein Profil → Packages → double-sweat →
+Package settings → Change visibility); die Quelltexte selbst bleiben davon unberührt.
 
 **Server und App gehören zusammen.** Ändert sich die API (der Server meldet `apiVersion` und `minClientApi` unter
 `/api/v1/health`), müssen Server und APK auf demselben Stand sein. Passt es nicht, sagt die App das beim Start
@@ -617,7 +644,9 @@ git tag v0.2.0 && git push origin v0.2.0
   Artefakt ab. Das empfiehlt sich vor dem ersten echten Release (die Workflows sind noch nie auf GitHub gelaufen).
 - Ist ein Tag falsch gesetzt: `git push --delete origin v0.2.0 && git tag -d v0.2.0`, dazu ein bereits angelegtes
   Release auf GitHub löschen.
-- Den Server liefert das Release nicht aus: Er läuft weiter per `git pull` und `docker compose up -d --build`.
+- Das Server-Image baut derselbe Tag über `.github/workflows/docker.yml` (amd64 und arm64, vorher ein Smoke-Test) und
+  legt es mit den Tags `0.2.0`, `0.2` und `latest` (Vorabversionen nur mit der genauen Version) in die Registry; der
+  Server aktualisiert sich mit `docker compose pull` und `up -d`. Das APK selbst liefert er nicht aus.
 
 **Forks.** Wer einen Fork betreibt, setzt die Secrets im eigenen Repository, trägt in `apps/web/src/lib/util/source.ts`
 den eigenen Quelltext-Link ein (siehe [Lizenz](#lizenz)) und ändert die App-ID (`app.doublesweat.mobile`) nur, wenn
