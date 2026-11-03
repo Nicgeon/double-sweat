@@ -92,8 +92,8 @@ case "$MODE" in
     echo "Fertig: apps/android/dist/$(basename "$OUT")"
     ;;
   test)
-    # Das Verzeichnis der Cordova-Plugins entsteht erst durch Capacitor (nicht im Repository); ohne es bricht Gradle ab.
-    (cd "$ANDROID" && pnpm exec cap update android)
+    # Capacitor erzeugt Dateien, die nicht im Repository liegen (Cordova-Plugins, Assets); ohne sie bricht Gradle ab.
+    sync_web build:native:test
     (cd "$ANDROID/android" && ./gradlew testFossDebugUnitTest)
     ;;
   *)

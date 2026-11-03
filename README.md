@@ -335,7 +335,8 @@ Das Repository muss öffentlich sein, damit andere die Release-Dateien ohne GitH
 ### Selbst bauen
 
 **Voraussetzungen zum Bauen:** JDK 21 und das Android-SDK (Plattform 36, Build-Tools 36). Die Kommandozeilen-Tools
-reichen (`sdkmanager "platforms;android-36" "build-tools;36.0.0"`). Setze `ANDROID_HOME` auf das SDK.
+reichen (`sdkmanager "platforms;android-36" "build-tools;35.0.0" "build-tools;36.0.0"`; die 35.0.0 verlangt das
+Android-Gradle-Plugin, Gradle lädt sie sonst selbst nach, wenn die Lizenzen akzeptiert sind). Setze `ANDROID_HOME` auf das SDK.
 
 ```bash
 ./scripts/gen-keystore.sh   # einmalig: Signaturschlüssel erzeugen (apps/android/signing/, nicht im Repository)
