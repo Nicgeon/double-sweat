@@ -68,7 +68,7 @@
   {#if nudgeMessage}<Banner tone={nudgeMessage.tone}>{nudgeMessage.text}</Banner>{/if}
 
   <hr class="ds-weekcard__rule" />
-  <a class="ds-weekcard__row" href={bet === null && betUpcoming === null ? '/bet#einsatz' : '/bet'}>
+  <a class="ds-weekcard__row" href={bet === null && betUpcoming === null ? '/deal#einsatz' : '/deal'}>
     <Icon name="target" size={20} />
     <span class="ds-weekcard__grow">
       {#if bet !== null}<span class="muted">{t('week.betLine')}</span> {bet}

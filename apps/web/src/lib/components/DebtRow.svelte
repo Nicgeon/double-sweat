@@ -15,20 +15,21 @@
     onredeem?: () => void;
   };
   let { debtorName, creditorName, viewerIsCreditor, bet, week, redeemed = false, busy = false, onredeem }: Props = $props();
-  const title = $derived(viewerIsCreditor ? t('debt.owesYou', { name: debtorName }) : t('debt.youOwe', { name: creditorName }));
+  const who = $derived(viewerIsCreditor ? t('debt.owesYou', { name: debtorName }) : t('debt.youOwe', { name: creditorName }));
 </script>
 
 <li class="ds-debt {redeemed ? 'is-redeemed' : ''}">
-  <span class="ds-debt__icon"><Icon name="gift" size={22} /></span>
+  <span class="ds-debt__icon ds-debt__icon--{viewerIsCreditor ? 'in' : 'out'}"><Icon name="gift" size={22} /></span>
   <div class="ds-debt__text">
-    <span class="ds-debt__title">{title}</span>
-    <span class="ds-debt__sub">{bet} · {week}</span>
+    <span class="ds-debt__who">{who}</span>
+    <span class="ds-debt__title">{bet}</span>
+    <span class="ds-debt__sub">{t('deal.kindBet')} · {week}</span>
   </div>
   {#if redeemed}
     <StatusChip status="done">{t('debt.redeemed')}</StatusChip>
   {:else if viewerIsCreditor}
     <Button variant="secondary" size="sm" icon="check" loading={busy} onclick={onredeem}>{t('debt.redeemed')}</Button>
   {:else}
-    <StatusChip status="open" />
+    <StatusChip status="open">{t('deal.waiting', { name: creditorName })}</StatusChip>
   {/if}
 </li>

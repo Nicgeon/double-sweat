@@ -57,6 +57,7 @@ Echte Texte der App:
 - **Mobil (bis 767 px).** Oben `AppBar` (56 px), darunter der Inhalt in einer Spalte, unten die `NavBar` als Tab-Leiste (64 px plus `safe-area-inset-bottom`). Vier Ziele: Heute, Verlauf, Abmachung, Profil. **Einchecken** ist keine Tab, sondern eine schwebende Schaltfläche mit Text (`ds-fab`) über der Leiste auf Heute, Verlauf und Abmachung; nach dem ersten Check-in des Tages tritt sie zurück (`ds-fab--quiet`, „Noch ein Check-in“). Abzeichen: Zahl auf Abmachung (Einlösungen, die auf dich warten), Zahl auf der Glocke (ungelesen).
 - **Tablet (ab 768 px).** Seitenrand `space-6`, Sheets erscheinen zentriert als Dialog.
 - **Desktop (ab 1024 px).** Links die Seitenleiste (`NavBar variant="side"`, 248 px) mit Logo, Einchecken als großer Button oben und dem Postfach unten; rechts der Inhalt, höchstens 1120 px breit. Start: Anzeigetafel links, Einsatz und Fotos rechts. Die App-Leiste entfällt, der Titel steht im Inhalt.
+- **Abmachung.** Oben **Offen**: Einsätze und Belohnungen in _einer_ Liste (`DebtRow`, `RewardRow`; Zeile: wer wem, was, Art und Woche; was zu dir kommt grün, was du gibst rosa, jeweils mit Symbol), leer mit „Nichts offen.“ (`ds-empty-row`). Darunter **Eure Abmachung**: je Person eine Karte (`DealCard`) mit Wochenziel (`ds-chip--plain`) und zwei Wenn-dann-Regeln (`DealRule`: „Schaffst du es: …“ mit Häkchen, „Verfehlst du es: …“ mit Kreuz). Ändern lässt sich nur, was dir gehört: dein Ziel, dein Einsatz und die Belohnung, die du der anderen Person versprichst. Auf dem Desktop steht „Offen“ links als schmale Spalte.
 - Fertige Bildschirme (Start, Check-in in drei Schritten, Einsatz, Mehr mit Farbwahl, Einladung) stehen unter den Komponenten in der Gruppe **Screens** und gelten als Vorlage.
 
 ## Ikonografie und Marke
@@ -67,7 +68,7 @@ Echte Texte der App:
 
 ## Komponenten
 
-Marke: `Logo`, `Icon`. Aktionen: `Button`, `ShutterButton`. Eingabe: `Field`, `Segmented`, `Stepper`, `Toggle`, `ColorPicker`. Anzeige: `Avatar`, `StatusChip`, `Streak`, `Card`, `WeekStrip`, `Scoreboard`, `PhotoTile`, `DebtRow`. Navigation: `NavBar`, `AppBar`. Rückmeldung: `Banner`, `Sheet`. Die Klassen tragen den Präfix `ds-` und stehen in `components/bundle.css`; sie nutzen ausschließlich Tokens. `components/bundle.js` ist die React-Referenz (`window.DS`); die Svelte-App übernimmt dasselbe Markup und dieselben Klassen, sie importiert kein React. Hinter jedem Namen liegt eine README mit Eigenschaften, Regeln und Verboten.
+Marke: `Logo`, `Icon`. Aktionen: `Button`, `ShutterButton`. Eingabe: `Field`, `Segmented`, `Stepper`, `Toggle`, `ColorPicker`. Anzeige: `Avatar`, `StatusChip`, `Streak`, `Card`, `WeekStrip`, `Scoreboard`, `PhotoTile`, `DebtRow`, `RewardRow`, `DealCard`, `DealRule`. Navigation: `NavBar`, `AppBar`. Rückmeldung: `Banner`, `Sheet`. Die Klassen tragen den Präfix `ds-` und stehen in `components/bundle.css`; sie nutzen ausschließlich Tokens. `components/bundle.js` ist die React-Referenz (`window.DS`); die Svelte-App übernimmt dasselbe Markup und dieselben Klassen, sie importiert kein React. Hinter jedem Namen liegt eine README mit Eigenschaften, Regeln und Verboten.
 
 ## Bekannte Abweichungen
 

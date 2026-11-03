@@ -79,6 +79,8 @@ export class Api {
       headers: this.csrf ? { 'x-csrf-token': this.csrf } : {},
     });
     const body = await res.json().catch(() => null);
+    // Registrierung und Anmeldung liefern das CSRF-Token: gleich merken (auch beim Beitritt per Einladung)
+    if (typeof body?.csrfToken === 'string') this.csrf = body.csrfToken;
     return { status: res.status(), body };
   }
   async founder(name = 'Anna') {

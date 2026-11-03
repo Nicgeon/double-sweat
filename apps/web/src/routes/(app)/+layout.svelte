@@ -48,7 +48,7 @@
   const tabs: NavItem[] = $derived([
     { id: 'today', label: t('nav.today'), icon: 'house', href: '/' },
     { id: 'history', label: t('nav.history'), icon: 'history', href: '/history' },
-    { id: 'deal', label: t('nav.deal'), icon: 'target', href: '/bet', badge: todayStore.openCount || undefined },
+    { id: 'deal', label: t('nav.deal'), icon: 'target', href: '/deal', badge: todayStore.openCount || undefined },
     { id: 'profile', label: t('nav.profile'), icon: 'user', href: '/more' },
   ]);
   // Seitenleiste (Desktop): Check-in oben als große Schaltfläche, das Postfach unten
@@ -63,12 +63,12 @@
     const path = page.url.pathname;
     if (path === '/' || path.startsWith('/notifications')) return 'today';
     if (path.startsWith('/history')) return 'history';
-    if (path.startsWith('/bet')) return 'deal';
+    if (path.startsWith('/deal')) return 'deal';
     if (path.startsWith('/more')) return 'profile';
     return '';
   });
   /** Die Check-in-Schaltfläche schwebt nur auf den drei Hauptseiten, nicht im Profil und nicht in Unterseiten. */
-  const showFab = $derived(['/', '/history', '/bet'].includes(page.url.pathname) && todayStore.canCheckin);
+  const showFab = $derived(['/', '/history', '/deal'].includes(page.url.pathname) && todayStore.canCheckin);
 </script>
 
 {#if session.user}

@@ -17,8 +17,14 @@ test('Bildschirmfotos', async ({ browser }, testInfo) => {
       { id: b.user.id, goalDays: 2, doneDays: 1, met: false },
     ],
     debt: { debtorId: b.user.id, creditorId: a.user.id, betText: 'Kinoabend zahlen' },
+    claim: { recipientId: a.user.id, giverId: b.user.id, rewardText: 'Massage' },
   });
   await anna.call('put', '/goals/next', { days: 4 });
+  await ben.call('put', '/goals/next', { days: 2 });
+  await anna.call('put', '/bets', { text: 'Sonntag kochen' });
+  await ben.call('put', '/bets', { text: 'Kinoabend zahlen' });
+  await anna.call('put', '/rewards', { text: 'Pizza backen' });
+  await ben.call('put', '/rewards', { text: 'Massage' });
   const { page } = await newUserContext(browser, testInfo);
   await loginViaUi(page, annaEmail);
   const name = testInfo.project.name;
@@ -39,8 +45,18 @@ test('Bildschirmfotos', async ({ browser }, testInfo) => {
   await shot('start-mit-foto');
   for (const [path, file] of [
     ['/history', 'verlauf'],
-    ['/bet', 'einsatz'],
+    ['/deal', 'abmachung'],
     ['/more', 'mehr'],
+  ] as const) {
+    await page.goto(path);
+    await page.waitForTimeout(400);
+    await shot(file);
+  }
+  // Dunkel: die wichtigsten Seiten noch einmal
+  await page.emulateMedia({ colorScheme: 'dark' });
+  for (const [path, file] of [
+    ['/', 'start-dunkel'],
+    ['/deal', 'abmachung-dunkel'],
   ] as const) {
     await page.goto(path);
     await page.waitForTimeout(400);

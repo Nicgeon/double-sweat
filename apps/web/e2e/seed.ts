@@ -19,6 +19,8 @@ export function seedSettledWeek(opts: {
   weekStart: string;
   members: SeedMember[];
   debt?: { debtorId: string; creditorId: string; betText: string; redeemed?: boolean };
+  /** Belohnung, die `recipientId` für das erreichte Ziel von `giverId` bekommt */
+  claim?: { recipientId: string; giverId: string; rewardText: string; redeemed?: boolean };
 }) {
   const db = new Database(join(DATA_DIR, 'double-sweat.db'));
   db.pragma('busy_timeout = 5000');
@@ -50,6 +52,20 @@ export function seedSettledWeek(opts: {
         opts.debt.betText,
         now,
         opts.debt.redeemed ? now : null,
+      );
+    }
+    if (opts.claim) {
+      db.prepare(
+        'INSERT INTO reward_claims (id, team_id, week_start, recipient_id, giver_id, reward_text, created_at, redeemed_at) VALUES (?,?,?,?,?,?,?,?)',
+      ).run(
+        `seed-claim-${opts.weekStart}-${opts.claim.recipientId.slice(-6)}`,
+        opts.teamId,
+        opts.weekStart,
+        opts.claim.recipientId,
+        opts.claim.giverId,
+        opts.claim.rewardText,
+        now,
+        opts.claim.redeemed ? now : null,
       );
     }
   } finally {

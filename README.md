@@ -644,7 +644,7 @@ GitHub gelaufen: erst per Probelauf prüfen), siehe [Push](#push-benachrichtigun
 [Release veröffentlichen](#release-veröffentlichen-github).
 Geplant, in dieser Reihenfolge:
 
-1. **Übersicht und Navigation, Fortsetzung:** Abmachung als eigener Bereich (Offenes, Wenn-dann-Karten),
-   Benachrichtigungen (neue Anlässe, Einstellungen pro Art, Postfach mit Links, Android-Kanäle), Check-in-Feinschliff
-   und Profil in Unterseiten.
+1. **Übersicht und Navigation, Fortsetzung:** Benachrichtigungen (neue Anlässe, Einstellungen pro Art, Postfach mit
+   Links, Android-Kanäle), Check-in-Feinschliff und Profil in Unterseiten. Die Abmachung (Offenes, Wenn-dann-Karten
+   je Person) ist auf `develop` umgesetzt.
 2. **Health Connect** (Android): Workout-Vorschläge aus Wearables, nur auf dem Gerät, das Foto bleibt Pflicht.

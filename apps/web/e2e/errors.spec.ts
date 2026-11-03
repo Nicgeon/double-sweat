@@ -13,7 +13,7 @@ test('Unerwarteter Fehler beim Anzeigen: gestaltete Fehlerseite mit Neu laden st
   await page.route('**/api/v1/bets', (route) =>
     route.fulfill({ json: { current: null, upcoming: null } }),
   );
-  await page.goto('/bet');
+  await page.goto('/deal');
   await expect(page.getByRole('heading', { name: 'Da ist etwas schiefgelaufen.' })).toBeVisible();
   await expect(page.getByText('Internal Error')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Neu laden' })).toBeVisible();

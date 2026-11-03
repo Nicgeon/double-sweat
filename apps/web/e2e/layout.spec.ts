@@ -105,7 +105,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await scan('Start');
     for (const [path, title] of [
       ['/history', 'Verlauf'],
-      ['/bet', 'Abmachung'],
+      ['/deal', 'Abmachung'],
       ['/more', 'Profil'],
       ['/notifications', 'Benachrichtigungen'],
     ] as const) {

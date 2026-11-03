@@ -21,7 +21,7 @@ test('Ab der ersten vollen Woche kommt man ohne Einsatz nicht in die App', async
   await expect(gate).toBeVisible();
   await expect(a.page.getByRole('navigation', { name: 'Hauptnavigation' })).toHaveCount(0);
   // Auch über die Adresse kommt man nicht daran vorbei
-  await a.page.goto('/bet');
+  await a.page.goto('/deal');
   await expect(gate).toBeVisible();
   await gate.getByLabel('Was schuldest du Ben?').fill('Kinoabend zahlen');
   await gate.getByRole('button', { name: 'Einsatz festlegen' }).click();
@@ -40,9 +40,13 @@ test('Ab der ersten vollen Woche kommt man ohne Einsatz nicht in die App', async
   await expect(b.page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
 
   // Jeder sieht den Einsatz des anderen auf der Abmachung-Seite
-  await b.page.goto('/bet');
-  await expect(b.page.getByText('Einsatz von Anna')).toBeVisible();
-  await expect(b.page.getByText('Kinoabend zahlen')).toBeVisible();
+  await b.page.goto('/deal');
+  await expect(b.page.getByRole('region', { name: 'Anna', exact: true })).toContainText(
+    'Verfehlt Anna es: Anna gibt dir: Kinoabend zahlen',
+  );
+  await expect(b.page.getByRole('region', { name: /\(Du\)/ })).toContainText(
+    'Verfehlst du es: Du gibst Anna: Pizza backen',
+  );
   expect(a.problems).toEqual([]);
   expect(b.problems).toEqual([]);
 });

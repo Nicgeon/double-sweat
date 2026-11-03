@@ -62,8 +62,9 @@ test('Sprache wechseln: sofort sichtbar, am Konto gespeichert, nach dem Neuladen
 
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Profile', level: 1 })).toBeVisible();
-  await page.goto('/bet');
+  await page.goto('/deal');
   await expect(page.getByRole('heading', { name: 'Agreement', level: 1 })).toBeVisible();
+  await expect(page.getByText('If you miss it:')).toBeVisible();
   await expect(
     page.getByText(/Whoever misses their weekly goal owes the other their own stake\./),
   ).toBeVisible();

@@ -37,7 +37,7 @@ test('Team gründen, abmelden und wieder anmelden', async ({ browser }, testInfo
 
   // Geschützte Seiten leiten mit Rücksprung zur Anmeldung
   await page.goto('/bet');
-  await expect(page).toHaveURL(/\/login\?next=%2Fbet/);
+  await expect(page).toHaveURL(/\/login\?next=%2F(bet|deal)/);
   await page.getByLabel('E-Mail').fill(email);
   await page.getByLabel('Passwort').fill('falsches passwort!!');
   await page.getByRole('button', { name: 'Anmelden' }).click();
@@ -199,20 +199,26 @@ test('Ziel und Einsatz festlegen', async ({ browser }, testInfo) => {
   await expect(page.getByText('Wochenziel setzen', { exact: true })).toBeVisible();
   // Auch der Einsatz steht in der Starthilfe (in der Beitrittswoche noch ohne Pflicht)
   await expect(page.getByText('Deinen Einsatz festlegen', { exact: true })).toBeVisible();
-  await page.goto('/bet');
-  const plus = page.getByRole('button', { name: 'Einen Tag mehr' });
+  // Der alte Link /bet#ziel führt weiter und öffnet gleich das Fenster für das Wochenziel
+  await page.goto('/bet#ziel');
+  await expect(page).toHaveURL(/\/deal#ziel$/);
+  const goalDialog = page.getByRole('dialog', { name: 'Dein Wochenziel' });
+  await expect(goalDialog).toBeVisible();
+  const plus = goalDialog.getByRole('button', { name: 'Einen Tag mehr' });
   await plus.click();
   await plus.click();
-  await page.getByRole('button', { name: 'Ziel speichern' }).click();
+  await goalDialog.getByRole('button', { name: 'Ziel speichern' }).click();
   // Das erste Ziel gilt sofort (Beitrittswoche wird nicht gewertet)
   await expect(page.getByText(/Dein Ziel von \d Tagen gilt ab sofort/)).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByText('5 Tage pro Woche')).toBeVisible();
   await page.goto('/');
   await expect(page.getByText('Wochenziel setzen', { exact: true })).toHaveCount(0);
   await expect(page.locator('.ds-wlane:not(.ds-wlane--empty)').first()).toContainText('von 5');
-  await page.goto('/bet');
+  await page.goto('/deal');
 
   // Dein Einsatz: jede Person legt ihren eigenen fest, er gilt ab dieser Woche
-  await expect(page.getByText('Lege deinen Einsatz fest')).toBeVisible();
+  await expect(page.getByText('Noch kein Einsatz festgelegt.')).toBeVisible();
   await page.getByRole('button', { name: 'Einsatz festlegen' }).click();
   await page
     .getByLabel('Was schuldest du Ben, wenn du dein Ziel verfehlst?')
@@ -222,15 +228,16 @@ test('Ziel und Einsatz festlegen', async ({ browser }, testInfo) => {
   await expect(page.getByText('Gespeichert. Ben wurde benachrichtigt.')).toBeVisible();
   await expect(page.getByText('Wer verliert, kocht am Sonntag').first()).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.getByText('Lege deinen Einsatz fest')).toHaveCount(0);
+  await expect(page.getByText('Noch kein Einsatz festgelegt.')).toHaveCount(0);
+  await expect(page.getByText('Du gibst Ben: Wer verliert, kocht am Sonntag')).toBeVisible();
 
   // Heute zeigt ihn gleich
   await page.goto('/');
   await expect(page.getByText('Wer verliert, kocht am Sonntag')).toBeVisible();
 
   // Der Einsatz bleibt editierbar und lässt sich für kommende Wochen vorab festlegen
-  await page.goto('/bet');
-  await page.getByRole('button', { name: 'Ändern' }).first().click();
+  await page.goto('/deal');
+  await page.getByRole('button', { name: 'Einsatz ändern' }).click();
   await page
     .getByLabel('Was schuldest du Ben, wenn du dein Ziel verfehlst?')
     .fill('Kaffee ausgeben');
@@ -298,21 +305,26 @@ test('Belohnung versprechen: Partner sieht sie und bekommt eine Mitteilung', asy
   const anna = await newUserContext(browser, testInfo);
   await loginViaUi(anna.page, annaEmail);
   await anna.page.goto('/bet');
-  const card = anna.page.locator('#belohnung');
-  await expect(card).toContainText('Du für Ben: Noch nichts versprochen.');
-  await card.getByRole('button', { name: 'Ändern' }).click();
+  // Belohnungen gehören zur Karte der Person, die sie bekommt: "Schafft Ben es: Du gibst Ben …"
+  const card = anna.page.getByRole('region', { name: 'Ben', exact: true });
+  await expect(card).toContainText('Schafft Ben es: Noch nichts versprochen.');
+  await card.getByRole('button', { name: 'Belohnung für Ben festlegen' }).click();
   await anna.page
     .getByLabel('Was bekommt Ben, wenn das Wochenziel klappt?')
     .fill('Anna kocht am Sonntag');
   await anna.page.getByRole('button', { name: 'Speichern', exact: true }).click();
   await expect(anna.page.getByRole('dialog')).toHaveCount(0);
+  // Eine neue Belohnung gilt erst ab der nächsten Woche: bis dahin steht sie als vorgemerkt da
+  await expect(card).toContainText('Ab Montag');
   await expect(card).toContainText('Anna kocht am Sonntag');
 
   const ben = await newUserContext(browser, testInfo);
   await loginViaUi(ben.page, benEmail);
-  await ben.page.goto('/bet');
-  await expect(ben.page.locator('#belohnung')).toContainText('Anna für dich:');
-  await expect(ben.page.locator('#belohnung')).toContainText('Anna kocht am Sonntag');
+  await ben.page.goto('/deal');
+  // Auf Bens Seite steht dieselbe Zusage in seiner eigenen Karte: "Schaffst du es: Anna gibt dir …"
+  const own = ben.page.getByRole('region', { name: /\(Du\)/ });
+  await expect(own).toContainText('Schaffst du es:');
+  await expect(own).toContainText('Anna kocht am Sonntag');
   await ben.page.goto('/notifications');
   await expect(ben.page.getByText(/Anna verspricht dir eine Belohnung/)).toBeVisible();
   expect(anna.problems).toEqual([]);

@@ -490,6 +490,12 @@ textarea.ds-field__input {
   background: var(--surface-2);
   color: var(--ink-muted);
 }
+/* Neutrale Angabe ohne Status (zum Beispiel "3 Tage pro Woche") */
+.ds-chip--plain {
+  padding-inline: var(--space-3);
+  background: var(--surface-2);
+  color: var(--ink);
+}
 .ds-chip--risk {
   background: var(--risk-soft);
   color: var(--risk-ink);
@@ -1020,7 +1026,7 @@ textarea.ds-field__input {
   gap: var(--space-2);
 }
 
-/* ---------- DebtRow ---------- */
+/* ---------- DebtRow / RewardRow ---------- */
 .ds-debt {
   display: flex;
   align-items: center;
@@ -1041,16 +1047,117 @@ textarea.ds-field__input {
   background: var(--surface-2);
   color: var(--ink);
 }
+/* Was zu dir kommt, ist grün, was du schuldest, rosa (nie nur Farbe: Text und Symbol sagen es auch) */
+.ds-debt__icon--in {
+  background: var(--done-soft);
+  color: var(--done-ink);
+}
+.ds-debt__icon--out {
+  background: var(--alert-soft);
+  color: var(--alert-ink);
+}
 .ds-debt__text {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
+/* Wer schuldet wem ("Ben schuldet dir"), dann was, dann Art und Woche */
+.ds-debt__who {
+  font: 400 14px / 20px var(--font-body);
+  color: var(--ink-muted);
+}
 .ds-debt__title {
   font: 700 16px / 24px var(--font-body);
 }
 .ds-debt__sub {
+  font: 400 14px / 20px var(--font-body);
+  color: var(--ink-muted);
+}
+
+/* Leerer Zustand in einer Liste: sagt, dass nichts ansteht, und was dann hier erscheint */
+.ds-empty-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+}
+.ds-empty-row__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--surface);
+}
+.ds-empty-row p {
+  margin: 0;
+}
+
+/* ---------- Abmachung: Personenkarte und Regel ("Schaffst du es: …") ---------- */
+.ds-card--dashed {
+  border-style: dashed;
+  border-color: var(--border-strong);
+}
+.ds-person__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.ds-person__who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.ds-person__name {
+  margin: 0;
+  font: 700 18px / 24px var(--font-display);
+}
+.ds-person__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+.ds-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: var(--space-2) 0;
+}
+.ds-rule__ic {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+}
+.ds-rule__ic--done {
+  background: var(--done-soft);
+  color: var(--done-ink);
+}
+.ds-rule__ic--alert {
+  background: var(--alert-soft);
+  color: var(--alert-ink);
+}
+.ds-rule__text {
+  flex: 1;
+  min-width: 0;
+  padding-top: 2px;
+  font: 400 16px / 24px var(--font-body);
+}
+.ds-rule__text b {
+  font-weight: 700;
+}
+.ds-rule__sub {
+  display: block;
   font: 400 14px / 20px var(--font-body);
   color: var(--ink-muted);
 }

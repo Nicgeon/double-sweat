@@ -183,6 +183,13 @@ p {
   }
 }
 
+/* Abmachung: schmale Spalte für "Offen", der Rest für die Karten der beiden */
+@media (min-width: 1024px) {
+  .cols.cols--deal {
+    grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+  }
+}
+
 .cols > .stack,
 .stack {
   display: flex;
@@ -195,6 +202,12 @@ p {
   .stack {
     gap: var(--space-6);
   }
+}
+
+/* Dichtere Gruppe innerhalb einer Seite (Abschnitt mit Überschrift und Karten) */
+.stack.stack--tight,
+.cols > .stack.stack--tight {
+  gap: var(--space-3);
 }
 
 /* ---------- Anmeldeseiten ---------- */

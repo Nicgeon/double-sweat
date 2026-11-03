@@ -128,11 +128,11 @@
           <StartGuide steps={guide.steps} oninvite={() => (inviteOpen = true)} />
         {:else if hint?.kind === 'open'}
           <HintCard icon="gift" title={tn('hint.openTitle', hint.count)} body={partner ? t('hint.openBody', { name: partner.displayName }) : undefined}>
-            {#snippet action()}<Button variant="secondary" size="sm" href="/bet">{t('week.view')}</Button>{/snippet}
+            {#snippet action()}<Button variant="secondary" size="sm" href="/deal">{t('week.view')}</Button>{/snippet}
           </HintCard>
         {:else if hint?.kind === 'goalNext'}
           <HintCard icon="info" title={t('home.goalNextTitle')} body={tn('home.goalNextBody', hint.days, { date: weekdayDate(addDays(hint.weekStart, 7)) })}>
-            {#snippet action()}<Button variant="secondary" size="sm" href="/bet#ziel">{t('common.change')}</Button>{/snippet}
+            {#snippet action()}<Button variant="secondary" size="sm" href="/deal#ziel">{t('common.change')}</Button>{/snippet}
           </HintCard>
         {/if}
       </div>

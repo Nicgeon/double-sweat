@@ -16,20 +16,21 @@
     onreceive?: () => void;
   };
   let { recipientName, giverName, viewerIsRecipient, reward, week, received = false, busy = false, onreceive }: Props = $props();
-  const title = $derived(viewerIsRecipient ? t('reward.fromGiver', { name: giverName }) : t('reward.forRecipient', { name: recipientName }));
+  const who = $derived(viewerIsRecipient ? t('reward.fromGiver', { name: giverName }) : t('reward.forRecipient', { name: recipientName }));
 </script>
 
 <li class="ds-debt {received ? 'is-redeemed' : ''}">
-  <span class="ds-debt__icon"><Icon name="trophy" size={22} /></span>
+  <span class="ds-debt__icon ds-debt__icon--{viewerIsRecipient ? 'in' : 'out'}"><Icon name="trophy" size={22} /></span>
   <div class="ds-debt__text">
-    <span class="ds-debt__title">{title}</span>
-    <span class="ds-debt__sub">{reward} · {week}</span>
+    <span class="ds-debt__who">{who}</span>
+    <span class="ds-debt__title">{reward}</span>
+    <span class="ds-debt__sub">{t('deal.kindReward')} · {week}</span>
   </div>
   {#if received}
     <StatusChip status="done">{t('reward.received')}</StatusChip>
   {:else if viewerIsRecipient}
     <Button variant="secondary" size="sm" icon="check" loading={busy} onclick={onreceive}>{t('reward.received')}</Button>
   {:else}
-    <StatusChip status="open">{t('reward.due')}</StatusChip>
+    <StatusChip status="open">{t('deal.waiting', { name: recipientName })}</StatusChip>
   {/if}
 </li>

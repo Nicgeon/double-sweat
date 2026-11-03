@@ -16,6 +16,8 @@ test('Verlauf und Einsatz: abgerechnete Wochen, Schuld einlösen', async ({ brow
       { id: b.user.id, goalDays: 3, doneDays: 1, met: false },
     ],
     debt: { debtorId: b.user.id, creditorId: a.user.id, betText: 'Kinoabend zahlen' },
+    // Anna hat ihr Ziel erreicht: Ben schuldet ihr außerdem die versprochene Belohnung
+    claim: { recipientId: a.user.id, giverId: b.user.id, rewardText: 'Massage' },
   });
   seedSettledWeek({
     teamId,
@@ -36,23 +38,36 @@ test('Verlauf und Einsatz: abgerechnete Wochen, Schuld einlösen', async ({ brow
   await expect(annaUi.page.getByText('Ben schuldet den Einsatz')).toBeVisible();
   await expect(annaUi.page.locator('.ds-streak')).toContainText('1');
 
-  // Anna ist Gläubigerin und kann die Schuld einlösen; Ben sieht nur den Status
-  await annaUi.page.goto('/bet');
-  await expect(annaUi.page.getByText('Ben schuldet dir')).toBeVisible();
+  // "Offen" führt Einsätze und Belohnungen in einer Liste. Anna ist Gläubigerin und löst ein; Ben sieht nur den Status
+  await annaUi.page.goto('/deal');
+  const annaOpen = annaUi.page.getByRole('region', { name: 'Offen' });
+  await expect(annaOpen.getByText('Ben schuldet dir')).toBeVisible();
+  await expect(annaOpen.getByText('Einsatz · KW 42')).toBeVisible();
+  await expect(annaOpen.getByText('Ben hat dir versprochen')).toBeVisible();
+  await expect(annaOpen.getByText('Massage')).toBeVisible();
+  await expect(annaOpen.getByText('Belohnung · KW 42')).toBeVisible();
   const benUi = await newUserContext(browser, testInfo);
   await loginViaUi(benUi.page, benEmail);
-  await benUi.page.goto('/bet');
-  await expect(benUi.page.getByText('Du schuldest Anna')).toBeVisible();
+  await benUi.page.goto('/deal');
+  const benOpen = benUi.page.getByRole('region', { name: 'Offen' });
+  await expect(benOpen.getByText('Du schuldest Anna')).toBeVisible();
+  await expect(benOpen.getByText('Du hast Anna versprochen')).toBeVisible();
+  await expect(benOpen.getByText('Anna bestätigt')).toHaveCount(2);
   await expect(benUi.page.getByRole('button', { name: 'Eingelöst' })).toHaveCount(0);
+  await expect(benUi.page.getByRole('button', { name: 'Erhalten' })).toHaveCount(0);
 
-  await annaUi.page.getByRole('button', { name: 'Eingelöst' }).click();
-  // Schulden und verdiente Belohnungen haben je eine Liste: hier geht es um die Schulden
-  await expect(
-    annaUi.page.getByRole('region', { name: 'Schulden' }).getByText('Nichts offen.'),
-  ).toBeVisible();
-  await annaUi.page.getByRole('radio', { name: 'Alle' }).click();
-  await expect(annaUi.page.getByText('Ben schuldet dir')).toBeVisible();
-  await expect(annaUi.page.locator('.ds-debt .ds-chip--done')).toContainText('Eingelöst');
+  await annaOpen.getByRole('button', { name: 'Eingelöst' }).click();
+  await annaOpen.getByRole('button', { name: 'Erhalten' }).click();
+  await expect(annaOpen.getByText('Nichts offen.')).toBeVisible();
+  // Erledigtes lässt sich einblenden
+  await annaUi.page.getByRole('button', { name: 'Erledigte anzeigen' }).click();
+  const annaDone = annaUi.page.getByRole('region', { name: 'Erledigt' });
+  await expect(annaDone.getByText('Ben schuldet dir')).toBeVisible();
+  await expect(annaDone.getByText('Ben hat dir versprochen')).toBeVisible();
+  await expect(annaDone.locator('.ds-debt .ds-chip--done')).toHaveCount(2);
+  await expect(annaDone.locator('.ds-debt .ds-chip--done').first()).toContainText(
+    /Eingelöst|Erhalten/,
+  );
   expect(annaUi.problems).toEqual([]);
 });
 
