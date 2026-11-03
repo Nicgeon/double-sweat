@@ -70,10 +70,10 @@ test('Selfie-Schalter: erst Rückkamera, dann Frontkamera mit Vorlauf, beide lan
   await page.getByRole('link', { name: 'Zur Übersicht' }).click();
   const inset = page.locator('.ds-photo .selfie-inset');
   await expect(inset).toBeVisible();
-  const loaded = await inset.evaluate(
-    (img: HTMLImageElement) => img.complete && img.naturalWidth > 0,
-  );
-  expect(loaded).toBe(true);
+  // Das Bild lädt nach dem Anzeigen noch: warten, statt den Stand eines Augenblicks zu prüfen
+  await expect
+    .poll(() => inset.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0))
+    .toBe(true);
   await page.getByRole('button', { name: /Foto ansehen/ }).click();
   const swap = page.getByTestId('selfie-swap');
   await expect(swap).toHaveAccessibleName('Selfie groß zeigen');

@@ -17,7 +17,8 @@
     onclose: () => void;
     ondeleted: () => void;
     /** Nach einer Reaktion mit dem neuen Stand der Reaktionen dieses Check-ins. */
-    onreacted?: (reactions: Checkin['reactions']) => void;
+    /** `id` gehört zum Check-in, auf den reagiert wurde; das Fenster kann bei der Antwort schon zu sein. */
+    onreacted?: (id: string, reactions: Checkin['reactions']) => void;
   };
   let { checkin, mine, onclose, ondeleted, onreacted }: Props = $props();
   let error = $state<string | null>(null);
@@ -47,7 +48,7 @@
         mineKind === kind
           ? unwrap(await api.DELETE('/api/v1/checkins/{id}/reaction', { params: { path: { id } } }))
           : unwrap(await api.PUT('/api/v1/checkins/{id}/reaction', { params: { path: { id } }, body: { kind } }));
-      onreacted?.(res.reactions);
+      onreacted?.(id, res.reactions);
     } catch (e) {
       error = e instanceof ApiError ? e.message : t('common.failed');
     } finally {

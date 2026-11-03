@@ -183,14 +183,13 @@
     viewing = null;
     void load();
   }}
-  onreacted={(reactions) => {
-    const open = viewing;
-    if (!open) return;
-    viewing = { ...open, reactions };
+  onreacted={(id, reactions) => {
+    // Auch wenn das Fenster inzwischen zu ist: Die Kachel im Feed muss den neuen Stand zeigen
+    if (viewing?.id === id) viewing = { ...viewing, reactions };
     if (todayStore.dashboard) {
       todayStore.dashboard = {
         ...todayStore.dashboard,
-        feed: todayStore.dashboard.feed.map((c) => (c.id === open.id ? { ...c, reactions } : c)),
+        feed: todayStore.dashboard.feed.map((c) => (c.id === id ? { ...c, reactions } : c)),
       };
     }
   }}
