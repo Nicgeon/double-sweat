@@ -45,6 +45,19 @@ export const de = {
   'root.unreachableBannerTitle': 'Der Server ist gerade nicht erreichbar',
   'root.unreachableBody': 'Prüfe deine Verbindung und versuch es gleich noch einmal.',
   'root.changeServer': 'Server ändern',
+  'root.versionTitle': 'App und Server passen nicht zusammen.',
+  'root.versionServerOldTitle': 'Der Server ist älter als die App',
+  'root.versionAppOldTitle': 'Die App ist älter als der Server',
+  'root.versionHint':
+    'Aufgabe: App und Server auf denselben Stand bringen (App: API {app}, Server: API {server}), den Server nach dem Update neu starten und es dann noch einmal versuchen.',
+  'error.title': 'Da ist etwas schiefgelaufen.',
+  'error.bannerTitle': 'Die Seite lässt sich nicht anzeigen ({code})',
+  'error.body':
+    'Versuch es noch einmal. Hilft das nicht, passen App und Server vielleicht nicht zusammen: Bring beide auf denselben Stand.',
+  'error.notFound': 'Diese Seite gibt es nicht.',
+  'error.reload': 'Neu laden',
+  'error.home': 'Zur Startseite',
+  'error.detail': 'Technische Angabe',
 
   // Navigation
   'nav.main': 'Hauptnavigation',

@@ -6,7 +6,7 @@
   import { page } from '$app/state';
   import JoinLinkSheet from '#lib/components/JoinLinkSheet.svelte';
   import { startDeepLinks } from '#lib/native/boot.svelte.ts';
-  import { NATIVE } from '#lib/native/flag.ts';
+  import { CLIENT_API, NATIVE } from '#lib/native/flag.ts';
   import Banner from '#lib/components/Banner.svelte';
   import Button from '#lib/components/Button.svelte';
   import LanguageSwitch from '#lib/components/LanguageSwitch.svelte';
@@ -44,6 +44,21 @@
 
 {#if !session.ready}
   <div class="boot" role="status" aria-label={t('common.loading')}><Logo variant="mark" size={48} /></div>
+{:else if session.versionProblem}
+  <div class="auth">
+    <div class="auth__box">
+      <Logo size={32} />
+      <h1 class="auth__title">{t('root.versionTitle')}</h1>
+      <Banner tone="warning" title={session.versionProblem === 'server_too_old' ? t('root.versionServerOldTitle') : t('root.versionAppOldTitle')}>
+        {session.versionProblem === 'server_too_old' ? t('serverUrl.serverTooOld') : t('serverUrl.clientTooOld')}
+        {t('root.versionHint', { app: CLIENT_API, server: session.health?.apiVersion ?? '?' })}
+      </Banner>
+      <Button size="lg" icon="refresh-cw" loading={retrying} onclick={retry}>{t('common.retry')}</Button>
+      {#if NATIVE}<Button variant="ghost" href="/server">{t('root.changeServer')}</Button>
+      {:else}<Button variant="ghost" onclick={() => location.reload()}>{t('error.reload')}</Button>{/if}
+      <LanguageSwitch />
+    </div>
+  </div>
 {:else if session.unreachable && !session.user}
   <div class="auth">
     <div class="auth__box">

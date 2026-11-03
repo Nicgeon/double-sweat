@@ -18,7 +18,7 @@ import {
   setTokens,
 } from '#lib/native/auth-store.ts';
 import { NATIVE } from '#lib/native/flag.ts';
-import type { ServerInfo } from '#lib/native/server-url.ts';
+import { type Compatibility, compatibility, type ServerInfo } from '#lib/native/server-url.ts';
 import { disablePush } from '#lib/util/push.ts';
 import { clearWidget } from '#lib/util/widget.ts';
 import { goto } from '$app/navigation';
@@ -33,6 +33,8 @@ class Session {
   mailEnabled = $state(false);
   unread = $state(0);
   unreachable = $state(false);
+  /** App und Server passen nicht zusammen (andere API-Version): dann läuft nichts verlässlich, die App sagt es offen. */
+  versionProblem = $state<Compatibility>(null);
   /** App: gespeicherte Serveradresse (null = noch keine eingerichtet) */
   serverUrl = $state<string | null>(null);
 
@@ -47,6 +49,7 @@ class Session {
     }
     try {
       this.health = unwrap(await api.GET('/api/v1/health'));
+      this.versionProblem = compatibility(this.health);
       i18n.useServerDefault(this.health.defaultLocale);
       this.unreachable = false;
     } catch {

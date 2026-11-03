@@ -42,6 +42,19 @@ export const en: Record<MessageKey, string> = {
   'root.unreachableTitle': 'No contact with the server.',
   'root.unreachableBannerTitle': 'The server is currently unreachable',
   'root.unreachableBody': 'Check your connection and try again in a moment.',
+  'root.versionTitle': 'The app and the server do not match.',
+  'root.versionServerOldTitle': 'The server is older than the app',
+  'root.versionAppOldTitle': 'The app is older than the server',
+  'root.versionHint':
+    'To do: bring the app and the server to the same version (app: API {app}, server: API {server}), restart the server after the update and try again.',
+  'error.title': 'Something went wrong.',
+  'error.bannerTitle': 'The page cannot be shown ({code})',
+  'error.body':
+    'Try again. If that does not help, the app and the server may not match: bring both to the same version.',
+  'error.notFound': 'This page does not exist.',
+  'error.reload': 'Reload',
+  'error.home': 'Go to start',
+  'error.detail': 'Technical details',
   'root.changeServer': 'Change server',
 
   // Navigation

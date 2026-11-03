@@ -1,6 +1,10 @@
 declare global {
   namespace App {
-    // Keine Seitenzustände über die URL hinaus
+    /** Fehler, die SvelteKit anzeigt; `detail` ist die technische Angabe (nur für die Fehlerseite). */
+    interface Error {
+      message: string;
+      detail?: string;
+    }
   }
 }
 

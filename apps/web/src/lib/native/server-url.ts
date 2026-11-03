@@ -46,6 +46,15 @@ export function normalizeServerUrl(input: string, allowHttp = ALLOW_HTTP): strin
   return url.origin;
 }
 
+export type Compatibility = 'client_too_old' | 'server_too_old' | null;
+
+/** Passen App und Server zusammen? Der Server nennt seine API-Version und die kleinste, die er noch bedient. */
+export function compatibility(h: { apiVersion: number; minClientApi: number }): Compatibility {
+  if (h.minClientApi > CLIENT_API) return 'client_too_old';
+  if (h.apiVersion < CLIENT_API) return 'server_too_old';
+  return null;
+}
+
 export interface ServerInfo {
   version: string;
   apiVersion: number;
@@ -86,12 +95,9 @@ export async function probeServer(origin: string, timeoutMs = 10_000): Promise<S
   ) {
     throw new ServerError('not_double_sweat', t('serverUrl.notDoubleSweat'));
   }
-  if (h.minClientApi > CLIENT_API) {
-    throw new ServerError('client_too_old', t('serverUrl.clientTooOld'));
-  }
-  if (h.apiVersion < CLIENT_API) {
-    throw new ServerError('server_too_old', t('serverUrl.serverTooOld'));
-  }
+  const problem = compatibility({ apiVersion: h.apiVersion, minClientApi: h.minClientApi });
+  if (problem === 'client_too_old') throw new ServerError(problem, t('serverUrl.clientTooOld'));
+  if (problem === 'server_too_old') throw new ServerError(problem, t('serverUrl.serverTooOld'));
   return {
     version: String(h.version ?? ''),
     apiVersion: h.apiVersion,

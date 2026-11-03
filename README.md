@@ -388,6 +388,12 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.caddy.yml up -d --
 
 Datenbank-Migrationen laufen beim Start automatisch. Sichere vorher.
 
+**Server und App gehören zusammen.** Ändert sich die API (der Server meldet `apiVersion` und `minClientApi` unter
+`/api/v1/health`), müssen Server und APK auf demselben Stand sein. Passt es nicht, sagt die App das beim Start
+offen ("App und Server passen nicht zusammen", mit den beiden Versionen) statt abzustürzen. Ein Server, der älter
+ist als die App, braucht das Update oben; eine App, die älter ist als der Server, eine neue APK. Unerwartete
+Fehler zeigt die App auf einer eigenen Fehlerseite mit "Neu laden" und aufklappbarer technischer Angabe.
+
 **Backup** (Datenbank konsistent per `VACUUM INTO`, plus Fotos, bei laufendem Betrieb):
 
 ```bash
