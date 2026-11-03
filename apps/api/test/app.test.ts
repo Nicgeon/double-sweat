@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { APP_VERSION } from '../src/version.js';
 import { createTestEnv, PUBLIC_URL } from './helpers.js';
 
 describe('System', () => {
@@ -8,7 +9,7 @@ describe('System', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       app: 'double-sweat',
-      version: '0.1.0',
+      version: APP_VERSION,
       apiVersion: 2,
       minClientApi: 2,
       signup: { mode: 'token', requiresSetupToken: true },
