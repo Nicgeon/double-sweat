@@ -240,6 +240,8 @@ test('Ziel und Einsatz festlegen', async ({ browser }, testInfo) => {
   await page.getByRole('button', { name: 'Für später festlegen' }).click();
   await page.getByLabel('Was schuldest du Ben, wenn du dein Ziel verfehlst?').fill('Kino zahlen');
   await page.getByRole('button', { name: 'Speichern', exact: true }).click();
+  // Erst wenn das Fenster zu ist: Die Auswahl "Gilt ab" darin enthält dieselben Texte wie die neue Zeile
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByText(/KW \d+, ab .*/)).toBeVisible();
   await expect(page.getByText('Kino zahlen')).toBeVisible();
   await expect(page.getByText('Kaffee ausgeben').first()).toBeVisible(); // der laufende bleibt
