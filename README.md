@@ -606,6 +606,11 @@ git tag v0.2.0 && git push origin v0.2.0
 
 - Ein **stabiles** Release (`v0.2.0`) muss auf `main` liegen, also erst nach deinem Test auf dem Gerät. Eine
   **Vorabversion** (`v0.2.0-rc.1`, GitHub zeigt sie als "Pre-release") darf auch von `develop` kommen.
+- **Ohne Kommandozeile:** GitHub → Releases → "Draft a new release" → bei "Choose a tag" `v0.2.0` eintippen und "Create
+  new tag on publish" wählen, **Target** `main` (Vorabversion: `develop`), "Pre-release" bei Vorabversionen anhaken,
+  "Publish release". Dabei entsteht der Tag und startet den Workflow; er ergänzt am Release die APK, die Prüfsumme
+  und den Text (ein selbst geschriebener Text wird ersetzt). Wichtig: Die Version im Code muss vorher zum Tag
+  passen (`bump-version.mjs`, committen).
 - Der Tag muss zur Version im Code passen; sonst bricht der Lauf ab, bevor etwas gebaut wird.
   Versionscode der App: `Major*10000 + Minor*100 + Patch` (0.2.0 → 200); ein Suffix wie `-rc.1` steht nur im Namen.
 - **Probelauf ohne Release:** Actions → Release → "Run workflow". Er baut und prüft alles und legt die APK nur als

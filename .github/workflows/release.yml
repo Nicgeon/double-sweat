@@ -203,10 +203,6 @@ jobs:
       - name: Release anlegen
         run: |
           set -eu
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "::error::Zu $TAG gibt es schon ein Release. Lösche es auf GitHub (den Tag behalten) und starte den Lauf neu."
-            exit 1
-          fi
           SUMME="$(cut -d' ' -f1 release/SHA256SUMS)"
           PREV="$(git describe --tags --abbrev=0 --match 'v[0-9]*' "$TAG^" 2>/dev/null || true)"
           if [ -n "$PREV" ]; then RANGE="$PREV..$TAG"; else RANGE="$TAG"; fi
@@ -229,7 +225,13 @@ jobs:
             echo
             git log --no-merges --pretty='- %s' "$RANGE" | head -60
           } > notes.md
-          case "$VERSION" in *-*) PRE="--prerelease" ;; *) PRE="" ;; esac
-          # shellcheck disable=SC2086
-          gh release create "$TAG" release/double-sweat-"$VERSION".apk release/SHA256SUMS \
-            --verify-tag --title "Double Sweat $VERSION" --notes-file notes.md $PRE
+          case "$VERSION" in *-*) PRE=true ;; *) PRE=false ;; esac
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # Das Release wurde schon im Browser angelegt (dabei entsteht der Tag): Dateien und Text ergänzen.
+            # Ein erneuter Lauf ersetzt die Dateien, statt abzubrechen.
+            gh release upload "$TAG" release/double-sweat-"$VERSION".apk release/SHA256SUMS --clobber
+            gh release edit "$TAG" --title "Double Sweat $VERSION" --notes-file notes.md --prerelease="$PRE"
+          else
+            gh release create "$TAG" release/double-sweat-"$VERSION".apk release/SHA256SUMS \
+              --verify-tag --title "Double Sweat $VERSION" --notes-file notes.md --prerelease="$PRE"
+          fi
