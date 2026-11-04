@@ -3,15 +3,19 @@ name: Docker-Image
 # Baut das Server-Image (amd64 und arm64, also auch für Raspberry Pi und ARM-Server) und legt es in die GitHub-
 # Registry (ghcr.io). Ein Update des Servers ist dann "docker compose pull" statt "git pull" und neu bauen.
 #
-#   Tag v0.2.0       →  :0.2.0, :0.2 und :latest   (stabil; Tag muss zur Version im Code passen und auf main liegen)
-#   Tag v0.2.0-rc.1  →  :0.2.0-rc.1                (Vorabversion, nie :latest)
-#   Push auf develop →  :develop                   (nur wenn sich etwas am Server ändert, nicht bei Doku, Tests, App)
+#   Push auf main     →  :latest, :sha-…           der getestete Stand, den Server normalerweise ziehen
+#   Push auf develop  →  :beta, :sha-…             Stand zum Testen (jeweils nur, wenn sich etwas am Server ändert)
+#   Tag v0.2.0        →  :0.2.0 und :0.2           feste Version zum Festhalten und Zurückrollen; der Tag muss zur
+#                                                   Version im Code passen und auf main liegen
+#   Tag v0.2.0-rc.1   →  :0.2.0-rc.1               Vorabversion
+# :latest kommt nur von main, nie von einem Tag: So kann ein später fertig werdender Tag-Bau :latest nicht auf einen
+# älteren Stand zurücksetzen.
 #
 # Vor dem Veröffentlichen wird das Image einmal gestartet und der Health-Check abgefragt (Smoke-Test). Es braucht
 # keine Geheimnisse: Der Workflow meldet sich mit dem eingebauten GITHUB_TOKEN an.
 on:
   push:
-    branches: [develop]
+    branches: [develop, main]
     tags: ["v[0-9]*"]
     paths-ignore:
       - "**.md"
@@ -27,7 +31,7 @@ permissions:
 
 concurrency:
   group: docker-${{ github.ref }}
-  # Ein neuerer Push auf develop ersetzt den laufenden Bau; ein Release-Tag wird nie abgebrochen
+  # Ein neuerer Push auf denselben Branch ersetzt den laufenden Bau; ein Release-Tag wird nie abgebrochen
   cancel-in-progress: ${{ github.ref_type == 'branch' }}
 
 jobs:
@@ -90,8 +94,9 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}},enable=${{ !contains(github.ref_name, '-') }}
-            type=ref,event=branch
-            type=raw,value=latest,enable=${{ github.ref_type == 'tag' && !contains(github.ref_name, '-') }}
+            type=raw,value=beta,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,enable=${{ github.ref_type == 'branch' }}
           labels: |
             org.opencontainers.image.title=Double Sweat
             org.opencontainers.image.description=Selbst gehostete Paar-Fitness-Accountability-App

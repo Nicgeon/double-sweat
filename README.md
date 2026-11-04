@@ -433,14 +433,19 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.caddy.yml up -d
 ```
 
 `git pull` brauchst du nur, wenn sich Compose-Dateien oder `.env.example` geändert haben. Welche Version Compose holt,
-bestimmt `DS_IMAGE` in der `.env` (Standard `:latest`, die neueste **stabile** Version):
+bestimmt `DS_IMAGE` in der `.env` (Standard `:latest`, der getestete Stand von `main`):
 
-| Tag                   | Bedeutung                                                         |
-| --------------------- | ----------------------------------------------------------------- |
-| `latest`              | neueste stabile Version                                           |
-| `0.2`                 | bleibt in der Linie 0.2 (nur kleine Updates, kein Sprung auf 0.3) |
-| `0.2.0`, `0.2.0-rc.1` | genau diese Version (auch Vorabversionen; sie sind nie `latest`)  |
-| `develop`             | jüngster Stand von `develop`, zum Testen                          |
+| Tag                   | Bedeutung                                                                           |
+| --------------------- | ----------------------------------------------------------------------------------- |
+| `latest`              | Stand von `main`, also der getestete Stand (gibt es ab dem ersten Stand auf `main`) |
+| `beta`                | Stand von `develop`, zum Testen                                                     |
+| `0.2`                 | bleibt in der Linie 0.2 (nur kleine Updates, kein Sprung auf 0.3)                   |
+| `0.2.0`, `0.2.0-rc.1` | genau diese Version (Release-Tags; auch Vorabversionen)                             |
+| `sha-1a2b3c4`         | genau dieser Commit; zum Zurückrollen von `latest` oder `beta`                      |
+
+`latest` und `beta` wandern mit jedem Stand weiter, tragen aber keine Versionsnummer; zum Festhalten oder Zurückrollen
+dienen die Versions-Tags und `sha-…`. Ein neuerer Server kann ältere App-Versionen aussperren (siehe unten): Wer das
+nicht möchte, setzt `DS_IMAGE` auf eine feste Linie wie `:0.2`.
 
 Wer lieber selbst baut (Fork, eigene Änderungen): `git pull` und `up -d --build`, wie bei der Erstinstallation.
 Ein Dienst, der den Server selbständig aktualisiert (Watchtower), ist möglich, aber nicht empfohlen: Ein neuer Server
@@ -645,8 +650,9 @@ git tag v0.2.0 && git push origin v0.2.0
 - Ist ein Tag falsch gesetzt: `git push --delete origin v0.2.0 && git tag -d v0.2.0`, dazu ein bereits angelegtes
   Release auf GitHub löschen.
 - Das Server-Image baut derselbe Tag über `.github/workflows/docker.yml` (amd64 und arm64, vorher ein Smoke-Test) und
-  legt es mit den Tags `0.2.0`, `0.2` und `latest` (Vorabversionen nur mit der genauen Version) in die Registry; der
-  Server aktualisiert sich mit `docker compose pull` und `up -d`. Das APK selbst liefert er nicht aus.
+  legt es mit den Tags `0.2.0` und `0.2` (Vorabversionen nur mit der genauen Version) in die Registry. `latest` kommt
+  von jedem Stand auf `main`, `beta` von `develop`. Der Server aktualisiert sich mit `docker compose pull` und
+  `up -d`. Das APK selbst liefert er nicht aus.
 
 **Forks.** Wer einen Fork betreibt, setzt die Secrets im eigenen Repository, trägt in `apps/web/src/lib/util/source.ts`
 den eigenen Quelltext-Link ein (siehe [Lizenz](#lizenz)) und ändert die App-ID (`app.doublesweat.mobile`) nur, wenn
