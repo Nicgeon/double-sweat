@@ -4,6 +4,8 @@ build/
 .svelte-kit/
 coverage/
 data/
+# ...aber die Seite /profile/data (Daten und Löschen) gehört zum Quelltext
+!apps/web/src/routes/**/data/
 .env
 .env.*
 !.env.example
