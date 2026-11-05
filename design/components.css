@@ -347,6 +347,24 @@ textarea.ds-field__input {
   border-color: var(--action);
 }
 
+/* Einzeilige Chip-Reihe zum Wischen; am rechten Rand blendet sie aus und zeigt, dass es weitergeht */
+.ds-seg--scroll {
+  position: relative;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-inline-end: var(--space-10);
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--space-10)), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--space-10)), transparent);
+}
+.ds-seg--scroll::-webkit-scrollbar {
+  display: none;
+}
+.ds-seg--scroll .ds-seg__opt {
+  scroll-snap-align: start;
+}
+
 /* ---------- Stepper ---------- */
 .ds-stepper {
   display: flex;
@@ -1733,4 +1751,61 @@ a.ds-msg:hover {
   .ds-spin {
     animation: none;
   }
+}
+
+/* ---------- Aktionsleiste (feste Hauptaktion am unteren Rand) ---------- */
+.ds-actionbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  background: var(--bg);
+  box-shadow: 0 -1px 0 var(--border);
+}
+.ds-actionbar > * {
+  width: 100%;
+  max-width: 28rem;
+}
+.ds-actionbar__hint {
+  margin: 0;
+  color: var(--ink-muted);
+  font: 400 14px / 20px var(--font-body);
+  text-align: center;
+}
+@media (min-width: 768px) {
+  .ds-actionbar {
+    padding-inline: var(--space-6);
+  }
+  .ds-actionbar__hint {
+    text-align: start;
+  }
+}
+
+/* ---------- Zeile als Knopf (klappt etwas auf), mit Trennlinie oben ---------- */
+.ds-rowbtn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 52px;
+  padding: 0 var(--space-1);
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink);
+  font: 400 16px / 24px var(--font-body);
+  text-align: start;
+  cursor: pointer;
+}
+.ds-rowbtn__main {
+  flex: 1;
+  font-weight: 700;
+}
+.ds-rowbtn:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
 }

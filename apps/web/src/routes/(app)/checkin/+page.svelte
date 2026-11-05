@@ -1,29 +1,38 @@
 <script lang="ts">
   import { t, tn } from '#lib/i18n/index.svelte.ts';
-  import { onDestroy, onMount } from 'svelte';
-  import { goto } from '$app/navigation';
-  import { api, ApiError, type Checkin, type Dashboard, unwrap, uploadCheckin } from '#lib/api/client.ts';
+  import { onDestroy, onMount, tick, untrack } from 'svelte';
+  import { beforeNavigate, goto } from '$app/navigation';
+  import { api, ApiError, type Checkin, unwrap, uploadCheckin } from '#lib/api/client.ts';
   import Banner from '#lib/components/Banner.svelte';
   import Button from '#lib/components/Button.svelte';
   import Field from '#lib/components/Field.svelte';
+  import Icon from '#lib/components/Icon.svelte';
   import Page from '#lib/components/Page.svelte';
   import Segmented from '#lib/components/Segmented.svelte';
+  import Sheet from '#lib/components/Sheet.svelte';
   import ShutterButton from '#lib/components/ShutterButton.svelte';
   import { NATIVE } from '#lib/native/flag.ts';
   import { cameraAvailable, cameraMessage, cameraProblem, type Facing, frameToJpeg, fileToJpeg, startCamera, stopStream, takeNativePhoto } from '#lib/util/camera.ts';
-  import { longDate } from '#lib/util/format.ts';
-  import { tagList } from '#lib/util/tags.ts';
+  import { longDate, weekdayDate } from '#lib/util/format.ts';
+  import { TAG_VALUES, tagList } from '#lib/util/tags.ts';
   import { pushWidget } from '#lib/util/widget.ts';
   import { streakStore } from '#lib/state/streak.svelte.ts';
   import { todayStore } from '#lib/state/today.svelte.ts';
 
-  type Step = 'loading' | 'already' | 'camera' | 'selfie' | 'file' | 'review' | 'done';
+  type Step = 'already' | 'camera' | 'selfie' | 'file' | 'review' | 'done';
   const SELFIE_PREF = 'ds_selfie';
+  const TAG_PREF = 'ds_last_tag';
   /** Sekunden Vorlauf vor dem automatischen Selfie (damit man sich auf das Bild einstellen kann). */
   const SELFIE_COUNTDOWN = 2;
 
-  let step = $state<Step>('loading');
-  let dash = $state<Dashboard | null>(null);
+  // Stand von heute kommt aus dem gemeinsamen Speicher (die Hülle hat ihn schon geladen): keine Ladeseite vor der Kamera
+  const dash = $derived(todayStore.dashboard);
+  const me = $derived(todayStore.me);
+  const partner = $derived(todayStore.partner);
+  /** Das Tageslimit ist erreicht: mehr Check-ins gehen heute nicht. */
+  const limitReached = $derived(!!dash && !!me && !todayStore.canCheckin);
+
+  let step = $state<Step>(untrack(() => limitReached) ? 'already' : 'camera');
   let video = $state<HTMLVideoElement>();
   let stream = $state<MediaStream | null>(null);
   let facing = $state<Facing>('environment');
@@ -40,8 +49,14 @@
   let selfieMessage = $state<string | null>(null);
   /** Läuft die Live-Kamera? Sonst gibt es für das Selfie nur die Fotoauswahl. */
   let liveCamera = $state(true);
-  let tag = $state<string | null>(null);
+  let tag = $state<string | null>(readTag());
   let note = $state('');
+  /** Die Notiz ist eingeklappt, bis man sie braucht. */
+  let noteOpen = $state(false);
+  let noteBox = $state<HTMLElement>();
+  /** Beim Verlassen mit ungesendetem Foto: wohin es danach ginge (öffnet die Rückfrage). */
+  let discardTo = $state<URL | null>(null);
+  let leaving = false;
   let busy = $state(false);
   let error = $state<string | null>(null);
   let result = $state<Checkin | null>(null);
@@ -50,8 +65,6 @@
   let cameraReady = $state(false);
   let timer: ReturnType<typeof setInterval> | undefined;
 
-  const me = $derived(dash?.members.find((m) => m.isMe));
-  const partner = $derived(dash?.members.find((m) => !m.isMe));
   /** Live-Kamera (Vorschau mit Auslöser), im Browser wie in der App. */
   const inCamera = $derived(step === 'camera' || step === 'selfie');
   const mirrored = $derived(step === 'selfie' || facing === 'user');
@@ -74,19 +87,53 @@
     }
   }
 
-  onMount(async () => {
+  /** Zuletzt gewählte Trainingsart, vorbelegt (weniger Entscheidungen); unbekannte Werte werden ignoriert. */
+  function readTag(): string | null {
     try {
-      dash = unwrap(await api.GET('/api/v1/dashboard'));
-    } catch (e) {
-      error = e instanceof ApiError ? e.message : t('common.failed');
+      const stored = localStorage.getItem(TAG_PREF);
+      return stored && TAG_VALUES.includes(stored) ? stored : null;
+    } catch {
+      return null;
     }
-    const mine = dash?.members.find((m) => m.isMe);
-    if (dash && mine && mine.checkinsToday >= dash.maxCheckinsPerDay) {
-      step = 'already';
-      return;
+  }
+  function rememberTag(value: string | null) {
+    if (!value) return;
+    try {
+      localStorage.setItem(TAG_PREF, value);
+    } catch {
+      /* nicht kritisch */
     }
-    await openCamera();
+  }
+
+  onMount(() => {
+    // Die Kamera startet sofort; der frische Stand wird nebenher geholt (siehe Wechsel auf "already" unten)
+    void todayStore.load().catch(() => {});
+    if (step === 'camera') void openCamera();
   });
+  // Stellt sich erst nach dem Abruf heraus, dass heute nichts mehr geht (etwa Check-ins vom anderen Gerät), und es
+  // gibt noch kein Foto, wechselt die Seite dorthin; ein fertiges Foto wird nie weggenommen.
+  $effect(() => {
+    if (limitReached && !photo && (step === 'camera' || step === 'selfie' || step === 'file')) {
+      clearCountdown();
+      stopStream(stream);
+      stream = null;
+      step = 'already';
+    }
+  });
+
+  // Verlassen mit ungesendetem Foto (Zurück, Schließen, Android-Zurück, Tab-Wechsel): erst fragen
+  beforeNavigate((nav) => {
+    if (leaving || !photo || step === 'done' || nav.type === 'leave') return;
+    nav.cancel();
+    if (nav.to) discardTo = nav.to.url;
+  });
+  function discard() {
+    const to = discardTo;
+    discardTo = null;
+    if (!to) return;
+    leaving = true;
+    void goto(to);
+  }
   onDestroy(() => {
     clearCountdown();
     stopStream(stream);
@@ -277,15 +324,22 @@
     busy = true;
     try {
       result = await uploadCheckin(photo, tag, note, selfie);
+      rememberTag(tag);
       step = 'done';
-      dash = unwrap(await api.GET('/api/v1/dashboard'));
-      todayStore.set(dash);
-      void pushWidget(dash, streakStore.team);
+      const fresh = unwrap(await api.GET('/api/v1/dashboard'));
+      todayStore.set(fresh);
+      void pushWidget(fresh, streakStore.team);
     } catch (e) {
       error = e instanceof ApiError ? e.message : t('common.failed');
     } finally {
       busy = false;
     }
+  }
+
+  async function openNote() {
+    noteOpen = true;
+    await tick();
+    noteBox?.querySelector('textarea')?.focus();
   }
 
   async function retake() {
@@ -302,11 +356,19 @@
     setSelfie(null);
     selfieMessage = null;
     result = null;
-    tag = null;
+    tag = readTag();
     note = '';
+    noteOpen = false;
     error = null;
     await openCamera();
   }
+
+  /** Kopfzeile der Vorschau: Datum und, ab dem zweiten Mal, der wie vielte Check-in es heute ist. */
+  const subtitle = $derived.by(() => {
+    const date = me?.days.find((d) => d.isToday)?.date;
+    const parts = [date ? weekdayDate(date) : null, me && me.checkinsToday > 0 ? t('checkin.nthToday', { n: me.checkinsToday + 1 }) : null];
+    return parts.filter(Boolean).join(' · ') || undefined;
+  });
 </script>
 
 {#if inCamera}
@@ -329,11 +391,58 @@
     {/if}
     <div class="camera__bottom"><ShutterButton {busy} disabled={!cameraReady} label={step === 'selfie' ? t('camera.selfieShutter') : undefined} onclick={step === 'selfie' ? takeSelfie : shoot} /></div>
   </div>
+{:else if step === 'review'}
+  <form class="checkin" onsubmit={(e) => { e.preventDefault(); void submit(); }}>
+    <Page title={t('checkin.title')} {subtitle} backHref="/">
+      <div class="checkin__body">
+        {#if photoUrl}
+          <div class="preview-wrap">
+            <img class="preview" src={photoUrl} alt={t('checkin.photoAlt')} />
+            {#if selfieUrl}<img class="selfie-inset" src={selfieUrl} alt={t('checkin.selfieAlt')} data-testid="selfie-preview" />{/if}
+          </div>
+        {/if}
+        <div class="row row--tight">
+          <Button variant="secondary" size="sm" icon="camera" onclick={retake}>{t('checkin.newPhoto')}</Button>
+          {#if selfie}
+            <Button variant="ghost" size="sm" icon="user" loading={busy} onclick={() => openSelfie(false)}>{t('checkin.selfieRetake')}</Button>
+            <Button variant="ghost" size="sm" icon="x" iconOnly onclick={() => setSelfie(null)}>{t('checkin.selfieRemove')}</Button>
+          {:else}
+            <Button variant="ghost" size="sm" icon="user" loading={busy} onclick={() => openSelfie(false)}>{t('checkin.selfieAdd')}</Button>
+          {/if}
+        </div>
+        {#if selfieMessage}<Banner tone="info">{selfieMessage}</Banner>{/if}
+        <input bind:this={selfieInput} class="ds-sr" type="file" accept="image/*" capture="user" onchange={pickedSelfie} data-testid="selfie-input" tabindex="-1" aria-hidden="true" />
+
+        <div class="stack stack--tight">
+          <p class="ds-field__label">{t('checkin.workout')}</p>
+          <Segmented scroll label={t('checkin.workout')} options={tagList()} bind:value={tag} />
+        </div>
+
+        {#if noteOpen || note}
+          <div bind:this={noteBox}><Field label={t('checkin.note')} multiline maxlength={280} placeholder={t('checkin.notePlaceholder')} bind:value={note} /></div>
+        {:else}
+          <button type="button" class="ds-rowbtn" onclick={openNote}>
+            <Icon name="plus" size={20} />
+            <span class="ds-rowbtn__main">{t('checkin.noteAdd')}</span>
+            <span class="muted">{t('checkin.optional')}</span>
+          </button>
+        {/if}
+      </div>
+    </Page>
+    <!-- Feste Aktionsleiste: "Einchecken" bleibt sichtbar, auch bei langen Inhalten und offener Tastatur -->
+    <div class="ds-actionbar">
+      {#if error}<Banner tone="error">{error}</Banner>{/if}
+      {#if me && me.checkinsToday > 0}
+        <p class="ds-actionbar__hint">{t('checkin.countsOnce')}</p>
+      {:else if partner}
+        <p class="ds-actionbar__hint">{t('checkin.partnerSeesNow', { name: partner.displayName })}</p>
+      {/if}
+      <Button type="submit" size="lg" icon="check" fullWidth loading={busy}>{t('checkin.submit')}</Button>
+    </div>
+  </form>
 {:else}
   <Page title={t('checkin.title')} backHref="/">
-    {#if step === 'loading'}
-      <p class="muted" role="status">{t('common.loading')}</p>
-    {:else if step === 'already'}
+    {#if step === 'already'}
       <Banner tone="success" title={t('checkin.alreadyTitle')}>
         {t('checkin.alreadyBody', { n: dash?.maxCheckinsPerDay ?? 0 })}
       </Banner>
@@ -351,52 +460,6 @@
         {/if}
         {#if cameraAvailable()}<Button variant="ghost" onclick={() => { liveCamera = true; void openCamera(); }}>{t('checkin.retryCamera')}</Button>{/if}
       </div>
-    {:else if step === 'review'}
-      <div class="cols">
-        <div class="stack">
-          {#if photoUrl}
-            <div class="preview-wrap">
-              <img class="preview" src={photoUrl} alt={t('checkin.photoAlt')} />
-              {#if selfieUrl}<img class="selfie-inset" src={selfieUrl} alt={t('checkin.selfieAlt')} data-testid="selfie-preview" />{/if}
-            </div>
-          {/if}
-        </div>
-        <form class="stack" onsubmit={(e) => { e.preventDefault(); void submit(); }}>
-          <p class="muted small">
-            {#if me && me.checkinsToday > 0}
-              {t('checkin.nthToday', { n: me.checkinsToday + 1 })}
-            {:else}
-              {t('checkin.serverDate')}
-            {/if}
-          </p>
-          <div>
-            <p class="ds-field__label">{t('checkin.workout')}</p>
-            <Segmented wrap label={t('checkin.workout')} options={tagList()} bind:value={tag} />
-          </div>
-          <Field label={t('checkin.note')} multiline maxlength={280} placeholder={t('checkin.notePlaceholder')} bind:value={note} />
-          <div class="stack">
-            <p class="ds-field__label">{t('checkin.selfie')}</p>
-            {#if selfie}
-              <div class="row">
-                <Button variant="secondary" size="sm" icon="user" loading={busy} onclick={() => openSelfie(false)}>{t('checkin.selfieRetake')}</Button>
-                <Button variant="ghost" size="sm" icon="x" onclick={() => setSelfie(null)}>{t('checkin.selfieRemove')}</Button>
-              </div>
-            {:else}
-              <p class="muted small">{t('checkin.selfieHint')}</p>
-              <div class="row">
-                <Button variant="secondary" size="sm" icon="user" loading={busy} onclick={() => openSelfie(false)}>{t('checkin.selfieAdd')}</Button>
-              </div>
-            {/if}
-            {#if selfieMessage}<Banner tone="info">{selfieMessage}</Banner>{/if}
-            <input bind:this={selfieInput} class="ds-sr" type="file" accept="image/*" capture="user" onchange={pickedSelfie} data-testid="selfie-input" tabindex="-1" aria-hidden="true" />
-          </div>
-          {#if error}<Banner tone="error">{error}</Banner>{/if}
-          <div class="form__actions">
-            <Button type="submit" size="lg" icon="check" loading={busy}>{t('checkin.submit')}</Button>
-            <Button variant="ghost" onclick={retake}>{t('checkin.newPhoto')}</Button>
-          </div>
-        </form>
-      </div>
     {:else if step === 'done'}
       <div class="stack">
         <h2 class="auth__title">{t('checkin.doneTitle')}</h2>
@@ -408,11 +471,19 @@
         </p>
         {#if me?.goalDays}<Banner tone="success" title={tn('days.progress', me.goalDays, { done: me.doneDays })}>{result ? longDate(result.localDate) : ''}</Banner>{/if}
         {#if me && dash && me.checkinsToday > 1}<p class="muted small">{t('checkin.wasNth', { n: me.checkinsToday })}</p>{/if}
-        <Button size="lg" href="/">{t('common.toOverview')}</Button>
+        <Button size="lg" href="/">{t('checkin.done')}</Button>
         {#if me && dash && me.checkinsToday < dash.maxCheckinsPerDay}
-          <Button variant="secondary" icon="camera" onclick={another}>{t('checkin.another')}</Button>
+          <Button variant="ghost" icon="camera" onclick={another}>{t('nav.checkinMore')}</Button>
         {/if}
       </div>
     {/if}
   </Page>
 {/if}
+
+<Sheet open={discardTo !== null} title={t('checkin.discardTitle')} onclose={() => (discardTo = null)}>
+  <p>{t('checkin.discardBody')}</p>
+  {#snippet footer()}
+    <Button variant="ghost" onclick={() => (discardTo = null)}>{t('checkin.discardKeep')}</Button>
+    <Button variant="danger" onclick={discard}>{t('checkin.discardYes')}</Button>
+  {/snippet}
+</Sheet>

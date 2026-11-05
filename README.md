@@ -52,6 +52,11 @@ Live-Kamera (Berechtigung verweigert, keine Kamera) läuft das Selfie über die 
 nichts: ein Foto genügt. Das Selfie wird wie das Foto
 verarbeitet (ohne EXIF/GPS) und zählt nicht für die Duplikat-Prüfung.
 
+**Check-in-Ablauf:** Die Kamera startet sofort, ohne Ladeseite. In der Vorschau steht das Foto kompakt oben,
+darunter die Trainingsart als wischbare Chip-Reihe (die zuletzt gewählte ist vorbelegt und wird im Gerät gemerkt) und
+die eingeklappte Notiz. "Einchecken" liegt in einer festen Leiste am unteren Rand und ist ohne Scrollen erreichbar;
+zurück oder schließen fragt nur dann "Foto verwerfen?", wenn schon ein Foto gemacht wurde.
+
 ```bash
 git clone https://github.com/Nicgeon/double-sweat.git
 cd double-sweat
@@ -693,7 +698,8 @@ GitHub gelaufen: erst per Probelauf prüfen), siehe [Push](#push-benachrichtigun
 [Release veröffentlichen](#release-veröffentlichen-github).
 Geplant, in dieser Reihenfolge:
 
-1. **Übersicht und Navigation, Fortsetzung:** Benachrichtigungen (neue Anlässe, Einstellungen pro Art, Postfach mit
-   Links, Android-Kanäle), Check-in-Feinschliff und Profil in Unterseiten. Die Abmachung (Offenes, Wenn-dann-Karten
-   je Person) ist auf `develop` umgesetzt.
+1. **Übersicht und Navigation, Fortsetzung:** Profil in Unterseiten und Querschnitt (Tippflächen, Android-Zurück,
+   Skeletons). Die Abmachung (Offenes, Wenn-dann-Karten je Person), die Benachrichtigungen (neue Anlässe,
+   Einstellungen pro Art, Postfach mit Links, Android-Kanäle) und der überarbeitete Check-in sind auf `develop`
+   umgesetzt.
 2. **Health Connect** (Android): Workout-Vorschläge aus Wearables, nur auf dem Gerät, das Foto bleibt Pflicht.

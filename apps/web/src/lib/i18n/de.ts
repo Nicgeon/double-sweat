@@ -308,18 +308,18 @@ export const de = {
   'checkin.takeOrPick': 'Foto aufnehmen oder auswählen',
   'checkin.retryCamera': 'Kamera erneut versuchen',
   'checkin.photoAlt': 'Dein Foto',
-  'checkin.selfie': 'Selfie (optional)',
-  'checkin.selfieHint': 'Ein Selfie zeigt, wie es dir beim Training geht. Es ist freiwillig.',
   'checkin.selfieAdd': 'Selfie hinzufügen',
   'checkin.selfieRetake': 'Selfie neu aufnehmen',
   'checkin.selfieRemove': 'Selfie entfernen',
   'checkin.selfieAlt': 'Dein Selfie',
   'checkin.selfieFailed': 'Das Selfie konnte nicht aufgenommen werden.',
-  'checkin.nthToday':
-    'Das ist dein {n}. Check-in heute. Für das Wochenziel zählt der Tag nur einmal.',
-  'checkin.serverDate': 'Das Datum bestimmt der Server.',
+  'checkin.nthToday': '{n}. Check-in heute',
+  'checkin.countsOnce': 'Für das Wochenziel zählt der Tag nur einmal.',
+  'checkin.partnerSeesNow': '{name} sieht dein Foto sofort.',
   'checkin.workout': 'Training',
   'checkin.note': 'Notiz (optional)',
+  'checkin.noteAdd': 'Notiz hinzufügen',
+  'checkin.optional': 'optional',
   'checkin.notePlaceholder': 'Wie war es?',
   'checkin.submit': 'Einchecken',
   'checkin.newPhoto': 'Neues Foto',
@@ -330,7 +330,12 @@ export const de = {
   'checkin.goalReached': 'Wochenziel erreicht.',
   'checkin.wasNth':
     'Das war dein {n}. Check-in heute. Für das Wochenziel zählt der Tag nur einmal.',
-  'checkin.another': 'Noch ein Workout eintragen',
+  'checkin.done': 'Fertig',
+  'checkin.discardTitle': 'Foto verwerfen?',
+  'checkin.discardBody':
+    'Dieser Check-in ist noch nicht gesendet. Wenn du jetzt gehst, ist das Foto weg.',
+  'checkin.discardKeep': 'Weiter bearbeiten',
+  'checkin.discardYes': 'Verwerfen',
 
   // Einsatz, Ziel, Belohnung
   // Abmachung

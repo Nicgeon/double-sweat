@@ -60,6 +60,46 @@ p {
   padding-bottom: calc(var(--tabbar-h) + var(--space-8) + 56px + env(safe-area-inset-bottom, 0px));
 }
 
+/* Check-in: ein Vorgang ohne Tab-Leiste; die Aktionsleiste liegt unten am Schirmrand */
+.app--focus .app__tabs {
+  display: none;
+}
+
+.app--focus .app__main {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  padding-bottom: 0;
+}
+
+.checkin {
+  display: contents;
+}
+
+/* Im Spaltenlayout würde `margin: auto` die Seite auf ihren Inhalt schrumpfen */
+.app--focus .page {
+  width: 100%;
+}
+
+/* Breit: die Leiste fluchtet mit dem Inhalt der (zentrierten) Seite */
+@media (min-width: 1024px) {
+  .app--focus .ds-actionbar {
+    padding-inline: calc(max(0px, (100% - var(--content-max)) / 2) + var(--space-8));
+  }
+}
+
+.checkin__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 28rem;
+}
+
+.row--tight {
+  gap: var(--space-2);
+}
+
 .page__bar {
   position: sticky;
   top: 0;
@@ -409,7 +449,12 @@ p {
 }
 
 .preview-wrap {
-  max-width: 24rem;
+  max-width: 28rem;
+}
+
+/* In der Vorschau bleibt das Selfie klein, damit das Foto frei bleibt */
+.preview-wrap .selfie-inset {
+  width: 4.5rem;
 }
 
 .selfie-inset {
@@ -458,9 +503,10 @@ button.selfie-inset img {
 }
 
 .preview {
+  display: block;
   width: 100%;
-  max-width: 24rem;
-  aspect-ratio: 3 / 4;
+  /* Kompakt, damit Training, Notiz und "Einchecken" ohne Scrollen auf den Schirm passen */
+  height: clamp(13rem, 44dvh, 25rem);
   object-fit: cover;
   border-radius: var(--radius-lg);
   background: var(--surface-2);

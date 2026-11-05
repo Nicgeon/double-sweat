@@ -31,7 +31,7 @@ test('Selfie ist freiwillig: ohne Selfie gibt es kein Selfie', async ({ browser 
   const { checkins } = await weekCheckins(page);
   expect(checkins).toHaveLength(1);
   expect(checkins[0].selfie).toBeNull();
-  await page.getByRole('link', { name: 'Zur Übersicht' }).click();
+  await page.getByRole('link', { name: 'Fertig' }).click();
   await expect(page.locator('.ds-photo')).toHaveCount(1);
   await expect(page.locator('.ds-photo .selfie-inset')).toHaveCount(0);
 });
@@ -67,7 +67,7 @@ test('Selfie-Schalter: erst Rückkamera, dann Frontkamera mit Vorlauf, beide lan
   expect(await imageLoads(page, only.selfie.thumbUrl)).toBe(true);
 
   // Im Feed: kleines Selfie auf der Kachel, im Foto-Fenster antippen tauscht Foto und Selfie
-  await page.getByRole('link', { name: 'Zur Übersicht' }).click();
+  await page.getByRole('link', { name: 'Fertig' }).click();
   const inset = page.locator('.ds-photo .selfie-inset');
   await expect(inset).toBeVisible();
   // Das Bild lädt nach dem Anzeigen noch: warten, statt den Stand eines Augenblicks zu prüfen
@@ -101,7 +101,7 @@ test('Selfie nachträglich hinzufügen, neu aufnehmen und wieder entfernen', asy
   await expect(page.getByTestId('camera')).toBeVisible();
   await page.getByRole('button', { name: 'Foto aufnehmen' }).click();
   await expect(page.getByRole('img', { name: 'Dein Foto' })).toBeVisible();
-  await expect(page.getByText('Ein Selfie zeigt, wie es dir beim Training geht.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Selfie hinzufügen' })).toBeVisible();
 
   // Selfie hinzufügen: Frontkamera, manuell auslösen (kein Vorlauf)
   await page.getByRole('button', { name: 'Selfie hinzufügen' }).click();

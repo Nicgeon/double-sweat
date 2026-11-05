@@ -304,18 +304,18 @@ export const en: Record<MessageKey, string> = {
   'checkin.takeOrPick': 'Take or pick a photo',
   'checkin.retryCamera': 'Try the camera again',
   'checkin.photoAlt': 'Your photo',
-  'checkin.selfie': 'Selfie (optional)',
-  'checkin.selfieHint': 'A selfie shows how you are doing during your workout. It is optional.',
   'checkin.selfieAdd': 'Add a selfie',
   'checkin.selfieRetake': 'Retake selfie',
   'checkin.selfieRemove': 'Remove selfie',
   'checkin.selfieAlt': 'Your selfie',
   'checkin.selfieFailed': 'The selfie could not be taken.',
-  'checkin.nthToday':
-    'This is check-in number {n} today. For the weekly goal the day only counts once.',
-  'checkin.serverDate': 'The server decides the date.',
+  'checkin.nthToday': 'Check-in {n} today',
+  'checkin.countsOnce': 'For the weekly goal the day only counts once.',
+  'checkin.partnerSeesNow': '{name} sees your photo right away.',
   'checkin.workout': 'Workout',
   'checkin.note': 'Note (optional)',
+  'checkin.noteAdd': 'Add a note',
+  'checkin.optional': 'optional',
   'checkin.notePlaceholder': 'How was it?',
   'checkin.submit': 'Check in',
   'checkin.newPhoto': 'New photo',
@@ -326,7 +326,12 @@ export const en: Record<MessageKey, string> = {
   'checkin.goalReached': 'Weekly goal reached.',
   'checkin.wasNth':
     'That was check-in number {n} today. For the weekly goal the day only counts once.',
-  'checkin.another': 'Log another workout',
+  'checkin.done': 'Done',
+  'checkin.discardTitle': 'Discard photo?',
+  'checkin.discardBody':
+    'This check-in has not been sent yet. If you leave now, the photo is gone.',
+  'checkin.discardKeep': 'Keep editing',
+  'checkin.discardYes': 'Discard',
 
   // Stakes, goal, reward
   // Agreement

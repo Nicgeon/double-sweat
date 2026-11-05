@@ -118,12 +118,14 @@ test('Check-in mit Fake-Kamera, Foto im Feed, mehrere Check-ins am Tag zählen a
   await page.getByRole('button', { name: 'Foto aufnehmen' }).click();
   await expect(page.getByRole('img', { name: 'Dein Foto' })).toBeVisible();
   await page.getByRole('radio', { name: 'Laufen' }).click();
+  // Die Notiz ist eingeklappt und öffnet sich auf Wunsch
+  await page.getByRole('button', { name: /Notiz hinzufügen/ }).click();
   await page.getByLabel('Notiz (optional)').fill('Schöne Runde');
   await page.getByRole('button', { name: 'Einchecken' }).click();
   await expect(page.getByRole('heading', { name: 'Eingecheckt.' })).toBeVisible();
   await expect(page.getByText('Ben sieht dein Foto.')).toBeVisible();
 
-  await page.getByRole('link', { name: 'Zur Übersicht' }).click();
+  await page.getByRole('link', { name: 'Fertig' }).click();
   await expect(page.locator('.ds-photo')).toHaveCount(1);
   await expect(page.locator('.ds-photo img')).toBeVisible();
   await expect(page.locator('.ds-photo')).toContainText('Laufen');
@@ -145,12 +147,13 @@ test('Check-in mit Fake-Kamera, Foto im Feed, mehrere Check-ins am Tag zählen a
   // und würde der Server als doppeltes Foto ablehnen.
   await page.waitForTimeout(1500);
   await page.getByRole('button', { name: 'Foto aufnehmen' }).click();
-  await expect(page.getByText('Das ist dein 2. Check-in heute')).toBeVisible();
+  await expect(page.getByText(/2\. Check-in heute/).locator('visible=true')).toBeVisible();
+  await expect(page.getByText('Für das Wochenziel zählt der Tag nur einmal.')).toBeVisible();
   await page.getByRole('radio', { name: 'Yoga' }).click();
   await page.getByRole('button', { name: 'Einchecken' }).click();
   await expect(page.getByRole('heading', { name: 'Eingecheckt.' })).toBeVisible();
   await expect(page.getByText('Das war dein 2. Check-in heute')).toBeVisible();
-  await page.getByRole('link', { name: 'Zur Übersicht' }).click();
+  await page.getByRole('link', { name: 'Fertig' }).click();
   await expect(page.locator('.ds-photo')).toHaveCount(2);
   await expect(page.locator('.ds-wlane:not(.ds-wlane--empty)').first()).toContainText('1 Tag');
   expect(problems).toEqual([]);

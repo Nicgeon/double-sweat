@@ -67,6 +67,8 @@
     if (path.startsWith('/more')) return 'profile';
     return '';
   });
+  /** Der Check-in ist ein eigener Vorgang: keine Tab-Leiste, die Aktionsleiste liegt unten. */
+  const focus = $derived(page.url.pathname === '/checkin');
   /** Die Check-in-Schaltfläche schwebt nur auf den drei Hauptseiten, nicht im Profil und nicht in Unterseiten. */
   const showFab = $derived(['/', '/history', '/deal'].includes(page.url.pathname) && todayStore.canCheckin);
 </script>
@@ -80,7 +82,7 @@
   {:else if todayStore.dashboard?.betRequired}
     <BetGate partnerName={todayStore.partner?.displayName} partnerBet={todayStore.dashboard.partnerBet} />
   {:else}
-    <div class="app">
+    <div class="app {focus ? 'app--focus' : ''}">
       <div class="app__side">
         <NavBar variant="side" items={sideItems} secondary={sideSecondary} {current}>
           {#snippet header()}<Logo size={28} />{/snippet}
