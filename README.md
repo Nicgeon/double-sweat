@@ -7,12 +7,13 @@ verfehlt, schuldet dem anderen etwas. Kein Statistik-Tracking, Fokus auf gemeins
 Keine Telemetrie und keine externen Dienste im Standardbetrieb. Mailversand und Push über Hersteller-Dienste
 sind optional und im Abschnitt [Datenschutz](#datenschutz) beschrieben.
 
-> **Status: in Entwicklung.** Backend, **Web-Oberfläche** (mobil und Desktop, Hell und Dunkel, als PWA
+> **Status: Version 0.2.0 (erste stabile Version).** Backend, **Web-Oberfläche** (mobil und Desktop, Hell und Dunkel, als PWA
 > installierbar) und **Android-App** sind gebaut und automatisch getestet: Konten, Anmeldung, Einladung per
 > Link, optionaler Mailversand, Wochenziele, Foto-Check-ins (mehrere pro Tag, optional mit Selfie) mit Wochenlogik pro Zeitzone,
 > Anzeigetafel, Wetteinsatz mit automatischer Wochenabrechnung, Schulden, Belohnungen, Reaktionen, Verlauf,
-> Push (Web Push und UnifiedPush), Anstupsen und Abend-Erinnerung. **Auf einem echten Gerät ist die App noch nicht ausprobiert**
-> (siehe [Android-App](#android-app), Abschnitt "Was noch nicht geprüft ist").
+> Push (Web Push und UnifiedPush), Anstupsen und Abend-Erinnerung. Die Android-App ist mit der Vorabversion 0.2.0-rc.2 auf
+> einem echten Gerät ausprobiert; was dabei nicht geprüft wurde, steht unter [Android-App](#android-app), Abschnitt
+> "Was noch nicht geprüft ist".
 > Die OpenAPI-Spezifikation liegt unter `/api/v1/openapi.json`.
 
 ## Inhalt
@@ -669,7 +670,7 @@ git tag v0.2.0 && git push origin v0.2.0
 - Der Tag muss zur Version im Code passen; sonst bricht der Lauf ab, bevor etwas gebaut wird.
   Versionscode der App: `Major*10000 + Minor*100 + Patch` (0.2.0 → 200); ein Suffix wie `-rc.1` steht nur im Namen.
 - **Probelauf ohne Release:** Actions → Release → "Run workflow". Er baut und prüft alles und legt die APK nur als
-  Artefakt ab. Das empfiehlt sich vor dem ersten echten Release (die Workflows sind noch nie auf GitHub gelaufen).
+  Artefakt ab.
 - Ist ein Tag falsch gesetzt: `git push --delete origin v0.2.0 && git tag -d v0.2.0`, dazu ein bereits angelegtes
   Release auf GitHub löschen.
 - Das Server-Image baut derselbe Tag über `.github/workflows/docker.yml` (amd64 und arm64, vorher ein Smoke-Test) und
@@ -696,14 +697,12 @@ Abhängigkeiten aus `pnpm-lock.yaml` stehen unter ihren eigenen Lizenzen.
 
 ## Roadmap
 
-Umgesetzt (auf `develop`): Serien-Benachrichtigungen, Android-Widgets, Überarbeitung von Navigation und Heute-Seite,
-Einsatz pro Person, AGPL-Lizenz sowie CI und Release-Workflow für die Android-App (die Workflows sind noch nicht auf
-GitHub gelaufen: erst per Probelauf prüfen), siehe [Push](#push-benachrichtigungen), [Android-App](#android-app) und
+Umgesetzt (bis Version 0.2.0): Serien-Benachrichtigungen, Android-Widgets, Einsatz pro Person, AGPL-Lizenz, CI,
+Release-Workflow und Docker-Image, dazu die Überarbeitung von Übersicht und Navigation: Heute-Seite, Abmachung (Offenes,
+Wenn-dann-Karten je Person), Benachrichtigungen (neue Anlässe, Einstellungen pro Art, Postfach mit Links,
+Android-Kanäle), Check-in, Profil in Unterseiten und Querschnitt (Tippflächen, Android-Zurück, Platzhalter), siehe
+[Push](#push-benachrichtigungen), [Android-App](#android-app) und
 [Release veröffentlichen](#release-veröffentlichen-github).
 Geplant, in dieser Reihenfolge:
 
-1. **Übersicht und Navigation, Fortsetzung:** Querschnitt (Tippflächen, Android-Zurück, Skeletons, leere Zustände).
-   Die Abmachung (Offenes, Wenn-dann-Karten je Person), die Benachrichtigungen (neue Anlässe, Einstellungen pro Art,
-   Postfach mit Links, Android-Kanäle), der überarbeitete Check-in und das Profil in Unterseiten sind auf `develop`
-   umgesetzt.
-2. **Health Connect** (Android): Workout-Vorschläge aus Wearables, nur auf dem Gerät, das Foto bleibt Pflicht.
+1. **Health Connect** (Android): Workout-Vorschläge aus Wearables, nur auf dem Gerät, das Foto bleibt Pflicht.
