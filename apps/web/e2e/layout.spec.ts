@@ -81,6 +81,8 @@ test('Schriften kommen vom eigenen Server', async ({ browser }, testInfo) => {
 
 for (const scheme of ['light', 'dark'] as const) {
   test(`Barrierefreiheit (axe) in ${scheme}`, async ({ browser }, testInfo) => {
+    // Eine lange Prüfung über alle Hauptseiten und Unterseiten; auf dem langsameren CI-Rechner reichen 45 s nicht
+    test.setTimeout(150_000);
     const { annaEmail } = await makeCouple();
     const { page } = await newUserContext(browser, testInfo);
     await page.emulateMedia({ colorScheme: scheme });
