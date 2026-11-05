@@ -29,7 +29,7 @@ export function parseJoinLink(raw: string): JoinLink | null {
 
 /** Ziele, die ein Tipp auf eine Mitteilung öffnen darf: bekannte Seiten, bei der Startseite optional ein Foto. */
 const OPEN_PATH =
-  /^\/(?:deal|history|checkin|notifications|profile)?(?:\?photo=[0-9A-Za-z_-]{1,40})?$/;
+  /^\/(?:deal|history|checkin|notifications|profile(?:\/health)?)?(?:\?photo=[0-9A-Za-z_-]{1,40})?$/;
 
 /**
  * Liest den Link einer Mitteilung der App: doublesweat://open?path=/deal. Es zählen nur bekannte Pfade der App; jeder

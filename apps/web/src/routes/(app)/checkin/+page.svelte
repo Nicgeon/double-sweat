@@ -13,9 +13,10 @@
   import ShutterButton from '#lib/components/ShutterButton.svelte';
   import { NATIVE } from '#lib/native/flag.ts';
   import { cameraAvailable, cameraMessage, cameraProblem, type Facing, frameToJpeg, fileToJpeg, startCamera, stopStream, takeNativePhoto } from '#lib/util/camera.ts';
-  import { longDate, weekdayDate } from '#lib/util/format.ts';
-  import { isTag, type TagValue, tagList } from '#lib/util/tags.ts';
+  import { clockTime, longDate, weekdayDate } from '#lib/util/format.ts';
+  import { isTag, type TagValue, tagList, tagMeta } from '#lib/util/tags.ts';
   import { pushWidget } from '#lib/util/widget.ts';
+  import { healthStore } from '#lib/state/health.svelte.ts';
   import { streakStore } from '#lib/state/streak.svelte.ts';
   import { todayStore } from '#lib/state/today.svelte.ts';
 
@@ -54,6 +55,10 @@
   /** Die Notiz ist eingeklappt, bis man sie braucht. */
   let noteOpen = $state(false);
   let noteBox = $state<HTMLElement>();
+  /** Das gewählte Training aus Health Connect (Vorschlag); es wird nach dem Check-in nicht noch einmal angeboten. */
+  let sessionId = $state<string | null>(null);
+  /** Die Notiz, die ein Vorschlag eingetragen hat: nur sie wird durch einen anderen Vorschlag ersetzt. */
+  let autoNote = '';
   /** Beim Verlassen mit ungesendetem Foto: wohin es danach ginge (öffnet die Rückfrage). */
   let discardTo = $state<URL | null>(null);
   let leaving = false;
@@ -108,6 +113,7 @@
   onMount(() => {
     // Die Kamera startet sofort; der frische Stand wird nebenher geholt (siehe Wechsel auf "already" unten)
     void todayStore.load().catch(() => {});
+    if (NATIVE) void healthStore.refresh();
     if (step === 'camera') void openCamera();
   });
   // Stellt sich erst nach dem Abruf heraus, dass heute nichts mehr geht (etwa Check-ins vom anderen Gerät), und es
@@ -325,6 +331,7 @@
     try {
       result = await uploadCheckin(photo, tag, note, selfie);
       rememberTag(tag);
+      if (sessionId) healthStore.markUsed(sessionId);
       step = 'done';
       const fresh = unwrap(await api.GET('/api/v1/dashboard'));
       todayStore.set(fresh);
@@ -335,6 +342,24 @@
       busy = false;
     }
   }
+
+  /** Ein Vorschlag aus Health Connect: Sportart wählen und die Dauer in die Notiz schreiben (sichtbar, änderbar). */
+  function pickSession(id: string) {
+    const s = healthStore.suggestions.find((x) => x.id === id);
+    if (!s) return;
+    tag = s.tag;
+    if (note.trim() === '' || note === autoNote) {
+      autoNote = t('health.minutes', { n: s.minutes });
+      note = autoNote;
+    }
+  }
+
+  const suggestionOptions = $derived(
+    healthStore.suggestions.map((s) => {
+      const meta = tagMeta(s.tag);
+      return { value: s.id, label: `${meta?.label ?? s.tag} · ${t('health.minutes', { n: s.minutes })} · ${clockTime(s.startMs)}`, icon: meta?.icon };
+    }),
+  );
 
   async function openNote() {
     noteOpen = true;
@@ -358,6 +383,8 @@
     result = null;
     tag = readTag();
     note = '';
+    autoNote = '';
+    sessionId = null;
     noteOpen = false;
     error = null;
     await openCamera();
@@ -413,9 +440,16 @@
         {#if selfieMessage}<Banner tone="info">{selfieMessage}</Banner>{/if}
         <input bind:this={selfieInput} class="ds-sr" type="file" accept="image/*" capture="user" onchange={pickedSelfie} data-testid="selfie-input" tabindex="-1" aria-hidden="true" />
 
+        {#if suggestionOptions.length > 0}
+          <div class="stack stack--tight">
+            <p class="ds-field__label">{t('health.suggest')}</p>
+            <Segmented scroll label={t('health.suggest')} options={suggestionOptions} bind:value={sessionId} onchange={pickSession} />
+          </div>
+        {/if}
+
         <div class="stack stack--tight">
           <p class="ds-field__label">{t('checkin.workout')}</p>
-          <Segmented scroll label={t('checkin.workout')} options={tagList()} bind:value={tag} />
+          <Segmented scroll label={t('checkin.workout')} options={tagList()} bind:value={tag} onchange={() => (sessionId = null)} />
         </div>
 
         {#if noteOpen || note}

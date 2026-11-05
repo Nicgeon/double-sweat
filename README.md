@@ -330,6 +330,19 @@ Zugangsdaten; ein Tipp öffnet die App. Gestaltet nach dem Designsystem (Schrift
 mit 24-dp-Radius); bei kleinen Rastern fallen zuerst Symbol und Kopfzeile weg, nie wird Text abgeschnitten. Beim Abmelden werden sie geleert. Hinzufügen: Startbildschirm lange drücken →
 Widgets → Double Sweat.
 
+**Health Connect (optional, aus):** Unter _Profil → Health Connect_ schaltest du ein, dass der Check-in Trainings deiner
+Uhr oder Fitness-App als Vorschlag zeigt. Nach dem Foto erscheint eine Reihe wie "Laufen · 45 min · 07:15"; ein Tipp
+wählt die Sportart und schreibt die Dauer in die Notiz (sichtbar, änderbar). Das Foto bleibt Pflicht, ein
+Vorschlag ersetzt keinen Check-in. Gelesen wird nur **lesend** und nur **Trainingseinheiten der letzten 24 Stunden**
+(Art, Dauer, Startzeit), ohne Titel, Notizen, Herzfrequenz oder Standort, und nur **auf dem Gerät**: Der Server
+erfährt nur, was du mit dem Check-in abschickst. Beim Einschalten fragt Health Connect nach der Leseerlaubnis; du
+kannst sie dort jederzeit entziehen (die App führt dich über "Health Connect öffnen" hin). Ein übernommenes Training
+wird nicht noch einmal vorgeschlagen. Ab Android 14 gehört Health Connect zum System, bis Android 13 ist es eine App
+aus dem Play Store (die App zeigt dann einen Knopf dorthin). Die Arten werden so zugeordnet: Laufen (auch auf dem
+Laufband), Rad (auch Ergometer), Schwimmen, Yoga (auch Pilates und Dehnen), Kraft (Krafttraining, Gewichtheben,
+Calisthenics, Boot Camp), Cardio (HIIT, Crosstrainer, Rudern, Treppensteigen, Kurse, Tanzen), alles andere als
+Sonstiges. Die App braucht dafür Android 8.0 oder neuer.
+
 **Zurück-Knopf:** Er schließt zuerst ein offenes Fenster, geht dann in einer Unterseite einen Schritt zurück, führt
 von einer Hauptseite (Verlauf, Abmachung, Profil) zu "Heute" und beendet die App erst dort. Die Logik ist getestet
 (Einheitentests und ein Lauf der App im Browser); das Verhalten am echten Handy nicht.
@@ -435,14 +448,16 @@ zusammenpassen (App zu alt für den Server oder Server zu alt für die App) und 
 **Automatisch getestet:** Web-Logik der App (Server-Prüfung, Token-Erneuerung samt Wiederholung bei 401,
 Deep-Links) mit Vitest; der Native-Build läuft in Playwright gegen einen echten Server (Server einrichten,
 Team gründen, Fotos mit Bearer-Token laden, Abmelden, Token-Ablauf, Einladungslinks, Serverwechsel);
-`pnpm android:test` prüft die Kotlin-Teile (Verschlüsselung der Zugangsdaten, Push-Nachrichten); Android Lint ohne
+`pnpm android:test` prüft die Kotlin-Teile (Verschlüsselung der Zugangsdaten, Push-Nachrichten, Zuordnung der
+Trainingsarten aus Health Connect); Android Lint ohne
 Fehler; das Release wird beim Bauen mit `apksigner` geprüft.
 
 **Was noch nicht geprüft ist (bitte auf deinem Gerät testen).** Hier gibt es keinen Emulator und kein Handy.
 Ungetestet sind deshalb: Live-Kamera und Selfie auf dem Handy, Safe-Area/Statusleiste auf deinem Handy, Push über ntfy (Anmeldung beim
 Verteiler und Benachrichtigung), Push über FCM mit echten Google-Servern (die Serverseite ist gegen einen
 nachgebauten FCM-Dienst getestet, die Entschlüsselung gegen den Beispielwert aus RFC 8291), Deep-Links aus einem Mail- oder Chat-Programm, Teilen-Menü beim Export,
-Tastatur-Verhalten in den Formularen (etwa die feste Leiste im Check-in), der Zurück-Knopf des Handys, Verhalten nach Neustart des Handys. Erst nach diesem Test sollte der Stand
+Tastatur-Verhalten in den Formularen (etwa die feste Leiste im Check-in), der Zurück-Knopf des Handys, Health Connect
+mit echten Daten einer Uhr (Berechtigungsfenster, Datenschutzhinweis, Lesen der Trainings), Verhalten nach Neustart des Handys. Erst nach diesem Test sollte der Stand
 nach `main`.
 
 ## Betrieb
@@ -590,6 +605,11 @@ kontaktieren.
 - **Datenexport** (`POST /api/v1/me/export`, Passwort nötig): liefert einen Einmal-Link (60 Sekunden gültig, ohne
   Sitzung nutzbar), der ein ZIP mit `data.json` und allen eigenen Fotos streamt. Enthalten sind nur die eigenen
   Daten (vom Partner nur der Anzeigename), keine Passwort-Hashes und keine Push-Zugangsdaten.
+- **Health Connect** (nur Android-App, nur wenn du es einschaltest): liest nur Trainingseinheiten der letzten
+  24 Stunden (Art, Dauer, Startzeit), nur lesend und nur auf dem Gerät. Diese Daten gehen nie von selbst an den Server;
+  übermittelt wird nur, was du mit einem Check-in abschickst (die gewählte Sportart und, wenn du sie stehen lässt, die
+  Dauer in der Notiz). Bereits übernommene Einträge merkt sich das Gerät nur als Kennung, damit sie nicht doppelt
+  vorgeschlagen werden.
 - Konto löschen (`DELETE /api/v1/me`, Passwort nötig) entfernt die eigenen Check-ins samt Fotodateien; das Team
   des Partners bleibt bestehen. Team auflösen (`DELETE /api/v1/team`) löscht alle Teamdaten und -fotos.
 
@@ -701,12 +721,13 @@ Abhängigkeiten aus `pnpm-lock.yaml` stehen unter ihren eigenen Lizenzen.
 
 ## Roadmap
 
+Umgesetzt (auf `develop`, noch nicht veröffentlicht): Check-ins nachträglich bearbeiten (Sportart und Notiz) und
+**Health Connect** (Trainings aus Wearables als Vorschlag, nur auf dem Gerät, das Foto bleibt Pflicht).
+
 Umgesetzt (bis Version 0.2.0): Serien-Benachrichtigungen, Android-Widgets, Einsatz pro Person, AGPL-Lizenz, CI,
 Release-Workflow und Docker-Image, dazu die Überarbeitung von Übersicht und Navigation: Heute-Seite, Abmachung (Offenes,
 Wenn-dann-Karten je Person), Benachrichtigungen (neue Anlässe, Einstellungen pro Art, Postfach mit Links,
 Android-Kanäle), Check-in, Profil in Unterseiten und Querschnitt (Tippflächen, Android-Zurück, Platzhalter), siehe
 [Push](#push-benachrichtigungen), [Android-App](#android-app) und
 [Release veröffentlichen](#release-veröffentlichen-github).
-Geplant, in dieser Reihenfolge:
-
-1. **Health Connect** (Android): Workout-Vorschläge aus Wearables, nur auf dem Gerät, das Foto bleibt Pflicht.
+Geplant ist im Moment nichts Festes; Ideen und Fehler gern als Issue auf GitHub.

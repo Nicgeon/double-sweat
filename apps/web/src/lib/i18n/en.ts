@@ -475,6 +475,31 @@ export const en: Record<MessageKey, string> = {
   'nset.saved': 'Saved.',
   'notifications.new': 'new',
 
+  // Health Connect
+  'health.title': 'Health Connect',
+  'health.capOn': 'Workouts as suggestions',
+  'health.capOff': 'Off',
+  'health.intro':
+    'Health Connect collects the workouts of your watch and fitness apps. Double Sweat shows them as suggestions when you check in: you tap one and the workout type is chosen.',
+  'health.privacy':
+    'Only workouts of the last 24 hours are read (type, duration, start time), and only on this device. Only what you send with the check-in goes to the server. The photo stays required.',
+  'health.toggle': 'Workouts as suggestions when checking in',
+  'health.toggleHint': 'You can turn it off any time and revoke access in Health Connect.',
+  'health.browserOnly': 'Health Connect only exists in the Android app.',
+  'health.unavailable':
+    'Health Connect is not available on this device. From Android 14 it is part of the system; before that it is an app.',
+  'health.updateRequired': 'Health Connect needs to be updated first.',
+  'health.openStore': 'Open in Play Store',
+  'health.denied':
+    'Access was not allowed. You can grant it in Health Connect under "App permissions".',
+  'health.failed': 'Health Connect is not responding.',
+  'health.openSettings': 'Open Health Connect',
+  'health.found': 'Workouts found (last 24 hours)',
+  'health.none':
+    'No workouts found. Your watch or fitness app has to save workouts to Health Connect.',
+  'health.refresh': 'Refresh',
+  'health.minutes': '{n} min',
+  'health.suggest': 'From Health Connect',
   // Profile
   'profile.capAccount': 'Name, email, password, time zone',
   'profile.capReminderOn': 'Reminder at {time}',

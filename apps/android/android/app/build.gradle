@@ -126,6 +126,9 @@ dependencies {
     implementation project(':capacitor-cordova-android-plugins')
     // Push über einen frei wählbaren Verteiler (ntfy u. a.), ohne Google-Dienste
     implementation "org.unifiedpush.android:connector:$unifiedPushConnectorVersion"
+    // Health Connect (Trainings als Vorschlag beim Check-in): reines AndroidX, kein Google-Dienst nötig. Ab Android 14 ist
+    // Health Connect Teil des Systems, davor eine App.
+    implementation "androidx.health.connect:connect-client:$healthConnectVersion"
     // Nur im Flavor fcm; Nachrichten kommen Ende-zu-Ende verschlüsselt (WebPushCrypto), Google sieht keinen Inhalt
     fcmImplementation platform("com.google.firebase:firebase-bom:$firebaseBomVersion")
     fcmImplementation 'com.google.firebase:firebase-messaging'

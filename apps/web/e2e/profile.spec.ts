@@ -170,3 +170,19 @@ test('Englisch: Profil und Unterseiten sind übersetzt', async ({ browser }, tes
   await expect(page.getByRole('region', { name: 'Irreversible' })).toBeVisible();
   expect(problems).toEqual([]);
 });
+
+test('Health Connect gibt es nur in der Android-App: im Browser keine Zeile, die Seite erklärt es', async ({
+  browser,
+}, testInfo) => {
+  const { annaEmail } = await makeCouple();
+  const { page, problems } = await newUserContext(browser, testInfo);
+  await loginViaUi(page, annaEmail);
+  await page.goto('/profile');
+  await expect(page.getByRole('heading', { name: 'Profil', level: 1 })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Health Connect/ })).toHaveCount(0);
+  await page.goto('/profile/health');
+  await expect(page.getByRole('heading', { name: 'Health Connect', level: 1 })).toBeVisible();
+  await expect(page.getByText('Health Connect gibt es nur in der Android-App.')).toBeVisible();
+  await expect(page.getByRole('switch')).toHaveCount(0);
+  expect(problems).toEqual([]);
+});

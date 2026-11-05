@@ -65,3 +65,32 @@ export interface WidgetPlugin {
 export const Widget = registerPlugin<WidgetPlugin>('Widget', {
   web: () => import('./widget.web.ts').then((m) => new m.WidgetWeb()),
 });
+
+/** Ob und wie sich Health Connect nutzen lässt. `unsupported`: nicht in der Android-App (Browser). */
+export type HealthAvailability = 'available' | 'update_required' | 'unavailable' | 'unsupported';
+
+/** Ein Training aus Health Connect, schon der Sportart der App zugeordnet. */
+export interface HealthSession {
+  /** Kennung des Eintrags in Health Connect (nur auf dem Gerät, um Gelesenes nicht doppelt vorzuschlagen) */
+  id: string;
+  tag: 'kraft' | 'cardio' | 'laufen' | 'rad' | 'schwimmen' | 'yoga' | 'sonstiges';
+  startMs: number;
+  endMs: number;
+  minutes: number;
+}
+
+/** Health Connect (Kotlin): liest nur Trainingseinheiten der letzten 24 Stunden, nur auf dem Gerät. */
+export interface HealthConnectPlugin {
+  status(): Promise<{ availability: HealthAvailability; granted: boolean }>;
+  /** Fragt die Leseerlaubnis für Trainings ab (Fenster von Health Connect). */
+  requestPermission(): Promise<{ granted: boolean }>;
+  recentSessions(): Promise<{ granted: boolean; sessions: HealthSession[] }>;
+  /** Öffnet Health Connect (Zugriff für Apps, Daten). */
+  openSettings(): Promise<void>;
+  /** Öffnet die Seite von Health Connect im Play Store (Android bis 13 oder zum Aktualisieren). */
+  openStore(): Promise<void>;
+}
+
+export const HealthConnect = registerPlugin<HealthConnectPlugin>('HealthConnect', {
+  web: () => import('./health.web.ts').then((m) => new m.HealthConnectWeb()),
+});

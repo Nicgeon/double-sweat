@@ -7,6 +7,7 @@
   import Page from '#lib/components/Page.svelte';
   import { NATIVE } from '#lib/native/flag.ts';
   import { colorName } from '#lib/state/colors.ts';
+  import { healthStore } from '#lib/state/health.svelte.ts';
   import { session } from '#lib/state/session.svelte.ts';
   import { theme } from '#lib/state/theme.svelte.ts';
   import { APP_VERSION, LICENSE_NAME, SOURCE_URL } from '#lib/util/source.ts';
@@ -49,6 +50,9 @@
       <LinkRow href="/profile/account" icon="user" title={t('more.accountCard')} caption={t('profile.capAccount')} />
       <!-- "from" lässt die Seite wissen, dass man vom Profil kommt (Zurück führt hierher, nicht ins Postfach) -->
       <LinkRow href="/notifications/settings?from=profile" icon="bell" title={t('more.pushCard')} caption={notificationsCaption} />
+      {#if NATIVE}
+        <LinkRow href="/profile/health" icon="heart-pulse" title={t('health.title')} caption={healthStore.enabled ? t('health.capOn') : t('health.capOff')} />
+      {/if}
       <LinkRow href="/profile/appearance" icon="sun" title={t('more.appearance')} caption={lookCaption} />
       <LinkRow href="/profile/team" icon="users" title={t('more.teamCard')} caption={teamCaption} />
       <LinkRow href="/profile/devices" icon="smartphone" title={t('more.sessionsCard')} caption={t('profile.capDevices')} />

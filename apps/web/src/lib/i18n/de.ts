@@ -480,6 +480,32 @@ export const de = {
   'nset.saved': 'Gespeichert.',
   'notifications.new': 'neu',
 
+  // Health Connect
+  'health.title': 'Health Connect',
+  'health.capOn': 'Trainings als Vorschlag',
+  'health.capOff': 'Aus',
+  'health.intro':
+    'Health Connect sammelt die Trainings deiner Uhr und deiner Fitness-Apps. Double Sweat zeigt sie beim Check-in als Vorschlag: Du tippst, und die Sportart ist gewählt.',
+  'health.privacy':
+    'Gelesen werden nur Trainings der letzten 24 Stunden (Art, Dauer, Startzeit), und nur auf diesem Gerät. Zum Server geht nur, was du mit dem Check-in abschickst. Das Foto bleibt Pflicht.',
+  'health.toggle': 'Trainings als Vorschlag beim Check-in',
+  'health.toggleHint':
+    'Du kannst es jederzeit ausschalten und den Zugriff in Health Connect entziehen.',
+  'health.browserOnly': 'Health Connect gibt es nur in der Android-App.',
+  'health.unavailable':
+    'Health Connect ist auf diesem Gerät nicht vorhanden. Ab Android 14 gehört es zum System, davor ist es eine App.',
+  'health.updateRequired': 'Health Connect muss zuerst aktualisiert werden.',
+  'health.openStore': 'Im Play Store öffnen',
+  'health.denied':
+    'Der Zugriff wurde nicht erlaubt. Du kannst ihn in Health Connect unter "Zugriff für Apps" erteilen.',
+  'health.failed': 'Health Connect antwortet nicht.',
+  'health.openSettings': 'Health Connect öffnen',
+  'health.found': 'Gefundene Trainings (letzte 24 Stunden)',
+  'health.none':
+    'Keine Trainings gefunden. Deine Uhr oder Fitness-App muss die Trainings in Health Connect speichern.',
+  'health.refresh': 'Aktualisieren',
+  'health.minutes': '{n} min',
+  'health.suggest': 'Aus Health Connect',
   // Profil
   'profile.capAccount': 'Name, E-Mail, Passwort, Zeitzone',
   'profile.capReminderOn': 'Erinnerung um {time} Uhr',

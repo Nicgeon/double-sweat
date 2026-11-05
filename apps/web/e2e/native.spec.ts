@@ -290,3 +290,182 @@ test('Zurück-Knopf: erst Fenster zu, dann Unterseite zurück, Tab-Wurzel zu „
   await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
   expect(problems).toEqual([]);
 });
+
+/** Gründet in der App ein Team (wie die Tests oben) und wartet auf „Heute“. */
+async function registerInApp(page: Page) {
+  await connect(page);
+  await page.getByRole('link', { name: 'Neues Team gründen' }).click();
+  await page.getByLabel('Anzeigename').fill('Anna');
+  await page.getByLabel('E-Mail').fill(uniqueEmail('anna'));
+  await page.getByLabel('Passwort').fill(PASSWORD);
+  await page.getByLabel('Setup-Token').fill(SETUP_TOKEN);
+  await page.getByRole('button', { name: 'Team gründen' }).click();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
+}
+
+/** Spielt Health Connect vor (im Testbuild liest die Brücke `window.__dsHealthFake`). */
+async function fakeHealth(page: Page, fake: Record<string, unknown>) {
+  await page.addInitScript((f) => Object.assign(window, { __dsHealthFake: f }), fake);
+}
+
+const healthState = (page: Page) =>
+  page.evaluate(
+    () => (window as unknown as { __dsHealthFake: Record<string, unknown> }).__dsHealthFake,
+  );
+
+test('Health Connect: einschalten, Trainings als Vorschlag im Check-in, Übernommenes kommt nicht wieder', async ({
+  browser,
+}) => {
+  const { page, problems } = await appPage(browser);
+  const now = Date.now();
+  await fakeHealth(page, {
+    availability: 'available',
+    granted: false,
+    sessions: [
+      {
+        id: 'lauf',
+        tag: 'laufen',
+        startMs: now - 3 * 3600_000,
+        endMs: now - 2 * 3600_000,
+        minutes: 45,
+      },
+      {
+        id: 'kraft',
+        tag: 'kraft',
+        startMs: now - 8 * 3600_000,
+        endMs: now - 7.5 * 3600_000,
+        minutes: 30,
+      },
+    ],
+  });
+  await registerInApp(page);
+
+  // Profil: die Zeile gibt es nur in der App, anfangs aus
+  await page
+    .getByRole('navigation')
+    .getByRole('link', { name: /Profil/ })
+    .click();
+  const row = page.getByRole('main').getByRole('link', { name: /^Health Connect/ });
+  await expect(row).toContainText('Aus');
+  await row.click();
+  await expect(page.getByRole('heading', { name: 'Health Connect', level: 1 })).toBeVisible();
+  const toggle = page.getByRole('switch', { name: 'Trainings als Vorschlag beim Check-in' });
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  await expect(page.getByText('Gefundene Trainings')).toHaveCount(0);
+
+  // Einschalten fragt die Erlaubnis ab; danach stehen die gefundenen Trainings da
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  const found = page.getByRole('region', { name: /Gefundene Trainings/ });
+  await expect(found).toContainText('Laufen');
+  await expect(found).toContainText('45 min');
+  await expect(found).toContainText('Kraft');
+  await expect(found).toContainText('30 min');
+  await page.getByRole('button', { name: 'Health Connect öffnen' }).click();
+  expect((await healthState(page)).opened).toBe(1);
+  await page.getByRole('link', { name: 'Zurück' }).first().click();
+  await expect(page.getByRole('main').getByRole('link', { name: /^Health Connect/ })).toContainText(
+    'Trainings als Vorschlag',
+  );
+
+  // Check-in (innerhalb der App navigieren, damit der vorgespielte Stand bleibt)
+  await page.getByRole('navigation').getByRole('link', { name: /Heute/ }).click();
+  await page.getByRole('link', { name: 'Einchecken' }).first().click();
+  await expect(page.getByTestId('camera')).toBeVisible();
+  await page.getByRole('button', { name: 'Foto aufnehmen' }).click();
+  await page.getByRole('button', { name: 'Selfie überspringen' }).click();
+  await expect(page.getByRole('img', { name: 'Dein Foto' })).toBeVisible();
+
+  const suggestions = page.getByRole('radiogroup', { name: 'Aus Health Connect' });
+  await expect(suggestions.getByRole('radio')).toHaveCount(2);
+  const run = suggestions.getByRole('radio', { name: /^Laufen · 45 min/ });
+  await run.click();
+  await expect(run).toHaveAttribute('aria-checked', 'true');
+  // Ein Tipp wählt die Sportart und schreibt die Dauer sichtbar in die Notiz
+  await expect(
+    page.getByRole('radiogroup', { name: 'Training' }).getByRole('radio', { name: 'Laufen' }),
+  ).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByLabel('Notiz (optional)')).toHaveValue('45 min');
+  // Wählt man selbst eine andere Sportart, gilt der Vorschlag nicht mehr als gewählt
+  await page
+    .getByRole('radiogroup', { name: 'Training' })
+    .getByRole('radio', { name: 'Rad' })
+    .click();
+  await expect(run).toHaveAttribute('aria-checked', 'false');
+  await run.click();
+  await page.getByRole('button', { name: 'Einchecken' }).click();
+  await expect(page.getByRole('heading', { name: 'Eingecheckt.' })).toBeVisible();
+
+  // Das Foto steht mit Sportart und Dauer im Feed
+  await page.getByRole('link', { name: 'Fertig' }).click();
+  await expect(page.locator('.ds-photo')).toContainText('Laufen');
+  await page.getByRole('button', { name: /Foto ansehen/ }).click();
+  await expect(page.getByRole('dialog')).toContainText('45 min');
+  await page.keyboard.press('Escape');
+
+  // Das übernommene Training wird nicht noch einmal vorgeschlagen, das andere schon
+  await page.getByRole('link', { name: 'Noch ein Check-in' }).first().click();
+  await expect(page.getByTestId('camera')).toBeVisible();
+  await page.waitForTimeout(1100); // die Fake-Kamera zeigt die Sekunde: zwei gleiche Fotos lehnt der Server ab
+  await page.getByRole('button', { name: 'Foto aufnehmen' }).click();
+  await page.getByRole('button', { name: 'Selfie überspringen' }).click();
+  await expect(page.getByRole('img', { name: 'Dein Foto' })).toBeVisible();
+  const again = page.getByRole('radiogroup', { name: 'Aus Health Connect' });
+  await expect(again.getByRole('radio')).toHaveCount(1);
+  await expect(again.getByRole('radio', { name: /^Kraft · 30 min/ })).toBeVisible();
+  expect(problems).toEqual([]);
+});
+
+test('Health Connect: nicht vorhanden oder Erlaubnis verweigert erklärt, was zu tun ist', async ({
+  browser,
+}) => {
+  const missing = await appPage(browser);
+  await fakeHealth(missing.page, { availability: 'unavailable' });
+  await registerInApp(missing.page);
+  await missing.page
+    .getByRole('navigation')
+    .getByRole('link', { name: /Profil/ })
+    .click();
+  await missing.page.getByRole('link', { name: /^Health Connect/ }).click();
+  await expect(
+    missing.page.getByText(/Health Connect ist auf diesem Gerät nicht vorhanden/),
+  ).toBeVisible();
+  await expect(
+    missing.page.getByRole('switch', { name: 'Trainings als Vorschlag beim Check-in' }),
+  ).toBeDisabled();
+  await missing.page.getByRole('button', { name: 'Im Play Store öffnen' }).click();
+  expect((await healthState(missing.page)).store).toBe(1);
+
+  const denied = await appPage(browser);
+  await fakeHealth(denied.page, { availability: 'available', granted: false, deny: true });
+  await registerInApp(denied.page);
+  await denied.page
+    .getByRole('navigation')
+    .getByRole('link', { name: /Profil/ })
+    .click();
+  await denied.page.getByRole('link', { name: /^Health Connect/ }).click();
+  const toggle = denied.page.getByRole('switch', { name: 'Trainings als Vorschlag beim Check-in' });
+  await toggle.click();
+  await expect(denied.page.getByText(/Der Zugriff wurde nicht erlaubt/)).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  await denied.page.getByRole('button', { name: 'Health Connect öffnen' }).click();
+  expect((await healthState(denied.page)).opened).toBe(1);
+  expect(missing.problems).toEqual([]);
+  expect(denied.problems).toEqual([]);
+});
+
+test('Health Connect: der Datenschutzhinweis von Health Connect öffnet die Seite der App', async ({
+  browser,
+}) => {
+  const { page, problems } = await appPage(browser);
+  await fakeHealth(page, { availability: 'available', granted: false });
+  await registerInApp(page);
+  await page.evaluate(() =>
+    (window as unknown as { __dsOpenUrl: (u: string) => Promise<void> }).__dsOpenUrl(
+      'doublesweat://open?path=%2Fprofile%2Fhealth',
+    ),
+  );
+  await expect(page.getByRole('heading', { name: 'Health Connect', level: 1 })).toBeVisible();
+  await expect(page.getByText(/Gelesen werden nur Trainings der letzten 24 Stunden/)).toBeVisible();
+  expect(problems).toEqual([]);
+});

@@ -1,5 +1,6 @@
 ext {
-    minSdkVersion = 24
+    // 26: Health Connect (androidx.health.connect:connect-client) braucht Android 8.0
+    minSdkVersion = 26
     compileSdkVersion = 36
     targetSdkVersion = 36
     androidxActivityVersion = '1.11.0'
@@ -14,6 +15,7 @@ ext {
     androidxEspressoCoreVersion = '3.7.0'
     cordovaAndroidVersion = '14.0.1'
     unifiedPushConnectorVersion = '3.3.5'
+    healthConnectVersion = '1.1.0'
     firebaseBomVersion = '35.1.0'
     playServicesBaseVersion = '18.11.1'
     jsonTestVersion = '20250517'
