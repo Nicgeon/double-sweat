@@ -5,7 +5,7 @@
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import JoinLinkSheet from '#lib/components/JoinLinkSheet.svelte';
-  import { startDeepLinks } from '#lib/native/boot.svelte.ts';
+  import { startBackButton, startDeepLinks } from '#lib/native/boot.svelte.ts';
   import { CLIENT_API, NATIVE } from '#lib/native/flag.ts';
   import Banner from '#lib/components/Banner.svelte';
   import Button from '#lib/components/Button.svelte';
@@ -20,10 +20,15 @@
   onMount(() => {
     theme.init();
     let stop = () => {};
+    let stopBack = () => {};
     void session.init().then(async () => {
       stop = await startDeepLinks();
+      stopBack = await startBackButton();
     });
-    return () => stop();
+    return () => {
+      stop();
+      stopBack();
+    };
   });
 
   // App: ohne eingerichteten Server zuerst dorthin (außer die Seite selbst)

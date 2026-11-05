@@ -47,6 +47,14 @@
     </div>
   {/if}
 
+  {#if loading && weeks.length === 0 && !error}
+    <div class="stack" role="status" aria-busy="true">
+      <span class="ds-sr">{t('common.loading')}</span>
+      <div class="ds-skel" style="height: 140px"></div>
+      <div class="ds-skel" style="height: 140px"></div>
+    </div>
+  {/if}
+
   {#if !loading && weeks.length === 0 && !error}
     <div class="center">
       <p class="lead">{t('history.empty')}</p>

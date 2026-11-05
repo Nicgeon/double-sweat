@@ -44,7 +44,11 @@
   <div class="stack narrow">
     <Card>
       {#if loading}
-        <p class="muted" role="status">{t('common.loading')}</p>
+        <div class="stack stack--tight" role="status" aria-busy="true">
+          <span class="ds-sr">{t('common.loading')}</span>
+          <div class="ds-skel" style="height: 44px"></div>
+          <div class="ds-skel" style="height: 44px"></div>
+        </div>
       {:else}
         <ul class="list">
           {#each sessions as s (s.id)}

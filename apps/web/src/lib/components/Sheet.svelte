@@ -1,6 +1,7 @@
 <script lang="ts">
   import { t } from '#lib/i18n/index.svelte.ts';
   import type { Snippet } from 'svelte';
+  import { registerOverlay } from '#lib/state/overlays.ts';
   import Button from './Button.svelte';
 
   type Props = { open: boolean; title: string; onclose: () => void; children: Snippet; footer?: Snippet };
@@ -8,6 +9,12 @@
   let panel = $state<HTMLElement>();
   const titleId = $props.id();
   const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+  // Offen gemeldet: der Zurück-Knopf der App schließt zuerst das oberste Fenster
+  $effect(() => {
+    if (!open) return;
+    return registerOverlay(() => onclose());
+  });
 
   $effect(() => {
     if (!open || !panel) return;

@@ -216,6 +216,12 @@
   font-size: 14px;
   line-height: 20px;
 } /* small-strong; nur wo ein Zeiger präzise trifft (Listen, Desktop) */
+/* Auf dem Handy (schmal oder Touch) gilt auch für kleine Knöpfe die volle Tippfläche */
+@media (max-width: 767px), (pointer: coarse) {
+  .ds-btn--sm {
+    min-height: var(--tap-min);
+  }
+}
 .ds-btn--icon {
   width: var(--tap-min);
   padding: 0;
@@ -347,6 +353,11 @@ textarea.ds-field__input {
   border-color: var(--action);
 }
 
+@media (max-width: 767px), (pointer: coarse) {
+  .ds-seg__opt {
+    min-height: var(--tap-min);
+  }
+}
 /* Einzeilige Chip-Reihe zum Wischen; am rechten Rand blendet sie aus und zeigt, dass es weitergeht */
 .ds-seg--scroll {
   position: relative;
@@ -431,22 +442,30 @@ textarea.ds-field__input {
   font: 400 14px / 20px var(--font-body);
   color: var(--ink-muted);
 }
+/* Der Knopf selbst ist 44 px hoch (volle Tippfläche); die sichtbare Bahn (52 × 32) liegt mittig darin */
 .ds-switch {
   flex: none;
   position: relative;
   width: 52px;
-  height: 32px;
+  height: var(--tap-min);
   padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.ds-switch::before {
+  content: "";
+  position: absolute;
+  inset: 6px 0;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-pill);
   background: var(--surface-2);
-  cursor: pointer;
   transition: background-color var(--dur-base) var(--ease-out);
 }
 .ds-switch__knob {
   position: absolute;
-  top: 3px;
-  left: 3px;
+  top: 10px;
+  left: 4px;
   display: grid;
   place-items: center;
   width: 24px;
@@ -458,7 +477,7 @@ textarea.ds-field__input {
     transform var(--dur-base) var(--ease-out),
     background-color var(--dur-base) var(--ease-out);
 }
-.ds-switch.is-on {
+.ds-switch.is-on::before {
   background: var(--action);
   border-color: var(--action);
 }

@@ -234,3 +234,59 @@ test('Server wechseln im Profil meldet ab und fragt nach einem neuen Server', as
   await expect(page.getByRole('heading', { name: 'Mit deinem Server verbinden.' })).toBeVisible();
   expect(await stored(page)).toBeNull();
 });
+
+test('Zurück-Knopf: erst Fenster zu, dann Unterseite zurück, Tab-Wurzel zu „Heute“, dort beenden', async ({
+  browser,
+}) => {
+  const { page, problems } = await appPage(browser);
+  await connect(page);
+  await page.getByRole('link', { name: 'Neues Team gründen' }).click();
+  await page.getByLabel('Anzeigename').fill('Anna');
+  await page.getByLabel('E-Mail').fill(uniqueEmail('anna'));
+  await page.getByLabel('Passwort').fill(PASSWORD);
+  await page.getByLabel('Setup-Token').fill(SETUP_TOKEN);
+  await page.getByRole('button', { name: 'Team gründen' }).click();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
+
+  // Der Zurück-Knopf der App, wie ihn Capacitor meldet (canGoBack: der WebView hat Verlauf)
+  const back = (canGoBack = true) =>
+    page.evaluate(
+      (c) => (window as unknown as { __dsBack: (c: boolean) => Promise<string> }).__dsBack(c),
+      canGoBack,
+    );
+
+  await page
+    .getByRole('navigation')
+    .getByRole('link', { name: /Profil/ })
+    .click();
+  await page.getByRole('link', { name: /^Konto/ }).click();
+  await expect(page.getByRole('heading', { name: 'Konto', level: 1 })).toBeVisible();
+
+  // Ein offenes Fenster schließt zuerst, die Seite bleibt
+  await page.getByRole('button', { name: 'Passwort ändern' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  expect(await back()).toBe('overlay');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Konto', level: 1 })).toBeVisible();
+
+  // Unterseite: einen Schritt zurück zur Liste
+  expect(await back()).toBe('history');
+  await expect(page.getByRole('heading', { name: 'Profil', level: 1 })).toBeVisible();
+  // Tab-Wurzel: zu „Heute“
+  expect(await back()).toBe('goto');
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
+  // Auf „Heute“ beendet Zurück die App (im Browser ohne Wirkung, die Seite bleibt stehen)
+  expect(await back()).toBe('exit');
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
+
+  // Ohne Verlauf (etwa nach einem Link aus einer Mitteilung) geht es zur Seite darüber
+  await page.evaluate(() =>
+    (window as unknown as { __dsOpenUrl: (u: string) => Promise<void> }).__dsOpenUrl(
+      'doublesweat://open?path=%2Fnotifications',
+    ),
+  );
+  await expect(page.getByRole('heading', { name: 'Benachrichtigungen', level: 1 })).toBeVisible();
+  expect(await back(false)).toBe('goto');
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
+  expect(problems).toEqual([]);
+});

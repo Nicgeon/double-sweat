@@ -329,6 +329,10 @@ Zugangsdaten; ein Tipp öffnet die App. Gestaltet nach dem Designsystem (Schrift
 mit 24-dp-Radius); bei kleinen Rastern fallen zuerst Symbol und Kopfzeile weg, nie wird Text abgeschnitten. Beim Abmelden werden sie geleert. Hinzufügen: Startbildschirm lange drücken →
 Widgets → Double Sweat.
 
+**Zurück-Knopf:** Er schließt zuerst ein offenes Fenster, geht dann in einer Unterseite einen Schritt zurück, führt
+von einer Hauptseite (Verlauf, Abmachung, Profil) zu "Heute" und beendet die App erst dort. Die Logik ist getestet
+(Einheitentests und ein Lauf der App im Browser); das Verhalten am echten Handy nicht.
+
 Die App ist ein Capacitor-Wrapper um dieselbe Web-Oberfläche. Die Oberfläche steckt **im APK** (die App lädt
 keine Seiten vom Server nach), nur die Daten kommen von deinem Server. Es gibt keinen Play-Store-Eintrag: du
 installierst die fertige APK aus den GitHub-Releases oder baust sie selbst.
@@ -437,7 +441,7 @@ Fehler; das Release wird beim Bauen mit `apksigner` geprüft.
 Ungetestet sind deshalb: Live-Kamera und Selfie auf dem Handy, Safe-Area/Statusleiste auf deinem Handy, Push über ntfy (Anmeldung beim
 Verteiler und Benachrichtigung), Push über FCM mit echten Google-Servern (die Serverseite ist gegen einen
 nachgebauten FCM-Dienst getestet, die Entschlüsselung gegen den Beispielwert aus RFC 8291), Deep-Links aus einem Mail- oder Chat-Programm, Teilen-Menü beim Export,
-Tastatur-Verhalten in den Formularen, Verhalten nach Neustart des Handys. Erst nach diesem Test sollte der Stand
+Tastatur-Verhalten in den Formularen (etwa die feste Leiste im Check-in), der Zurück-Knopf des Handys, Verhalten nach Neustart des Handys. Erst nach diesem Test sollte der Stand
 nach `main`.
 
 ## Betrieb

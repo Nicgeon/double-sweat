@@ -49,6 +49,8 @@
   let savingReward = $state(false);
   let redeeming = $state<string | null>(null);
   let inviteOpen = $state(false);
+  /** Die ersten Daten sind da (oder haben versagt): vorher zeigt die Seite Platzhalter statt leerer Karten. */
+  let ready = $state(false);
 
   const me = $derived(session.me);
   const partner = $derived(todayStore.partner);
@@ -108,6 +110,7 @@
       fail(e);
     }
     await loadLists();
+    ready = true;
     // Links aus der Starthilfe und von Heute öffnen gleich das passende Fenster
     const target = page.url.hash;
     if (target === '#ziel') openGoal();
@@ -225,6 +228,16 @@
 <Page title={t('nav.deal')} subtitle={bet ? t('deal.subtitle', { n: isoWeek(bet.currentWeekStart) }) : undefined}>
   {#if error}<Banner tone="error">{error}</Banner>{/if}
   {#if notice}<Banner tone="success">{notice}</Banner>{/if}
+  {#if !ready}
+    <div class="cols cols--deal" role="status" aria-busy="true">
+      <span class="ds-sr">{t('common.loading')}</span>
+      <div class="ds-skel" style="height: 120px"></div>
+      <div class="stack">
+        <div class="ds-skel" style="height: 200px"></div>
+        <div class="ds-skel" style="height: 200px"></div>
+      </div>
+    </div>
+  {:else}
   <div class="cols cols--deal">
     <!-- Offen: was gerade eingelöst werden will, in beide Richtungen -->
     <section class="stack stack--tight" aria-labelledby="open-title">
@@ -399,6 +412,7 @@
       <p class="small muted">{t('bet.rule')} {t('reward.rule')}</p>
     </section>
   </div>
+  {/if}
 </Page>
 
 <InviteSheet open={inviteOpen} onclose={() => (inviteOpen = false)} />
