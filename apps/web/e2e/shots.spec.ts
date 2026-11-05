@@ -51,7 +51,12 @@ test('Bildschirmfotos', async ({ browser }, testInfo) => {
     ['/deal', 'abmachung'],
     ['/notifications', 'postfach'],
     ['/notifications/settings', 'benachrichtigungen'],
-    ['/more', 'mehr'],
+    ['/profile', 'profil'],
+    ['/profile/account', 'konto'],
+    ['/profile/appearance', 'darstellung'],
+    ['/profile/team', 'team'],
+    ['/profile/devices', 'geraete'],
+    ['/profile/data', 'daten'],
   ] as const) {
     await page.goto(path);
     await page.waitForTimeout(400);

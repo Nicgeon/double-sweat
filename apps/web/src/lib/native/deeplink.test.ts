@@ -11,7 +11,7 @@ describe('parseOpenLink (Tipp auf eine Mitteilung)', () => {
       '/history',
       '/checkin',
       '/notifications',
-      '/more',
+      '/profile',
       '/?photo=abc_12-X',
     ]) {
       expect(parseOpenLink(open(path))).toBe(path);

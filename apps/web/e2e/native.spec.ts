@@ -109,7 +109,7 @@ test('Team gründen mit Token-Anmeldung, Fotos mit Anmeldung laden, abmelden', a
 
   // Abmelden: Tokens weg (Server bleibt), das alte Token ist am Server widerrufen
   const oldAccess = auth.access as string;
-  await page.goto('/more');
+  await page.goto('/profile');
   await page.getByRole('button', { name: 'Abmelden' }).click();
   await expect(page.getByRole('heading', { name: 'Willkommen zurück.' })).toBeVisible();
   expect(await stored(page)).toMatchObject({ server: BASE, access: null, refresh: null });
@@ -217,7 +217,7 @@ test('Einladungslink des eigenen Servers öffnet die Einladung direkt, Beitritt 
   expect(problems).toEqual([]);
 });
 
-test('Server wechseln in „Mehr“ meldet ab und fragt nach einem neuen Server', async ({
+test('Server wechseln im Profil meldet ab und fragt nach einem neuen Server', async ({
   browser,
 }) => {
   const api = await Api.create();
@@ -228,8 +228,8 @@ test('Server wechseln in „Mehr“ meldet ab und fragt nach einem neuen Server'
   await page.getByLabel('Passwort').fill(PASSWORD);
   await page.getByRole('button', { name: 'Anmelden' }).click();
   await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
-  await page.goto('/more');
-  await expect(page.getByText('Verbunden mit')).toBeVisible();
+  await page.goto('/profile');
+  await expect(page.getByText(/^Server: 127\.0\.0\.1/)).toBeVisible();
   await page.getByRole('button', { name: 'Server wechseln' }).click();
   await expect(page.getByRole('heading', { name: 'Mit deinem Server verbinden.' })).toBeVisible();
   expect(await stored(page)).toBeNull();

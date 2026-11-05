@@ -296,7 +296,7 @@ test('Englisch: Beschriftungen der Selfie-Funktion', async ({ browser }, testInf
   const { page } = await newUserContext(browser, testInfo, undefined, 'en-US');
   await loginViaUi(page, annaEmail);
   // Das Konto wurde über die API auf Deutsch angelegt; die Oberfläche folgt dem Konto
-  await page.goto('/more');
+  await page.goto('/profile/appearance');
   await page.getByRole('radio', { name: 'English' }).click();
   await expect(page.getByText('Language saved.')).toBeVisible();
   await page.goto('/checkin');

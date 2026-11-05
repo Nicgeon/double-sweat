@@ -1,6 +1,7 @@
 <script lang="ts">
   import { t } from '#lib/i18n/index.svelte.ts';
   import { onMount } from 'svelte';
+  import { page } from '$app/state';
   import { api, ApiError, unwrap } from '#lib/api/client.ts';
   import Banner from '#lib/components/Banner.svelte';
   import Button from '#lib/components/Button.svelte';
@@ -118,7 +119,7 @@
   }
 </script>
 
-<Page title={t('notifications.title')} backHref="/notifications">
+<Page title={t('notifications.title')} backHref={page.url.searchParams.get('from') === 'profile' ? '/profile' : '/notifications'}>
   {#if error}<Banner tone="error">{error}</Banner>{/if}
   {#if notice}<Banner tone="success">{notice}</Banner>{/if}
 

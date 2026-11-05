@@ -57,10 +57,13 @@ test('Einstellungen: Schalter wirken sofort und bleiben, die Uhrzeit der Erinner
   await loginViaUi(page, annaEmail);
 
   // Vom Profil aus erreichbar; dort steht kein Push-Schalter mehr
-  await page.goto('/more');
+  await page.goto('/profile');
   await expect(page.getByRole('switch')).toHaveCount(0);
-  await page.getByRole('link', { name: /Push, Erinnerung am Abend/ }).click();
-  await expect(page).toHaveURL(/\/notifications\/settings$/);
+  await page
+    .getByRole('main')
+    .getByRole('link', { name: /Benachrichtigungen/ })
+    .click();
+  await expect(page).toHaveURL(/\/notifications\/settings\?from=profile$/);
   await expect(page.getByRole('heading', { name: 'Benachrichtigungen', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Erinnerungen' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Von Ben' })).toBeVisible();

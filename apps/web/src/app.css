@@ -244,6 +244,12 @@ p {
   }
 }
 
+/* Schmale Spalte für Listen und Formulare (Profil und seine Unterseiten) */
+.narrow {
+  width: 100%;
+  max-width: 36rem;
+}
+
 /* Dichtere Gruppe innerhalb einer Seite (Abschnitt mit Überschrift und Karten) */
 .stack.stack--tight,
 .cols > .stack.stack--tight {

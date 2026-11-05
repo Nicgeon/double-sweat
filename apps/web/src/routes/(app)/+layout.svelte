@@ -49,7 +49,7 @@
     { id: 'today', label: t('nav.today'), icon: 'house', href: '/' },
     { id: 'history', label: t('nav.history'), icon: 'history', href: '/history' },
     { id: 'deal', label: t('nav.deal'), icon: 'target', href: '/deal', badge: todayStore.openCount || undefined },
-    { id: 'profile', label: t('nav.profile'), icon: 'user', href: '/more' },
+    { id: 'profile', label: t('nav.profile'), icon: 'user', href: '/profile' },
   ]);
   // Seitenleiste (Desktop): Check-in oben als große Schaltfläche, das Postfach unten
   const sideItems: NavItem[] = $derived([
@@ -61,10 +61,12 @@
   ]);
   const current = $derived.by(() => {
     const path = page.url.pathname;
+    // Die Benachrichtigungs-Einstellungen gehören zum Profil, wenn man von dort kommt (sonst zum Postfach)
+    if (path === '/notifications/settings' && page.url.searchParams.get('from') === 'profile') return 'profile';
     if (path === '/' || path.startsWith('/notifications')) return 'today';
     if (path.startsWith('/history')) return 'history';
     if (path.startsWith('/deal')) return 'deal';
-    if (path.startsWith('/more')) return 'profile';
+    if (path.startsWith('/profile')) return 'profile';
     return '';
   });
   /** Der Check-in ist ein eigener Vorgang: keine Tab-Leiste, die Aktionsleiste liegt unten. */

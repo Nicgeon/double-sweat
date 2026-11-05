@@ -77,15 +77,18 @@ test('Passwort ändern meldet andere Geräte ab', async ({ browser }, testInfo) 
   await loginViaUi(first.page, annaEmail);
   const second = await newUserContext(browser, testInfo);
   await loginViaUi(second.page, annaEmail);
-  await second.page.goto('/more');
+  // Geräte und Sitzungen: das eigene Gerät ist gekennzeichnet, das andere lässt sich abmelden
+  await second.page.goto('/profile/devices');
   await expect(second.page.getByText('(dieses Gerät)')).toBeVisible();
+  await expect(second.page.getByRole('button', { name: 'Abmelden' }).first()).toBeVisible();
+  await second.page.goto('/profile/account');
   await second.page.getByRole('button', { name: 'Passwort ändern' }).click();
   await second.page.getByLabel('Aktuelles Passwort').fill(PASSWORD);
   await second.page.getByLabel('Neues Passwort').fill('ein noch längeres passwort');
   await second.page.getByRole('dialog').getByRole('button', { name: 'Passwort ändern' }).click();
   await expect(second.page.getByText(/Passwort geändert/)).toBeVisible();
   // die erste Sitzung ist beendet: geschützte Seite führt zur Anmeldung
-  await first.page.goto('/more');
+  await first.page.goto('/profile');
   await expect(first.page).toHaveURL(/\/login/);
 });
 
@@ -93,7 +96,7 @@ test('Datenexport lädt ein ZIP, Passwort wird abgefragt', async ({ browser }, t
   const { annaEmail } = await makeCouple();
   const { page } = await newUserContext(browser, testInfo);
   await loginViaUi(page, annaEmail);
-  await page.goto('/more');
+  await page.goto('/profile/data');
   await page.getByRole('button', { name: 'Meine Daten exportieren' }).click();
   await page.getByLabel('Dein Passwort').fill('falsch falsch falsch');
   await page.getByRole('button', { name: 'Export starten' }).click();
@@ -109,7 +112,7 @@ test('Team auflösen und Konto löschen verlangen das Passwort', async ({ browse
   const { annaEmail, benEmail } = await makeCouple();
   const anna = await newUserContext(browser, testInfo);
   await loginViaUi(anna.page, annaEmail);
-  await anna.page.goto('/more');
+  await anna.page.goto('/profile/data');
   await anna.page.getByRole('button', { name: 'Team auflösen' }).first().click();
   await anna.page.getByLabel('Dein Passwort').fill(PASSWORD);
   await anna.page.getByRole('dialog').getByRole('button', { name: 'Team auflösen' }).click();
@@ -130,7 +133,7 @@ test('Konto löschen entfernt die Sitzung', async ({ browser }, testInfo) => {
   const { annaEmail } = await makeCouple();
   const { page } = await newUserContext(browser, testInfo);
   await loginViaUi(page, annaEmail);
-  await page.goto('/more');
+  await page.goto('/profile/data');
   await page.getByRole('button', { name: 'Konto löschen' }).click();
   await page.getByLabel('Dein Passwort').fill(PASSWORD);
   await page.getByRole('dialog').getByRole('button', { name: 'Konto löschen' }).click();

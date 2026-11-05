@@ -27,7 +27,7 @@ test('Team gründen, abmelden und wieder anmelden', async ({ browser }, testInfo
   // Sitzung überlebt ein Neuladen (Cookie), Abmelden führt zur Anmeldung
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
-  await page.goto('/more');
+  await page.goto('/profile');
   // AGPL-3.0 §13: Link zum Quelltext in der Oberfläche
   await expect(
     page.getByRole('link', { name: /Quellcode und Lizenz \(AGPL-3\.0\)/ }),
@@ -288,14 +288,14 @@ test('Farbe wählen: wirkt sofort, die des Partners ist gesperrt', async ({ brow
   const { annaEmail, benEmail } = await makeCouple();
   const anna = await newUserContext(browser, testInfo);
   await loginViaUi(anna.page, annaEmail);
-  await anna.page.goto('/more');
+  await anna.page.goto('/profile/appearance');
   await anna.page.getByRole('radio', { name: 'Orchidee' }).click();
   await expect(anna.page.getByText('Farbe gespeichert.')).toBeVisible();
   await expect(anna.page.getByRole('radio', { name: 'Flut, vergeben von Ben' })).toBeDisabled();
 
   const ben = await newUserContext(browser, testInfo);
   await loginViaUi(ben.page, benEmail);
-  await ben.page.goto('/more');
+  await ben.page.goto('/profile/appearance');
   await expect(ben.page.getByRole('radio', { name: 'Orchidee, vergeben von Anna' })).toBeDisabled();
   await ben.page.goto('/');
   await expect(ben.page.locator('.ds-wlane.ds-c-orchid')).toContainText('Anna');

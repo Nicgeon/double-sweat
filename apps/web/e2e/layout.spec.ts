@@ -48,7 +48,7 @@ test('Dunkelmodus: folgt dem System und lässt sich umstellen', async ({ browser
   });
 
   // Manuell auf Hell stellen, auch wenn das System dunkel ist; die Wahl bleibt nach dem Neuladen
-  await page.goto('/more');
+  await page.goto('/profile/appearance');
   await page.getByRole('radio', { name: 'Hell' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   expect(await bg(page)).toBe(LIGHT_BG);
@@ -106,14 +106,19 @@ for (const scheme of ['light', 'dark'] as const) {
     for (const [path, title] of [
       ['/history', 'Verlauf'],
       ['/deal', 'Abmachung'],
-      ['/more', 'Profil'],
+      ['/profile', 'Profil'],
+      ['/profile/account', 'Konto'],
+      ['/profile/appearance', 'Darstellung'],
+      ['/profile/team', 'Team'],
+      ['/profile/devices', 'Geräte und Sitzungen'],
+      ['/profile/data', 'Daten und Löschen'],
       ['/notifications', 'Benachrichtigungen'],
     ] as const) {
       await page.goto(path);
       await expect(page.getByRole('heading', { name: title, level: 1 })).toBeVisible();
       await scan(title);
     }
-    await page.goto('/more');
+    await page.goto('/profile/account');
     await page.getByRole('button', { name: 'Passwort ändern' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     // Einblenden abwarten (axe misst sonst den Kontrast bei halber Deckkraft)

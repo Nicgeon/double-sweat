@@ -1229,6 +1229,9 @@ textarea.ds-field__input {
 .ds-msg__title {
   font: 400 14px / 20px var(--font-body);
 }
+.ds-msg__title--lead {
+  font: 700 16px / 24px var(--font-body);
+}
 .ds-msg__cap {
   font: 400 12px / 16px var(--font-body);
   color: var(--ink-muted);

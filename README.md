@@ -219,7 +219,7 @@ stehen in deren SMTP-Hilfe, Port 465 = `smtps://`, Port 587 = `smtp://` mit STAR
 ## Sprachen
 
 Die Oberfläche gibt es auf **Deutsch** und **Englisch**. Jedes Konto hat seine eigene Sprache (unter _Profil →
-Sprache_); Paare dürfen also verschiedene Sprachen nutzen.
+Darstellung_); Paare dürfen also verschiedene Sprachen nutzen.
 
 - **Oberfläche:** Vor der Anmeldung gilt die zuletzt gewählte Sprache, sonst die des Browsers, sonst
   `DEFAULT_LOCALE` des Servers. Nach der Anmeldung gilt die Sprache des Kontos. Auf den Seiten vor der Anmeldung
@@ -698,8 +698,8 @@ GitHub gelaufen: erst per Probelauf prüfen), siehe [Push](#push-benachrichtigun
 [Release veröffentlichen](#release-veröffentlichen-github).
 Geplant, in dieser Reihenfolge:
 
-1. **Übersicht und Navigation, Fortsetzung:** Profil in Unterseiten und Querschnitt (Tippflächen, Android-Zurück,
-   Skeletons). Die Abmachung (Offenes, Wenn-dann-Karten je Person), die Benachrichtigungen (neue Anlässe,
-   Einstellungen pro Art, Postfach mit Links, Android-Kanäle) und der überarbeitete Check-in sind auf `develop`
+1. **Übersicht und Navigation, Fortsetzung:** Querschnitt (Tippflächen, Android-Zurück, Skeletons, leere Zustände).
+   Die Abmachung (Offenes, Wenn-dann-Karten je Person), die Benachrichtigungen (neue Anlässe, Einstellungen pro Art,
+   Postfach mit Links, Android-Kanäle), der überarbeitete Check-in und das Profil in Unterseiten sind auf `develop`
    umgesetzt.
 2. **Health Connect** (Android): Workout-Vorschläge aus Wearables, nur auf dem Gerät, das Foto bleibt Pflicht.

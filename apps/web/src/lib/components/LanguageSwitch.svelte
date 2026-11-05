@@ -2,7 +2,7 @@
   import { i18n, LANGUAGE_NAMES, LOCALES, t } from '#lib/i18n/index.svelte.ts';
 </script>
 
-<!-- Sprachwahl für Seiten vor der Anmeldung; nach der Anmeldung gilt die Sprache des Kontos (unter "Mehr") -->
+<!-- Sprachwahl für Seiten vor der Anmeldung; nach der Anmeldung gilt die Sprache des Kontos (unter "Profil → Darstellung") -->
 <nav class="langs" aria-label={t('common.language')}>
   {#each LOCALES as locale (locale)}
     <button

@@ -51,17 +51,20 @@ test('Sprache wechseln: sofort sichtbar, am Konto gespeichert, nach dem Neuladen
   const { annaEmail } = await makeCouple();
   const { page } = await newUserContext(browser, testInfo);
   await loginViaUi(page, annaEmail);
-  await page.goto('/more');
+  await page.goto('/profile');
   await expect(page.getByRole('heading', { name: 'Profil', level: 1 })).toBeVisible();
+  // Die Sprache steht unter Darstellung
+  await page.getByRole('link', { name: /Darstellung/ }).click();
+  await expect(page.getByRole('heading', { name: 'Darstellung', level: 1 })).toBeVisible();
 
   await page.getByRole('radio', { name: 'English' }).click();
-  await expect(page.getByRole('heading', { name: 'Profile', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Appearance', level: 1 })).toBeVisible();
   await expect(page.getByText('Language saved.')).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   expect((await profile(page)).user.locale).toBe('en');
 
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Profile', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Appearance', level: 1 })).toBeVisible();
   await page.goto('/deal');
   await expect(page.getByRole('heading', { name: 'Agreement', level: 1 })).toBeVisible();
   await expect(page.getByText('If you miss it:')).toBeVisible();
@@ -69,9 +72,9 @@ test('Sprache wechseln: sofort sichtbar, am Konto gespeichert, nach dem Neuladen
     page.getByText(/Whoever misses their weekly goal owes the other their own stake\./),
   ).toBeVisible();
 
-  await page.goto('/more');
+  await page.goto('/profile/appearance');
   await page.getByRole('radio', { name: 'Deutsch' }).click();
-  await expect(page.getByRole('heading', { name: 'Profil', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Darstellung', level: 1 })).toBeVisible();
   expect((await profile(page)).user.locale).toBe('de');
 });
 
@@ -106,7 +109,7 @@ test('Paar mit zwei Sprachen: Mitteilungen kommen in der Sprache des Empfängers
   // Ben liest Englisch, Anna Deutsch
   const benPage = await newUserContext(browser, testInfo, undefined, ENGLISH);
   await loginViaUi(benPage.page, benEmail);
-  await benPage.page.goto('/more');
+  await benPage.page.goto('/profile/appearance');
   await benPage.page.getByRole('radio', { name: 'English' }).click();
   await expect(benPage.page.getByText('Language saved.')).toBeVisible();
 
@@ -126,7 +129,7 @@ test('Paar mit zwei Sprachen: Mitteilungen kommen in der Sprache des Empfängers
   await expect(benPage.page.getByText('Anna is nudging you: time to work out!')).toBeVisible();
 
   // Dieselbe Mitteilung erscheint nach einem Sprachwechsel in der neuen Sprache
-  await benPage.page.goto('/more');
+  await benPage.page.goto('/profile/appearance');
   await benPage.page.getByRole('radio', { name: 'Deutsch' }).click();
   await benPage.page.goto('/notifications');
   await expect(benPage.page.getByText('Anna stupst dich an: Zeit fürs Training!')).toBeVisible();
