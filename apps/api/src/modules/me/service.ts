@@ -5,6 +5,7 @@ import type { PartnerColor } from '../../domain/colors.js';
 import type { Locale } from '../../i18n/locales.js';
 import { badRequest, conflict } from '../../util/errors.js';
 import { verifyReauth } from '../auth/service.js';
+import { mergePrefs, type NotificationPrefs } from '../notifications/prefs.js';
 import { photoKeysFor } from '../photos/keys.js';
 import { getMembership, partnerColorOf, TEAM_SIZE } from '../teams/service.js';
 import { requestTimezoneChange } from './timezone.js';
@@ -15,13 +16,16 @@ export interface ProfileUpdate {
   reminderTime?: string | undefined;
   color?: PartnerColor | undefined;
   locale?: Locale | undefined;
+  notifications?: Partial<NotificationPrefs> | undefined;
 }
 
 export function updateProfile(ctx: AppContext, user: User, update: ProfileUpdate): User {
-  const set: Partial<Pick<User, 'displayName' | 'reminderTime' | 'locale'>> = {};
+  const set: Partial<Pick<User, 'displayName' | 'reminderTime' | 'locale' | 'notifyPrefs'>> = {};
   if (update.displayName !== undefined) set.displayName = update.displayName.trim();
   if (update.reminderTime !== undefined) set.reminderTime = update.reminderTime;
   if (update.locale !== undefined) set.locale = update.locale;
+  if (update.notifications !== undefined && Object.keys(update.notifications).length > 0)
+    set.notifyPrefs = mergePrefs(user.notifyPrefs, update.notifications);
   if (
     Object.keys(set).length === 0 &&
     update.timezone === undefined &&

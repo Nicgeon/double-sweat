@@ -78,7 +78,10 @@ describe('Reaktionen auf Check-ins', () => {
       body: 'Ben applaudiert dir.',
       data: { checkinId: id },
     });
-    expect((await ben.get('/notifications')).body.notifications).toEqual([]);
+    // Ben bekommt nur die Meldung zu Annas Check-in, keine zu seiner eigenen Reaktion
+    expect(
+      (await ben.get('/notifications')).body.notifications.map((n: { type: string }) => n.type),
+    ).toEqual(['checkin']);
   });
 
   it('mit dem Check-in verschwindet auch die Reaktion', async () => {

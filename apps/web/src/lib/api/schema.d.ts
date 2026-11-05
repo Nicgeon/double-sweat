@@ -1443,6 +1443,23 @@ export interface paths {
                          * @enum {string}
                          */
                         locale?: "de" | "en";
+                        /** @description Schalter je Art von Mitteilung; nicht genannte bleiben, wie sie sind */
+                        notifications?: {
+                            /** @description Abendliche Erinnerung, wenn das Wochenziel gefährdet ist */
+                            reminder?: boolean;
+                            /** @description Anstupser vom Partner */
+                            nudge?: boolean;
+                            /** @description Check-ins des Partners und sein erreichtes Wochenziel */
+                            checkin?: boolean;
+                            /** @description Reaktionen auf deine Fotos */
+                            reaction?: boolean;
+                            /** @description Änderungen an Einsatz und Belohnung, Einlösungen */
+                            agreement?: boolean;
+                            /** @description Wochenergebnis, Schulden und Belohnungen */
+                            result?: boolean;
+                            /** @description Serie: Meilensteine und gerissene Serie */
+                            streak?: boolean;
+                        };
                     };
                 };
             };
@@ -5196,12 +5213,30 @@ export interface components {
              * @enum {string}
              */
             locale: "de" | "en";
+            notifications: components["schemas"]["NotificationPrefs"];
         };
         /**
          * @description Identitätsfarbe aus der Palette (Tokens in design/tokens.json)
          * @enum {string}
          */
         PartnerColor: "ember" | "tide" | "orchid" | "moss" | "sky" | "cocoa" | "graphite";
+        /** @description Welche Arten von Mitteilungen per Push kommen. Das Postfach bekommt immer alles. */
+        NotificationPrefs: {
+            /** @description Abendliche Erinnerung, wenn das Wochenziel gefährdet ist */
+            reminder: boolean;
+            /** @description Anstupser vom Partner */
+            nudge: boolean;
+            /** @description Check-ins des Partners und sein erreichtes Wochenziel */
+            checkin: boolean;
+            /** @description Reaktionen auf deine Fotos */
+            reaction: boolean;
+            /** @description Änderungen an Einsatz und Belohnung, Einlösungen */
+            agreement: boolean;
+            /** @description Wochenergebnis, Schulden und Belohnungen */
+            result: boolean;
+            /** @description Serie: Meilensteine und gerissene Serie */
+            streak: boolean;
+        };
         Team: {
             id: string;
             name: string;
@@ -5427,6 +5462,8 @@ export interface components {
             } | null;
             createdAt: number;
             read: boolean;
+            /** @description Pfad in der App, zu dem die Mitteilung führt (null: nirgends hin) */
+            link: string | null;
         };
     };
     responses: never;

@@ -2,7 +2,7 @@ import { App } from '@capacitor/app';
 import { session } from '#lib/state/session.svelte.ts';
 import { goto } from '$app/navigation';
 import type { JoinLink } from './deeplink.ts';
-import { parseJoinLink } from './deeplink.ts';
+import { parseJoinLink, parseOpenLink } from './deeplink.ts';
 import { ALLOW_HTTP, NATIVE } from './flag.ts';
 
 /** Einladung, die per Link in die App gekommen ist und auf Bestätigung des Servers wartet. */
@@ -11,8 +11,16 @@ class PendingJoin {
 }
 export const pendingJoin = new PendingJoin();
 
-/** Verarbeitet einen geöffneten Link der App (doublesweat://join?...). Fremde Links werden ignoriert. */
+/**
+ * Verarbeitet einen geöffneten Link der App: doublesweat://join?... (Einladung) oder doublesweat://open?path=...
+ * (Tipp auf eine Mitteilung). Fremde und ungültige Links werden ignoriert.
+ */
 export async function handleOpenedUrl(url: string): Promise<void> {
+  const target = parseOpenLink(url);
+  if (target) {
+    await goto(target);
+    return;
+  }
   const link = parseJoinLink(url);
   if (!link) return;
   if (link.server === session.serverUrl) {

@@ -85,7 +85,7 @@ export function setReaction(
     ctx.push.notify(row.userId, {
       type: 'reaction',
       params: { name: user.displayName, kind },
-      data: { checkinId },
+      data: { checkinId, kind },
     });
   }
   return reactionsFor(ctx.db, [checkinId]).get(checkinId) ?? [];

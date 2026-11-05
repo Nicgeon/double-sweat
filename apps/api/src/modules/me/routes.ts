@@ -6,6 +6,7 @@ import {
   errorResponses,
   jsonBody,
   jsonResponse,
+  notificationPrefsSchema,
   okSchema,
   partnerColorSchema,
   protectedSecurity,
@@ -84,6 +85,10 @@ export function meRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
               .enum(LOCALES)
               .optional()
               .describe('Sprache der Oberfläche, Mitteilungen und Mails'),
+            notifications: notificationPrefsSchema
+              .partial()
+              .optional()
+              .describe('Schalter je Art von Mitteilung; nicht genannte bleiben, wie sie sind'),
           }),
         ),
       },

@@ -10,6 +10,12 @@ export type NotificationType =
   | 'reward_set'
   | 'reward_earned'
   | 'reaction'
+  | 'checkin'
+  | 'goal_reached'
+  | 'debt_redeemed'
+  | 'reward_received'
+  | 'partner_joined'
+  | 'week_result'
   | 'team_dissolved'
   | 'streak_milestone'
   | 'streak_broken'
@@ -41,6 +47,12 @@ const streakRisk: Record<Locale, Template> = {
   de: (p) =>
     Number(p.streak) >= 2 ? ` Eure Serie von ${p.streak} Wochen steht auf dem Spiel.` : '',
   en: (p) => (Number(p.streak) >= 2 ? ` Your streak of ${p.streak} weeks is on the line.` : ''),
+};
+
+/** "3 von 3" oder, ohne Ziel in dieser Woche, "2 Tage (kein Ziel)". Ein Ziel von 0 steht für "kein Ziel". */
+const resultSide: Record<Locale, (done: unknown, goal: unknown) => string> = {
+  de: (done, goal) => (Number(goal) > 0 ? `${done}/${goal}` : `${done} Tage, kein Ziel`),
+  en: (done, goal) => (Number(goal) > 0 ? `${done}/${goal}` : `${done} days, no goal`),
 };
 
 const TEMPLATES: Record<NotificationType, Record<Locale, Template>> = {
@@ -106,6 +118,33 @@ const TEMPLATES: Record<NotificationType, Record<Locale, Template>> = {
   reaction: {
     de: (p) => `${p.name} ${REACTION_PHRASE.de[String(p.kind)] ?? 'reagiert auf dein Training'}.`,
     en: (p) => `${p.name} ${REACTION_PHRASE.en[String(p.kind)] ?? 'reacted to your workout'}.`,
+  },
+  // Kurz und neutral: weder Trainingsart noch Notiz, nur dass etwas passiert ist
+  checkin: {
+    de: (p) => `${p.name} hat eingecheckt.`,
+    en: (p) => `${p.name} checked in.`,
+  },
+  goal_reached: {
+    de: (p) => `${p.name} hat das Wochenziel erreicht.`,
+    en: (p) => `${p.name} reached the weekly goal.`,
+  },
+  debt_redeemed: {
+    de: (p) => `${p.name} hat deinen Einsatz als eingelöst markiert: „${p.bet}“.`,
+    en: (p) => `${p.name} marked your stake as settled: “${p.bet}”.`,
+  },
+  reward_received: {
+    de: (p) => `${p.name} hat die Belohnung erhalten: „${p.reward}“.`,
+    en: (p) => `${p.name} received the reward: “${p.reward}”.`,
+  },
+  partner_joined: {
+    de: (p) => `${p.name} ist deinem Team beigetreten.`,
+    en: (p) => `${p.name} joined your team.`,
+  },
+  week_result: {
+    de: (p) =>
+      `KW ${p.week}: du ${resultSide.de(p.mine, p.myGoal)}, ${p.other} ${resultSide.de(p.theirs, p.theirGoal)}.`,
+    en: (p) =>
+      `Week ${p.week}: you ${resultSide.en(p.mine, p.myGoal)}, ${p.other} ${resultSide.en(p.theirs, p.theirGoal)}.`,
   },
   team_dissolved: {
     de: (p) => `${p.name ?? 'Dein Partner'} hat das Team aufgelöst. Dein Konto bleibt bestehen.`,

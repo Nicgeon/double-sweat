@@ -25,6 +25,9 @@ test('Bildschirmfotos', async ({ browser }, testInfo) => {
   await ben.call('put', '/bets', { text: 'Kinoabend zahlen' });
   await anna.call('put', '/rewards', { text: 'Pizza backen' });
   await ben.call('put', '/rewards', { text: 'Massage' });
+  // Etwas für das Postfach von Anna
+  await ben.checkin('laufen');
+  await ben.call('post', '/nudges');
   const { page } = await newUserContext(browser, testInfo);
   await loginViaUi(page, annaEmail);
   const name = testInfo.project.name;
@@ -41,11 +44,13 @@ test('Bildschirmfotos', async ({ browser }, testInfo) => {
   await expect(page.getByRole('heading', { name: 'Eingecheckt.' })).toBeVisible();
   await shot('done');
   await page.goto('/');
-  await expect(page.locator('.ds-photo')).toHaveCount(1);
+  await expect(page.locator('.ds-photo')).toHaveCount(2); // Annas Foto und das von Ben
   await shot('start-mit-foto');
   for (const [path, file] of [
     ['/history', 'verlauf'],
     ['/deal', 'abmachung'],
+    ['/notifications', 'postfach'],
+    ['/notifications/settings', 'benachrichtigungen'],
     ['/more', 'mehr'],
   ] as const) {
     await page.goto(path);
@@ -57,6 +62,8 @@ test('Bildschirmfotos', async ({ browser }, testInfo) => {
   for (const [path, file] of [
     ['/', 'start-dunkel'],
     ['/deal', 'abmachung-dunkel'],
+    ['/notifications', 'postfach-dunkel'],
+    ['/notifications/settings', 'benachrichtigungen-dunkel'],
   ] as const) {
     await page.goto(path);
     await page.waitForTimeout(400);

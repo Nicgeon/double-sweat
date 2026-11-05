@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm';
+import { DateTime } from 'luxon';
 import type { AppContext } from '../context.js';
 import { users, weekResults } from '../db/schema.js';
 import { loadTeamStreak } from '../modules/history/service.js';
@@ -63,9 +64,10 @@ export function settleWeeksJob(ctx: AppContext): void {
 }
 
 /**
- * Serie der Wochen eines Teams: sobald beide Partner einer Woche abgerechnet sind (bei verschiedenen Zeitzonen
- * kann das in verschiedenen Läufen sein), gibt es einen Meilenstein oder, wenn eine Serie ab zwei Wochen endet,
- * eine Info. Jede Woche wird pro Team nur einmal bewertet.
+ * Ergebnis und Serie der Wochen eines Teams: sobald beide Partner einer Woche abgerechnet sind (bei verschiedenen
+ * Zeitzonen kann das in verschiedenen Läufen sein), bekommen beide das Wochenergebnis ("KW 44: du 3/3, Ben 2/3"),
+ * dazu einen Meilenstein oder, wenn eine Serie ab zwei Wochen endet, eine Info. Jede Woche wird pro Team nur einmal
+ * bewertet.
  */
 function notifyStreaks(ctx: AppContext, settled: ReturnType<typeof settleDueWeeks>): void {
   const done = new Set<string>();
@@ -73,7 +75,11 @@ function notifyStreaks(ctx: AppContext, settled: ReturnType<typeof settleDueWeek
     const key = `${week.teamId}:${week.weekStart}`;
     if (done.has(key)) continue;
     const partner = ctx.db
-      .select({ met: weekResults.met })
+      .select({
+        met: weekResults.met,
+        goalDays: weekResults.goalDays,
+        doneDays: weekResults.doneDays,
+      })
       .from(weekResults)
       .where(and(eq(weekResults.userId, week.partnerId), eq(weekResults.weekStart, week.weekStart)))
       .get();
@@ -81,6 +87,24 @@ function notifyStreaks(ctx: AppContext, settled: ReturnType<typeof settleDueWeek
     done.add(key);
     const members = [week.userId, week.partnerId];
     const data = { weekStart: week.weekStart };
+    // Wochenergebnis: jede Person sieht sich zuerst. Ein Ziel von 0 steht für "kein Ziel in dieser Woche".
+    const number = DateTime.fromISO(week.weekStart, { zone: 'utc' }).weekNumber;
+    const mine = { done: week.doneDays, goal: week.goalDays ?? 0 };
+    const theirs = { done: partner.doneDays, goal: partner.goalDays ?? 0 };
+    const resultFor = (self: typeof mine, other: typeof mine, otherId: string) => ({
+      type: 'week_result' as const,
+      params: {
+        week: number,
+        mine: self.done,
+        myGoal: self.goal,
+        other: nameOf(ctx, otherId),
+        theirs: other.done,
+        theirGoal: other.goal,
+      },
+      data,
+    });
+    ctx.push.notify(week.userId, resultFor(mine, theirs, week.partnerId));
+    ctx.push.notify(week.partnerId, resultFor(theirs, mine, week.userId));
     if (week.met === true && partner.met === true) {
       const weeks = loadTeamStreak(ctx.db, week.teamId).current;
       if (isMilestone(weeks))

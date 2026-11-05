@@ -19,6 +19,19 @@ export const partnerColorSchema = z
 
 export const okSchema = z.object({ ok: z.literal(true) }).openapi('Ok');
 
+/** Schalter je Art von Mitteilung (siehe modules/notifications/prefs.ts); `true` = kommt per Push an. */
+export const notificationPrefsSchema = z
+  .object({
+    reminder: z.boolean().describe('Abendliche Erinnerung, wenn das Wochenziel gefährdet ist'),
+    nudge: z.boolean().describe('Anstupser vom Partner'),
+    checkin: z.boolean().describe('Check-ins des Partners und sein erreichtes Wochenziel'),
+    reaction: z.boolean().describe('Reaktionen auf deine Fotos'),
+    agreement: z.boolean().describe('Änderungen an Einsatz und Belohnung, Einlösungen'),
+    result: z.boolean().describe('Wochenergebnis, Schulden und Belohnungen'),
+    streak: z.boolean().describe('Serie: Meilensteine und gerissene Serie'),
+  })
+  .openapi('NotificationPrefs');
+
 export const userSchema = z
   .object({
     id: z.string(),
@@ -30,6 +43,9 @@ export const userSchema = z
     pendingTimezone: z.string().nullable(),
     reminderTime: z.string(),
     locale: z.enum(LOCALES).describe('Sprache der Oberfläche, Mitteilungen und Mails'),
+    notifications: notificationPrefsSchema.describe(
+      'Welche Arten von Mitteilungen per Push kommen. Das Postfach bekommt immer alles.',
+    ),
   })
   .openapi('User');
 

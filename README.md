@@ -239,10 +239,22 @@ Sprache_); Paare dürfen also verschiedene Sprachen nutzen.
 
 ## Push-Benachrichtigungen
 
-**Mitteilungen:** Anstupsen, Abend-Erinnerung, Schulden, Belohnungen, Reaktionen und die **Serie**: Ab zwei Wochen
+**Mitteilungen:** Anstupsen, Abend-Erinnerung, Check-ins des Partners ("Ben hat eingecheckt.", beim Check-in, der das
+Wochenziel erfüllt, stattdessen "Ben hat das Wochenziel erreicht."; nur der erste des Tages), Reaktionen, das
+**Wochenergebnis** am Montag ("KW 44: du 3/3, Ben 2/3."), Schulden und Belohnungen samt Einlösung ("Ben hat die
+Belohnung erhalten"), Änderungen an Einsatz und Belohnung, der Beitritt des Partners und die **Serie**: Ab zwei Wochen
 in Folge nennt die Abend-Erinnerung, dass eure Serie auf dem Spiel steht. Bei 2, 4, 8, 12, 26 und 52 Wochen (danach
 alle 52) gratuliert der Server beiden. Reißt eine Serie von mindestens zwei Wochen, bekommen beide eine kurze Info
-mit der bisherigen Länge.
+mit der bisherigen Länge. Die Texte bleiben kurz und neutral (kein Betrag, keine Trainingsart, keine Notiz).
+
+**Postfach und Einstellungen.** Jede Mitteilung landet im **Postfach** (Glocke, "Benachrichtigungen"), nach Tagen
+gruppiert, ungelesen markiert. Ein Tipp führt zur passenden Stelle: Check-in und Reaktion öffnen das Foto,
+Anstupser und Erinnerung den Check-in, Einsatz, Schuld und Belohnung die Abmachung, Wochenergebnis und Serie den
+Verlauf. Unter **Profil → Benachrichtigungen** schaltest du pro Art ab, was als Push kommt: Abend-Erinnerung (mit
+Uhrzeit), Anstupser, Check-ins des Partners, Reaktionen, Änderungen an der Abmachung, Wochenergebnis und Serie. Das
+Postfach schreibt immer alles mit; abgeschaltet wird nur der Push (die Abend-Erinnerung entsteht dann gar nicht).
+Beitritt und Auflösung des Teams kommen immer an. Standard: alles an. Per API: `PATCH /api/v1/me` mit
+`{"notifications": {"nudge": false}}`; `GET /api/v1/notifications` liefert je Eintrag `link` (Pfad in der App).
 
 - **UnifiedPush / ntfy** (empfohlen, vollständig selbst hostbar; für die Android-App): Auf dem Handy
   die ntfy-App als Verteiler installieren. Läuft ntfy in deinem eigenen Netz, trage dessen Hostnamen in
@@ -375,8 +387,10 @@ etwas tut. (Eigene Schemata kann auch eine fremde App beanspruchen; deshalb gibt
 "Profil → Benachrichtigungen" Push ein. Bei mehreren Verteilern fragt die App, welchen sie nehmen soll. Wer keinen
 Verteiler möchte, nutzt die App-Version mit **FCM** (siehe [Push](#fcm-google-für-geräte-ohne-unifiedpush)). Ab
 Android 13 erscheint die Frage nach der Erlaubnis für Benachrichtigungen. Läuft ntfy in deinem Heimnetz, trage
-dessen Hostnamen in `PUSH_ALLOWED_HOSTS` des Servers ein. Anstupser, Abend-Erinnerung und Abrechnung bekommen eigene
-Benachrichtigungskanäle, die du in den Android-Einstellungen einzeln einstellst. Ohne Verteiler läuft alles weiter,
+dessen Hostnamen in `PUSH_ALLOWED_HOSTS` des Servers ein. Jede Gruppe (Anstupser, Erinnerung, Check-ins des Partners,
+Reaktionen, Abmachung, Wochenergebnis, Serie, Sonstiges) hat einen eigenen Benachrichtigungskanal, den du in den
+Android-Einstellungen einzeln einstellst (Reaktionen und Serie sind leise). Ein Tipp auf die Benachrichtigung öffnet
+die App an der passenden Stelle (`doublesweat://open?path=…`, die Oberfläche kennt nur ihre eigenen Seiten). Ohne Verteiler läuft alles weiter,
 du siehst die Meldungen dann in der App unter "Benachrichtigungen".
 
 **Test-APK für ein Gerät im Heimnetz.** `pnpm android:debug` baut ein Debug-APK (`...-debug.apk`, eigene App-ID

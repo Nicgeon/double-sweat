@@ -123,14 +123,17 @@ describe('Benachrichtigungen bei Abrechnung und Team-Auflösung', () => {
     expect(forAnna[0]?.data).toMatchObject({ weekStart: W1 });
   });
 
-  it('wer sein Ziel erreicht oder keinen Einsatz hat, bekommt nichts', async () => {
+  it('wer sein Ziel erreicht oder keinen Einsatz hat, bekommt keine Schuld und kein Ergebnis', async () => {
     const { env, anna, ben } = await pair({ bet: null });
     await checkinDays(env, anna, W1, 3);
     env.clock.set(afterWeek(W1));
     settleWeeksJob(env.ctx);
     await env.ctx.idle();
-    expect((await anna.get('/notifications')).body.notifications).toEqual([]);
-    expect((await ben.get('/notifications')).body.notifications).toEqual([]);
+    const types = async (who: typeof anna) =>
+      (await who.get('/notifications')).body.notifications.map((n: { type: string }) => n.type);
+    // Anna trainiert allein: Ben erfährt davon, sonst kommt nichts (ohne Einsatz wird die Woche nicht gewertet)
+    expect(await types(anna)).toEqual([]);
+    expect((await types(ben)).sort()).toEqual(['checkin', 'checkin', 'goal_reached']);
   });
 
   it('ein zweiter Lauf benachrichtigt nicht erneut', async () => {
@@ -141,7 +144,7 @@ describe('Benachrichtigungen bei Abrechnung und Team-Auflösung', () => {
     await env.ctx.idle();
     const settlement = async () =>
       (await ben.get('/notifications')).body.notifications.filter(
-        (n: { type: string }) => n.type !== 'bet_set',
+        (n: { type: string }) => n.type === 'debt_created',
       );
     expect(await settlement()).toHaveLength(2);
     settleWeeksJob(env.ctx);

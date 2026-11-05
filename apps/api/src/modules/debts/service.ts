@@ -88,6 +88,14 @@ export function setRedeemed(ctx: AppContext, user: User, id: string, redeemed: b
       )
       .where(eq(debts.id, id))
       .run();
+    // Wer den Einsatz schuldete, erfährt, dass er als eingelöst gilt (beim Zurücknehmen kommt nichts)
+    if (redeemed) {
+      ctx.push.notify(debt.debtorId, {
+        type: 'debt_redeemed',
+        params: { name: user.displayName, bet: debt.betText },
+        data: { debtId: debt.id },
+      });
+    }
   }
   return toDto(ctx, findDebt(ctx, user, id), user.id);
 }

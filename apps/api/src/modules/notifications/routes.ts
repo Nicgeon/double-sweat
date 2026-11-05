@@ -14,6 +14,10 @@ const notificationSchema = z
     data: z.record(z.string(), z.unknown()).nullable(),
     createdAt: z.number(),
     read: z.boolean(),
+    link: z
+      .string()
+      .nullable()
+      .describe('Pfad in der App, zu dem die Mitteilung führt (null: nirgends hin)'),
   })
   .openapi('Notification');
 

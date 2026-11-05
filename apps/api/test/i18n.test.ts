@@ -108,6 +108,11 @@ describe('Mitteilungen in der Sprache des Empfängers', () => {
           role: type === 'reward_earned' ? 'recipient' : 'debtor',
           bet: 'Kaffee',
           reward: 'Kino',
+          week: 44,
+          mine: 3,
+          myGoal: 3,
+          theirs: 2,
+          theirGoal: 3,
         });
         expect(title).toBe('Double Sweat');
         expect(body.length).toBeGreaterThan(5);

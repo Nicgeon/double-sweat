@@ -1162,6 +1162,105 @@ textarea.ds-field__input {
   color: var(--ink-muted);
 }
 
+/* ---------- Listenkarte, Postfach-Zeile, Einstellungszeile ---------- */
+/* Karte ohne Innenrand: ihre Zeilen laufen bis an den Rand und trennen sich durch eine Linie */
+.ds-card--flush {
+  padding: 0;
+  overflow: hidden;
+}
+.ds-card--flush > * + * {
+  border-top: 1px solid var(--border);
+}
+.ds-tile {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.ds-tile--done {
+  background: var(--done-soft);
+  color: var(--done-ink);
+}
+.ds-tile--alert {
+  background: var(--alert-soft);
+  color: var(--alert-ink);
+}
+.ds-tile--risk {
+  background: var(--risk-soft);
+  color: var(--risk-ink);
+}
+.ds-msg {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 64px;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  color: var(--ink);
+  text-decoration: none;
+}
+.ds-msg__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ds-msg__title {
+  font: 400 14px / 20px var(--font-body);
+}
+.ds-msg__cap {
+  font: 400 12px / 16px var(--font-body);
+  color: var(--ink-muted);
+}
+/* Ungelesen: fett und mit Punkt (Text und Punkt, nicht nur Farbe) */
+.ds-msg--new .ds-msg__title {
+  font-weight: 700;
+}
+.ds-msg--read .ds-msg__title {
+  color: var(--ink-muted);
+}
+.ds-msg__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--alert-ink);
+}
+.ds-msg__go {
+  flex: none;
+  color: var(--ink-muted);
+}
+a.ds-msg:hover {
+  background: var(--surface-2);
+}
+.ds-setting {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 60px;
+  padding: var(--space-2) var(--space-4);
+}
+.ds-setting .ds-toggle {
+  flex: 1;
+}
+/* Eine Zeile "Titel … Wert/Eingabe" in einer flush-Karte (Uhrzeit) */
+.ds-setting__title {
+  flex: 1;
+  font: 700 16px / 24px var(--font-body);
+}
+.ds-setting__input {
+  min-height: var(--tap-min);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: 700 16px / 24px var(--font-body);
+}
+
 /* ---------- NavBar ---------- */
 .ds-nav {
   background: var(--surface);

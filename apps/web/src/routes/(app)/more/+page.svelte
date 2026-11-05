@@ -8,22 +8,20 @@
   import Card from '#lib/components/Card.svelte';
   import ColorPicker from '#lib/components/ColorPicker.svelte';
   import Field from '#lib/components/Field.svelte';
+  import Icon from '#lib/components/Icon.svelte';
   import InviteSheet from '#lib/components/InviteSheet.svelte';
   import PasswordSheet from '#lib/components/PasswordSheet.svelte';
   import Page from '#lib/components/Page.svelte';
   import Segmented from '#lib/components/Segmented.svelte';
   import Sheet from '#lib/components/Sheet.svelte';
-  import Toggle from '#lib/components/Toggle.svelte';
   import { session } from '#lib/state/session.svelte.ts';
   import { type ThemeChoice, theme } from '#lib/state/theme.svelte.ts';
   import { dateAndTime, longDate } from '#lib/util/format.ts';
   import { downloadExport } from '#lib/util/export.ts';
   import { NATIVE } from '#lib/native/flag.ts';
   import { APP_VERSION, LICENSE_NAME, SOURCE_URL } from '#lib/util/source.ts';
-  import type { PushDistributor } from '#lib/native/plugins.ts';
-  import { describeAgent, deviceLabel, PUSH_PROVIDER, pushActive, pushSupported, togglePushState } from '#lib/util/push.ts';
+  import { describeAgent } from '#lib/util/push.ts';
 
-  type Device = { id: string; provider: string; deviceLabel: string | null; createdAt: number };
   type Sess = { id: string; kind: string; label: string | null; createdAt: number; lastSeenAt: number; current: boolean };
 
   const user = $derived(session.user);
@@ -32,16 +30,11 @@
   const team = $derived(session.team);
 
   let name = $state(session.user?.displayName ?? '');
-  let reminder = $state(session.user?.reminderTime ?? '19:00');
   let timezone = $state(session.user?.timezone ?? 'Europe/Berlin');
   let color = $state<PartnerColor>(session.user?.color ?? 'ember');
   let notice = $state<string | null>(null);
   let error = $state<string | null>(null);
   let saving = $state(false);
-  let pushOn = $state(false);
-  let pushBusy = $state(false);
-  let pushNote = $state<string | null>(null);
-  let devices = $state<Device[]>([]);
   let sessions = $state<Sess[]>([]);
   let inviteOpen = $state(false);
   let sheet = $state<'' | 'email' | 'password' | 'export' | 'delete' | 'dissolve'>('');
@@ -65,24 +58,19 @@
 
   async function loadLists() {
     try {
-      devices = unwrap(await api.GET('/api/v1/push/subscriptions')).subscriptions;
       sessions = unwrap(await api.GET('/api/v1/auth/sessions')).sessions;
     } catch (e) {
       fail(e);
     }
   }
-  onMount(async () => {
-    await loadLists();
-    pushOn = await pushActive();
-  });
+  onMount(loadLists);
 
   async function saveProfile() {
     saving = true;
     error = null;
     try {
-      const body: { displayName?: string; reminderTime?: string; timezone?: string } = {};
+      const body: { displayName?: string; timezone?: string } = {};
       if (name.trim() !== user?.displayName) body.displayName = name.trim();
-      if (reminder !== user?.reminderTime) body.reminderTime = reminder;
       if (timezone !== user?.timezone && timezone !== user?.pendingTimezone) body.timezone = timezone;
       if (Object.keys(body).length === 0) return ok(t('more.nothingToSave'));
       unwrap(await api.PATCH('/api/v1/me', { body }));
@@ -120,47 +108,6 @@
     }
   }
 
-  const PROVIDER_NAMES: Record<string, string> = { webpush: 'Web Push', unifiedpush: 'UnifiedPush', fcm: 'FCM' };
-  let pushChoices = $state<PushDistributor[] | null>(null);
-
-  async function togglePush(on: boolean, choice?: string) {
-    pushBusy = true;
-    pushNote = null;
-    pushChoices = null;
-    try {
-      const outcome = await togglePushState(on, deviceLabel(), choice);
-      pushOn = outcome.active;
-      pushChoices = outcome.choices;
-      pushNote = outcome.note;
-      if (!on) {
-        const mine = devices.find((d) => d.provider === PUSH_PROVIDER);
-        if (mine && !NATIVE) await api.DELETE('/api/v1/push/subscriptions/{id}', { params: { path: { id: mine.id } } });
-      }
-      await loadLists();
-    } catch (e) {
-      pushOn = !on;
-      fail(e);
-    } finally {
-      pushBusy = false;
-    }
-  }
-
-  async function testPush() {
-    try {
-      unwrap(await api.POST('/api/v1/push/test'));
-      ok(t('more.pushTestSent'));
-    } catch (e) {
-      fail(e);
-    }
-  }
-  async function removeDevice(id: string) {
-    try {
-      unwrap(await api.DELETE('/api/v1/push/subscriptions/{id}', { params: { path: { id } } }));
-      await loadLists();
-    } catch (e) {
-      fail(e);
-    }
-  }
   async function endSession(id: string) {
     try {
       unwrap(await api.DELETE('/api/v1/auth/sessions/{id}', { params: { path: { id } } }));
@@ -231,7 +178,6 @@
       <Card title={t('more.profile')}>
         <form class="form" onsubmit={(e) => { e.preventDefault(); void saveProfile(); }}>
           <Field label={t('common.displayName')} bind:value={name} maxlength={40} required />
-          <Field label={t('more.reminderAt')} type="time" bind:value={reminder} hint={t('more.reminderHint')} required />
           <div class="ds-field">
             <label class="ds-field__label" for="tz">{t('more.timezone')}</label>
             <div class="ds-field__control">
@@ -275,36 +221,17 @@
         />
       </Card>
 
-      <Card title={t('more.pushCard')}>
-        <div class="stack">
-          {#if pushSupported()}
-            <Toggle label={t('more.pushToggle')} hint="{NATIVE ? `${t('more.pushHintNative')} ` : ''}{t('more.pushHint', { name: partner?.displayName ?? t('more.pushHintPartner') })}" bind:checked={pushOn} disabled={pushBusy} onchange={togglePush} />
-          {:else}
-            <p class="small muted">{t('more.pushUnsupported')}</p>
-          {/if}
-          {#if pushNote}<Banner tone="info">{pushNote}</Banner>{/if}
-          {#if pushChoices}
-            <div class="stack">
-              <p>{t('more.pushChoose')}</p>
-              {#each pushChoices as d (d.id)}
-                <Button variant="secondary" onclick={() => togglePush(true, d.id)}>{d.label}</Button>
-                {#if d.hint}<p class="small muted">{d.hint}</p>{/if}
-              {/each}
-            </div>
-          {/if}
-          {#if devices.length > 0}
-            <ul class="list">
-              {#each devices as d (d.id)}
-                <li class="line">
-                  <span>{d.deviceLabel ?? d.provider}<span class="small muted"> · {t('more.deviceSince', { provider: PROVIDER_NAMES[d.provider] ?? d.provider, date: dateAndTime(d.createdAt) })}</span></span>
-                  <Button variant="ghost" size="sm" icon="trash-2" iconOnly onclick={() => removeDevice(d.id)}>{t('more.removeDevice')}</Button>
-                </li>
-              {/each}
-            </ul>
-            <Button variant="secondary" icon="bell-ring" onclick={testPush}>{t('more.pushTest')}</Button>
-          {/if}
-        </div>
-      </Card>
+      <!-- Push, Erinnerung und die Schalter je Art von Mitteilung haben eine eigene Seite -->
+      <div class="ds-card ds-card--flush">
+        <a class="ds-msg" href="/notifications/settings">
+          <span class="ds-tile"><Icon name="bell" size={20} /></span>
+          <span class="ds-msg__text">
+            <span class="ds-msg__title strong">{t('more.pushCard')}</span>
+            <span class="ds-msg__cap">{t('more.notificationsHint')}</span>
+          </span>
+          <Icon name="chevron-right" size={20} class="ds-msg__go" />
+        </a>
+      </div>
     </div>
 
     <div class="stack">
@@ -402,6 +329,12 @@
 <style>
   .about {
     text-align: center;
+  }
+
+  .strong {
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 24px;
   }
 
   /* Textlink, aber mit Trefferfläche für den Daumen */

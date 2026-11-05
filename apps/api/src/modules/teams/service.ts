@@ -230,7 +230,7 @@ export function joinTeamWithCode(
   const limit = ctx.limiter.hit(`invite:join:${ip}`, 15, HOUR);
   if (limit.limited) throw tooManyRequests(limit.retryAfterSec);
   const now = ctx.clock.now();
-  return ctx.db.transaction(
+  const team = ctx.db.transaction(
     (tx) => {
       if (getMembership(tx, userId))
         throw conflict('already_in_team', 'Du bist bereits in einem Team');
@@ -245,6 +245,31 @@ export function joinTeamWithCode(
     },
     { behavior: 'immediate' },
   );
+  notifyPartnerJoined(ctx, team.id, userId);
+  return team;
+}
+
+/** Sagt der Person, die schon im Team war, dass jemand beigetreten ist. */
+export function notifyPartnerJoined(ctx: AppContext, teamId: string, joinedUserId: string): void {
+  const joined = ctx.db
+    .select({ name: users.displayName })
+    .from(users)
+    .where(eq(users.id, joinedUserId))
+    .get();
+  if (!joined) return;
+  const others = ctx.db
+    .select({ userId: memberships.userId })
+    .from(memberships)
+    .where(eq(memberships.teamId, teamId))
+    .all()
+    .filter((m) => m.userId !== joinedUserId);
+  for (const other of others) {
+    ctx.push.notify(other.userId, {
+      type: 'partner_joined',
+      params: { name: joined.name },
+      data: { userId: joinedUserId },
+    });
+  }
 }
 
 /** Bestehender Nutzer ohne Team legt ein neues an (gleiche Regeln wie bei der Registrierung). */

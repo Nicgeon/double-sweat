@@ -6,6 +6,7 @@ import { localDateAt } from '../domain/weeks.js';
 import { buildMemberProgress } from '../modules/dashboard/service.js';
 import { loadTeamStreak } from '../modules/history/service.js';
 import { currentTimezone } from '../modules/me/timezone.js';
+import { parsePrefs } from '../modules/notifications/prefs.js';
 import { firstScoredWeek } from '../modules/settlement/service.js';
 import { HOUR } from '../util/time.js';
 
@@ -38,6 +39,8 @@ export function remindersJob(ctx: AppContext): void {
       .all();
 
     for (const { user, slot } of members) {
+      // Wer die Erinnerung abgeschaltet hat, bekommt sie weder per Push noch im Postfach
+      if (!parsePrefs(user.notifyPrefs).reminder) continue;
       const zone = currentTimezone(ctx, user);
       const today = localDateAt(now, zone);
       const start = localInstant(today, user.reminderTime, zone);

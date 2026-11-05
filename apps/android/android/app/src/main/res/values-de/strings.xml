@@ -2,6 +2,11 @@
 <resources>
     <string name="channel_nudge">Anstupser</string>
     <string name="channel_reminder">Erinnerungen</string>
+    <string name="channel_partner">Check-ins deines Partners</string>
+    <string name="channel_reaction">Reaktionen</string>
+    <string name="channel_agreement">Änderungen an der Abmachung</string>
+    <string name="channel_result">Wochenergebnis</string>
+    <string name="channel_streak">Serie</string>
     <string name="channel_general">Weitere Mitteilungen</string>
     <string name="push_default_body">Du hast eine neue Benachrichtigung.</string>
     <string name="widget_small_desc">Serie und heutiger Check-in</string>

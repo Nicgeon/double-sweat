@@ -6,6 +6,11 @@
     <string name="custom_url_scheme" translatable="false">doublesweat</string>
     <string name="channel_nudge">Nudges</string>
     <string name="channel_reminder">Reminders</string>
+    <string name="channel_partner">Check-ins from your partner</string>
+    <string name="channel_reaction">Reactions</string>
+    <string name="channel_agreement">Agreement changes</string>
+    <string name="channel_result">Weekly result</string>
+    <string name="channel_streak">Streak</string>
     <string name="channel_general">Other notifications</string>
     <string name="push_default_body">You have a new notification.</string>
     <string name="widget_small_desc">Streak and today’s check-in</string>

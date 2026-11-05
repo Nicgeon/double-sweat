@@ -218,6 +218,14 @@ export function setClaimRedeemed(
       .set({ redeemedAt: redeemed ? ctx.clock.now() : null })
       .where(eq(rewardClaims.id, id))
       .run();
+    // Wer die Belohnung gab, erfährt, dass sie angekommen ist
+    if (redeemed) {
+      ctx.push.notify(claim.giverId, {
+        type: 'reward_received',
+        params: { name: user.displayName, reward: claim.rewardText },
+        data: { rewardClaimId: claim.id },
+      });
+    }
   }
   const fresh = ctx.db.select().from(rewardClaims).where(eq(rewardClaims.id, id)).get();
   return toDto(ctx, fresh as RewardClaim, user.id);

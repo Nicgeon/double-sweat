@@ -1,6 +1,8 @@
 <script lang="ts">
   import { t, tn } from '#lib/i18n/index.svelte.ts';
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import { api, ApiError, type Checkin, unwrap } from '#lib/api/client.ts';
   import Banner from '#lib/components/Banner.svelte';
   import Button from '#lib/components/Button.svelte';
@@ -42,6 +44,17 @@
   onMount(() => {
     void load();
     void streakStore.load();
+  });
+
+  // Links aus dem Postfach (/?photo=ID) öffnen das Foto gleich. Danach verschwindet der Zusatz aus der Adresse, damit
+  // Neuladen und "Zurück" es nicht wieder öffnen. Ein Foto, das nicht (mehr) im Feed steht, wird still übergangen.
+  $effect(() => {
+    const id = page.url.searchParams.get('photo');
+    const feed = data?.feed;
+    if (!id || !feed) return;
+    const found = feed.find((c) => c.id === id);
+    if (found) viewing = found;
+    void goto('/', { replaceState: true });
   });
 
   // App: Widgets auf dem Startbildschirm mit dem aktuellen Stand versorgen (auch nach Sprachwechsel)

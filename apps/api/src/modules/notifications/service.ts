@@ -9,6 +9,7 @@ import {
   renderNotification,
 } from '../../i18n/notifications.js';
 import { newId } from '../../util/ids.js';
+import { linkFor } from './prefs.js';
 
 export type { NotificationType };
 
@@ -29,6 +30,8 @@ export interface NotificationDto {
   data: Record<string, unknown> | null;
   createdAt: number;
   read: boolean;
+  /** Wohin die App beim Antippen führt (Pfad), null = nirgends hin */
+  link: string | null;
 }
 
 /** Text einer gespeicherten Mitteilung: in der aktuellen Sprache neu erzeugt, wenn Parameter vorliegen. */
@@ -43,14 +46,18 @@ function textOf(row: NotificationRow, locale: Locale): { title: string; body: st
   return { title: row.title, body: row.body };
 }
 
-const toDto = (row: NotificationRow, locale: Locale): NotificationDto => ({
-  id: row.id,
-  type: row.type,
-  ...textOf(row, locale),
-  data: row.dataJson ? (JSON.parse(row.dataJson) as Record<string, unknown>) : null,
-  createdAt: row.createdAt,
-  read: row.readAt !== null,
-});
+const toDto = (row: NotificationRow, locale: Locale): NotificationDto => {
+  const data = row.dataJson ? (JSON.parse(row.dataJson) as Record<string, unknown>) : null;
+  return {
+    id: row.id,
+    type: row.type,
+    ...textOf(row, locale),
+    data,
+    createdAt: row.createdAt,
+    read: row.readAt !== null,
+    link: isNotificationType(row.type) ? linkFor(row.type, data) : null,
+  };
+};
 
 /** Legt die Benachrichtigung im Postfach des Nutzers ab. Das Postfach funktioniert auch ohne Push. */
 export function storeNotification(

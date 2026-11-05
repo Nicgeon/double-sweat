@@ -18,6 +18,7 @@ import { isValidTimeZone } from '../../util/timezone.js';
 import { linkTo, sendMailInBackground } from '../mail/send.js';
 import { passwordChangedMail, verifyEmailMail } from '../mail/templates.js';
 import { createEmailToken } from '../mail/tokens.js';
+import { type NotificationPrefs, parsePrefs } from '../notifications/prefs.js';
 import {
   addMemberTx,
   assertSignupOpen,
@@ -25,6 +26,7 @@ import {
   assertTeamLimit,
   createTeamTx,
   findValidInvite,
+  notifyPartnerJoined,
 } from '../teams/service.js';
 import { revokeAllFamilies } from './app-tokens.js';
 import { deleteAllSessions } from './sessions.js';
@@ -46,6 +48,8 @@ export interface UserDto {
   pendingTimezone: string | null;
   reminderTime: string;
   locale: Locale;
+  /** Welche Arten von Mitteilungen per Push kommen (alle, mit Standard "an") */
+  notifications: NotificationPrefs;
 }
 
 export function toUserDto(user: User): UserDto {
@@ -59,6 +63,7 @@ export function toUserDto(user: User): UserDto {
     pendingTimezone: user.pendingTimezone,
     reminderTime: user.reminderTime,
     locale: user.locale,
+    notifications: parsePrefs(user.notifyPrefs),
   };
 }
 
@@ -197,6 +202,7 @@ export async function registerAccount(
         pendingFromWeek: null,
         reminderTime: '19:00',
         locale: input.locale ?? ctx.config.defaultLocale,
+        notifyPrefs: null,
         createdAt: now,
       };
       tx.insert(users).values(user).run();
@@ -216,6 +222,8 @@ export async function registerAccount(
     { behavior: 'immediate' },
   );
 
+  // Wer per Einladung beitritt, meldet sich beim Team (die Gründung eines neuen Teams meldet niemandem etwas)
+  if (input.inviteCode) notifyPartnerJoined(ctx, result.team.id, result.user.id);
   if (ctx.mailer.enabled) sendVerification(ctx, result.user);
   return result;
 }

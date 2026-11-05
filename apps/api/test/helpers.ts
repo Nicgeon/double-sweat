@@ -57,7 +57,21 @@ export function createTestEnv(options: TestEnvOptions = {}): TestEnv {
     mailRetryDelaysMs: [0, 0],
   });
   const app = createApp(ctx);
-  return { ctx, app, config, clock, mailer, logs, client: (o) => new TestClient(app, o) };
+  // Das Beitritts-Ereignis ("Ben ist deinem Team beigetreten") gehört zur Einrichtung der meisten Tests, nicht zu ihrem
+  // Gegenstand: Es wird zugestellt und aus dem Postfach geräumt. Wer es prüfen will, übergibt afterJoin: undefined.
+  const quietJoin = async () => {
+    await ctx.idle();
+    ctx.db.$client.prepare("DELETE FROM notifications WHERE type = 'partner_joined'").run();
+  };
+  return {
+    ctx,
+    app,
+    config,
+    clock,
+    mailer,
+    logs,
+    client: (o) => new TestClient(app, { afterJoin: quietJoin, ...o }),
+  };
 }
 
 export interface ClientOptions {
@@ -65,6 +79,8 @@ export interface ClientOptions {
   ip?: string;
   /** Origin-Header, den ein Browser bei unsicheren Methoden mitsendet. */
   origin?: string | null;
+  /** Läuft nach einem Beitritt per Einladung (siehe createTestEnv). */
+  afterJoin?: (() => Promise<void>) | undefined;
 }
 
 export interface TestResponse {
@@ -89,7 +105,10 @@ export class TestClient {
   ) {
     this.ip = options.ip ?? '203.0.113.10';
     this.origin = options.origin === undefined ? PUBLIC_URL : options.origin;
+    this.afterJoin = options.afterJoin;
   }
+
+  private readonly afterJoin: (() => Promise<void>) | undefined;
 
   async request(
     method: string,
@@ -189,7 +208,7 @@ export class TestClient {
     name = 'Ben',
     timezone = 'Europe/Berlin',
   ) {
-    return this.adopt(
+    const res = this.adopt(
       await this.post('/auth/register', {
         email,
         password: PASSWORD,
@@ -198,6 +217,8 @@ export class TestClient {
         inviteCode: code,
       }),
     );
+    await this.afterJoin?.();
+    return res;
   }
 
   async login(email: string, password = PASSWORD): Promise<TestResponse> {

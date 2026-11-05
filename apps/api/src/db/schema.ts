@@ -28,6 +28,8 @@ export const users = sqliteTable('users', {
   reminderTime: text('reminder_time').notNull().default('19:00'),
   /** Sprache der Oberfläche, der Mitteilungen und Mails (de oder en). */
   locale: text('locale', { enum: LOCALES }).notNull().default('de'),
+  /** Welche Arten von Mitteilungen per Push kommen (JSON, nur ausdrücklich gesetzte Werte); null = Standard (alle). */
+  notifyPrefs: text('notify_prefs'),
   createdAt: integer('created_at').notNull(),
 });
 

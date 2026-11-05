@@ -17,6 +17,27 @@ class PushPayloadTest {
     }
 
     @Test
+    fun readsAllKindsOfMessagesTheServerSends() {
+        for (type in listOf("checkin", "goal_reached", "reaction", "bet_set", "debt_redeemed", "reward_received", "week_result", "streak_broken", "partner_joined")) {
+            assertEquals(type, parse("""{"type":"$type","title":"a","body":"b"}""").type)
+        }
+    }
+
+    @Test
+    fun readsAnAppPathAsTarget() {
+        assertEquals("/deal", parse("""{"type":"nudge","url":"/deal"}""").url)
+        assertEquals("/?photo=abc123", parse("""{"type":"checkin","url":"/?photo=abc123"}""").url)
+    }
+
+    @Test
+    fun dropsEverythingThatIsNotAnAppPath() {
+        for (url in listOf("https://evil.example/", "//evil.example", "deal", "javascript:alert(1)", "/a b", "/${"x".repeat(300)}")) {
+            assertNull(url, parse("""{"type":"nudge","url":"$url"}""").url)
+        }
+        assertNull(parse("""{"type":"nudge"}""").url)
+    }
+
+    @Test
     fun unknownTypeBecomesGeneral() {
         assertEquals("general", parse("""{"type":"x","title":"a","body":"b"}""").type)
     }

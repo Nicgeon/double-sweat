@@ -1,12 +1,13 @@
-import { and, count, desc, eq, inArray } from 'drizzle-orm';
+import { and, count, countDistinct, desc, eq, inArray, ne } from 'drizzle-orm';
 import type { AppContext } from '../../context.js';
 import type { DbLike } from '../../db/client.js';
 import type { User } from '../../db/schema.js';
-import { type Checkin, checkins, users } from '../../db/schema.js';
+import { type Checkin, checkins, memberships, users } from '../../db/schema.js';
 import { isWeekClosed, type LocalDate, localDateAt, weekStartOf } from '../../domain/weeks.js';
 import { badRequest, conflict, forbidden, notFound, tooManyRequests } from '../../util/errors.js';
 import { newId } from '../../util/ids.js';
 import { HOUR } from '../../util/time.js';
+import { goalForWeek } from '../goals/service.js';
 import { currentTimezone } from '../me/timezone.js';
 import { checkinFileKeys } from '../photos/keys.js';
 import { processPhoto } from '../photos/pipeline.js';
@@ -149,9 +150,10 @@ export async function createCheckin(
   }
 
   try {
-    const row = ctx.db.transaction(
+    const { row, firstOfDay } = ctx.db.transaction(
       (tx) => {
-        if (countCheckinsOn(tx, user.id, localDate) >= MAX_CHECKINS_PER_DAY) throw dayFull();
+        const already = countCheckinsOn(tx, user.id, localDate);
+        if (already >= MAX_CHECKINS_PER_DAY) throw dayFull();
         const duplicate = tx
           .select({ id: checkins.id })
           .from(checkins)
@@ -182,14 +184,56 @@ export async function createCheckin(
           createdAt: now,
         };
         tx.insert(checkins).values(values).run();
-        return values;
+        return { row: values, firstOfDay: already === 0 };
       },
       { behavior: 'immediate' },
     );
+    // Nur der erste Check-in des Tages meldet sich beim Partner (weitere am selben Tag wären Rauschen)
+    if (firstOfDay) notifyPartnerOfCheckin(ctx, user, membership.teamId, row.id, weekStart);
     return toCheckinDto(row, user.displayName);
   } catch (error) {
     await ctx.photos.remove(written);
     throw error;
+  }
+}
+
+/**
+ * Sagt dem Partner Bescheid: "Ben hat eingecheckt." Ist es der Check-in, der das Wochenziel erfüllt, kommt stattdessen
+ * "Ben hat das Wochenziel erreicht." (nie beides). Der Text bleibt neutral: weder Trainingsart noch Notiz.
+ */
+function notifyPartnerOfCheckin(
+  ctx: AppContext,
+  user: User,
+  teamId: string,
+  checkinId: string,
+  weekStart: LocalDate,
+): void {
+  const partner = ctx.db
+    .select({ userId: memberships.userId })
+    .from(memberships)
+    .where(and(eq(memberships.teamId, teamId), ne(memberships.userId, user.id)))
+    .get();
+  if (!partner) return;
+  const goal = goalForWeek(ctx.db, user.id, weekStart);
+  const days =
+    ctx.db
+      .select({ n: countDistinct(checkins.localDate) })
+      .from(checkins)
+      .where(and(eq(checkins.userId, user.id), eq(checkins.weekStart, weekStart)))
+      .get()?.n ?? 0;
+  const data = { checkinId, weekStart };
+  if (goal !== null && days === goal) {
+    ctx.push.notify(partner.userId, {
+      type: 'goal_reached',
+      params: { name: user.displayName, goal },
+      data,
+    });
+  } else {
+    ctx.push.notify(partner.userId, {
+      type: 'checkin',
+      params: { name: user.displayName },
+      data,
+    });
   }
 }
 

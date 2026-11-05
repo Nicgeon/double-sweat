@@ -106,10 +106,9 @@ describe('Datenexport', () => {
       }),
     ]);
     // Beim Setzen des Einsatzes bekommen beide eine Mitteilung vom anderen (bet_set), dazu kommt die Schuld
-    expect(data.notifications.map((n: { type: string }) => n.type).sort()).toEqual([
-      'bet_set',
-      'debt_created',
-    ]);
+    expect(data.notifications.map((n: { type: string }) => n.type)).toEqual(
+      expect.arrayContaining(['bet_set', 'debt_created']),
+    );
 
     // Genau die Fotos von Anna, byte-identisch zu den gespeicherten Dateien
     expect(data.checkins).toHaveLength(2);

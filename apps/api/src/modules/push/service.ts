@@ -5,6 +5,7 @@ import { renderNotification } from '../../i18n/notifications.js';
 import { badRequest, conflict, notFound, tooManyRequests } from '../../util/errors.js';
 import { newId } from '../../util/ids.js';
 import { HOUR } from '../../util/time.js';
+import { linkFor, parsePrefs, pushWanted } from '../notifications/prefs.js';
 import {
   type NotificationInput,
   type NotificationType,
@@ -32,6 +33,12 @@ const DELIVERY: Record<NotificationType, DeliveryOptions> = {
   reward_set: { ttlSec: 86_400, urgency: 'normal' },
   reward_earned: { ttlSec: 86_400, urgency: 'normal' },
   reaction: { ttlSec: 3600, urgency: 'low' },
+  checkin: { ttlSec: 3600, urgency: 'low' },
+  goal_reached: { ttlSec: 14_400, urgency: 'low' },
+  debt_redeemed: { ttlSec: 86_400, urgency: 'normal' },
+  reward_received: { ttlSec: 86_400, urgency: 'normal' },
+  partner_joined: { ttlSec: 86_400, urgency: 'normal' },
+  week_result: { ttlSec: 86_400, urgency: 'low' },
   team_dissolved: { ttlSec: 86_400, urgency: 'normal' },
   streak_milestone: { ttlSec: 86_400, urgency: 'low' },
   streak_broken: { ttlSec: 86_400, urgency: 'normal' },
@@ -91,7 +98,14 @@ export function createPushService(ctx: AppContext): PushService {
     if (!p.isConfigured()) return;
     const result = await p.send(
       sub,
-      { type: input.type, title: text.title, body: text.body, tag: input.type, url: '/' },
+      {
+        type: input.type,
+        title: text.title,
+        body: text.body,
+        tag: input.type,
+        // Der Tipp auf die Mitteilung öffnet gleich die passende Stelle der App
+        url: linkFor(input.type, input.data) ?? '/',
+      },
       DELIVERY[input.type],
     );
     if (result === 'ok') {
@@ -214,11 +228,16 @@ export function createPushService(ctx: AppContext): PushService {
 
     notify(userId, input) {
       // Sprache des Empfängers: Postfach und Push bekommen denselben Text
-      const locale =
-        ctx.db.select({ locale: users.locale }).from(users).where(eq(users.id, userId)).get()
-          ?.locale ?? ctx.config.defaultLocale;
+      const recipient = ctx.db
+        .select({ locale: users.locale, notifyPrefs: users.notifyPrefs })
+        .from(users)
+        .where(eq(users.id, userId))
+        .get();
+      const locale = recipient?.locale ?? ctx.config.defaultLocale;
       const text = renderNotification(locale, input.type, input.params);
       const id = storeNotification(ctx, userId, input, text);
+      // Das Postfach schreibt immer alles; Push kommt nur für Arten, die die Person nicht abgeschaltet hat
+      if (!pushWanted(parsePrefs(recipient?.notifyPrefs), input.type)) return id;
       ctx.defer(async () => {
         const subs = ctx.db
           .select()
