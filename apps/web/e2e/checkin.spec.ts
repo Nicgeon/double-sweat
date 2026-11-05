@@ -204,3 +204,81 @@ test('Englisch: Vorschau, Hinweis und Rückfrage sind übersetzt', async ({ brow
   await expect(page.getByRole('button', { name: 'Another check-in' })).toBeVisible();
   expect(problems).toEqual([]);
 });
+
+test('Bearbeiten: falsche Sportart und Notiz nachträglich ändern, der Partner sieht den neuen Stand', async ({
+  browser,
+}, testInfo) => {
+  const { anna, annaEmail, benEmail } = await makeCouple();
+  await anna.checkin('laufen');
+  const { page, problems } = await newUserContext(browser, testInfo);
+  await loginViaUi(page, annaEmail);
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
+  await expect(page.locator('.ds-photo')).toContainText('Laufen');
+
+  await page.getByRole('button', { name: /Foto ansehen/ }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Laufen');
+  await dialog.getByRole('button', { name: 'Bearbeiten' }).click();
+  // Die aktuelle Sportart ist vorgewählt
+  await expect(dialog.getByRole('radio', { name: 'Laufen' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+
+  // Abbrechen verwirft die Änderung
+  await dialog.getByRole('radio', { name: 'Yoga' }).click();
+  await dialog.getByRole('button', { name: 'Abbrechen' }).click();
+  await expect(dialog).toContainText('Laufen');
+  await expect(dialog.getByRole('radio')).toHaveCount(0);
+
+  // Speichern: neue Sportart und Notiz stehen gleich im Fenster, auf der Kachel und nach dem Neuladen
+  await dialog.getByRole('button', { name: 'Bearbeiten' }).click();
+  await dialog.getByRole('radio', { name: 'Rad' }).click();
+  await dialog.getByLabel('Notiz (optional)').fill('Mit dem Rad ins Büro');
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  await expect(dialog.getByText('Gespeichert.')).toBeVisible();
+  await expect(dialog).toContainText('Rad');
+  await expect(dialog).toContainText('Mit dem Rad ins Büro');
+  await expect(dialog).not.toContainText('Laufen');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.ds-photo')).toContainText('Rad');
+  await page.reload();
+  await expect(page.locator('.ds-photo')).toContainText('Rad');
+  await expect(page.locator('.ds-photo')).not.toContainText('Laufen');
+
+  // Die Notiz lässt sich auch wieder entfernen
+  await page.getByRole('button', { name: /Foto ansehen/ }).click();
+  await dialog.getByRole('button', { name: 'Bearbeiten' }).click();
+  await dialog.getByLabel('Notiz (optional)').fill('');
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  await expect(dialog.getByText('Gespeichert.')).toBeVisible();
+  await expect(dialog).not.toContainText('Mit dem Rad ins Büro');
+  await page.keyboard.press('Escape');
+
+  // Ben sieht den neuen Stand und kann Annas Check-in nicht bearbeiten, nur darauf reagieren
+  const ben = await newUserContext(browser, testInfo);
+  await loginViaUi(ben.page, benEmail);
+  await expect(ben.page.locator('.ds-photo')).toContainText('Rad');
+  await ben.page.getByRole('button', { name: /Foto ansehen/ }).click();
+  const benDialog = ben.page.getByRole('dialog');
+  await expect(benDialog.getByRole('group', { name: /reagieren/ })).toBeVisible();
+  await expect(benDialog.getByRole('button', { name: 'Bearbeiten' })).toHaveCount(0);
+  expect(problems).toEqual([]);
+  expect(ben.problems).toEqual([]);
+});
+
+test('Englisch: Bearbeiten im Foto-Fenster ist übersetzt', async ({ browser }, testInfo) => {
+  const { anna, annaEmail } = await makeCouple();
+  await anna.call('patch', '/me', { locale: 'en' });
+  await anna.checkin('kraft');
+  const { page, problems } = await newUserContext(browser, testInfo, undefined, 'en-US');
+  await loginViaUi(page, annaEmail);
+  await page.getByRole('button', { name: /View photo/ }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Edit' }).click();
+  await dialog.getByRole('radio', { name: 'Yoga' }).click();
+  await dialog.getByRole('button', { name: 'Save' }).click();
+  await expect(dialog.getByText('Saved.')).toBeVisible();
+  await expect(dialog).toContainText('Yoga');
+  expect(problems).toEqual([]);
+});

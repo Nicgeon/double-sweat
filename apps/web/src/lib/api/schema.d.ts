@@ -2731,7 +2731,96 @@ export interface paths {
         };
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Sportart und Notiz des eigenen Check-ins ändern (nur bis zum Ende seiner Woche)
+         * @description Zum Beispiel, wenn die falsche Sportart gewählt wurde. `null` entfernt den Wert, ein weggelassenes Feld bleibt unverändert. Foto, Selfie und Datum lassen sich nicht ändern; die Wertung der Woche bleibt gleich.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string|null} */
+                        tag?: "kraft" | "cardio" | "laufen" | "rad" | "schwimmen" | "yoga" | "sonstiges" | null;
+                        note?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Geändert */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            checkin: components["schemas"]["Checkin"];
+                        };
+                    };
+                };
+                /** @description Ungültige Eingabe */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht angemeldet */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht erlaubt */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Nicht gefunden */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Konflikt */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Zu viele Anfragen (Retry-After beachten) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
     "/api/v1/photos/{checkinId}/{variant}": {

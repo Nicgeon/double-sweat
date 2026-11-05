@@ -460,6 +460,114 @@ describe('Check-ins ansehen und zurücknehmen', () => {
   });
 });
 
+describe('Check-in bearbeiten', () => {
+  it('ändert Sportart und Notiz des eigenen Check-ins, Foto und Wertung bleiben', async () => {
+    const env = createTestEnv();
+    const { anna, ben } = await createCouple(env);
+    const { body } = await anna.upload(
+      '/checkins',
+      photoForm(await noisyJpeg(), { tag: 'laufen', note: 'Runde' }),
+    );
+    const id = body.checkin.id;
+    // Ben reagiert; die Reaktion bleibt nach der Änderung erhalten
+    expect((await ben.put(`/checkins/${id}/reaction`, { kind: 'flame' })).status).toBe(200);
+
+    const res = await anna.patch(`/checkins/${id}`, {
+      tag: 'rad',
+      note: '  Mit dem Rad ins Büro ',
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.checkin).toMatchObject({
+      id,
+      displayName: 'Anna',
+      tag: 'rad',
+      note: 'Mit dem Rad ins Büro',
+      localDate: body.checkin.localDate,
+      createdAt: body.checkin.createdAt,
+      photo: body.checkin.photo,
+    });
+    expect(res.body.checkin.reactions).toHaveLength(1);
+
+    // Der Feed zeigt den neuen Stand, die Wertung der Woche ist dieselbe
+    const feed = (await ben.get('/checkins')).body.checkins;
+    expect(feed[0]).toMatchObject({ id, tag: 'rad', note: 'Mit dem Rad ins Büro' });
+    const me = (await anna.get('/dashboard')).body.members.find((m: { isMe: boolean }) => m.isMe);
+    expect(me).toMatchObject({ doneDays: 1, checkinsToday: 1 });
+  });
+
+  it('ein weggelassenes Feld bleibt, null und Leerraum entfernen den Wert', async () => {
+    const env = createTestEnv();
+    const anna = env.client();
+    await anna.registerFounder();
+    const { body } = await anna.upload(
+      '/checkins',
+      photoForm(await noisyJpeg(), { tag: 'yoga', note: 'Abends' }),
+    );
+    const id = body.checkin.id;
+    expect((await anna.patch(`/checkins/${id}`, { tag: 'kraft' })).body.checkin).toMatchObject({
+      tag: 'kraft',
+      note: 'Abends',
+    });
+    expect((await anna.patch(`/checkins/${id}`, { note: '   ' })).body.checkin).toMatchObject({
+      tag: 'kraft',
+      note: null,
+    });
+    expect((await anna.patch(`/checkins/${id}`, { tag: null })).body.checkin).toMatchObject({
+      tag: null,
+      note: null,
+    });
+  });
+
+  it('lehnt leere Änderungen, unbekannte Sportarten und zu lange Notizen ab', async () => {
+    const env = createTestEnv();
+    const anna = env.client();
+    await anna.registerFounder();
+    const { body } = await anna.upload('/checkins', photoForm(await noisyJpeg(), { tag: 'kraft' }));
+    const id = body.checkin.id;
+    const empty = await anna.patch(`/checkins/${id}`, {});
+    expect(empty.status).toBe(400);
+    expect(empty.body.error.code).toBe('nothing_to_change');
+    expect((await anna.patch(`/checkins/${id}`, { tag: 'tennis' })).status).toBe(400);
+    expect((await anna.patch(`/checkins/${id}`, { note: 'x'.repeat(281) })).status).toBe(400);
+    // Nichts davon hat etwas verändert
+    expect((await anna.get('/checkins')).body.checkins[0]).toMatchObject({ tag: 'kraft' });
+  });
+
+  it('fremde Check-ins, unbekannte IDs und Anfragen ohne Anmeldung werden abgewiesen', async () => {
+    const env = createTestEnv();
+    const { anna, ben } = await createCouple(env);
+    const { body } = await anna.upload('/checkins', photoForm(await noisyJpeg(), { tag: 'kraft' }));
+    const id = body.checkin.id;
+    expect((await ben.patch(`/checkins/${id}`, { tag: 'yoga' })).status).toBe(404);
+    expect((await anna.patch('/checkins/gibtsnicht', { tag: 'yoga' })).status).toBe(404);
+    expect((await env.client().patch(`/checkins/${id}`, { tag: 'yoga' })).status).toBe(401);
+    expect((await anna.get('/checkins')).body.checkins[0]).toMatchObject({ tag: 'kraft' });
+  });
+
+  it('nach Ende der Woche ist auch die Beschriftung unveränderlich', async () => {
+    const env = createTestEnv();
+    const anna = env.client();
+    await anna.registerFounder();
+    const { body } = await anna.upload('/checkins', photoForm(await noisyJpeg(), { tag: 'kraft' }));
+    const id = body.checkin.id;
+    env.clock.set(weekEndInstant('2026-03-02', 'Europe/Berlin') - 1);
+    expect((await anna.patch(`/checkins/${id}`, { tag: 'cardio' })).status).toBe(200);
+    env.clock.set(weekEndInstant('2026-03-02', 'Europe/Berlin'));
+    const res = await anna.patch(`/checkins/${id}`, { tag: 'yoga' });
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('week_closed');
+  });
+
+  it('löst keine neue Mitteilung an den Partner aus', async () => {
+    const env = createTestEnv();
+    const { anna, ben } = await createCouple(env);
+    const { body } = await anna.upload('/checkins', photoForm(await noisyJpeg(), { tag: 'kraft' }));
+    const before = (await ben.get('/notifications')).body.notifications.length;
+    await anna.patch(`/checkins/${body.checkin.id}`, { tag: 'rad' });
+    expect((await ben.get('/notifications')).body.notifications).toHaveLength(before);
+  });
+});
+
 describe('Aufräumen', () => {
   it('Team auflösen löscht alle Fotodateien des Teams', async () => {
     const env = createTestEnv();

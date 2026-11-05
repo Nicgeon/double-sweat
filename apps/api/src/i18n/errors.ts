@@ -31,6 +31,7 @@ const EN: Record<string, string> = {
   'Dein Team hat noch keinen Partner': 'Your team has no partner yet',
   'Dein Team ist bereits vollständig': 'Your team is already complete',
   'Die Notiz ist zu lang': 'The note is too long',
+  'Gib Sportart oder Notiz an': 'Provide a workout type or a note',
   'Die Verschlüsselungsschlüssel der Subscription sind ungültig':
     'The encryption keys of the subscription are invalid',
   'Die Woche ist abgeschlossen, der Check-in kann nicht mehr geändert werden':

@@ -17,6 +17,7 @@ import {
   NOTE_MAX_LENGTH,
   openPhoto,
   PHOTO_VARIANTS,
+  updateCheckin,
 } from './service.js';
 
 const imageSchema = z.object({
@@ -128,6 +129,46 @@ export function checkinRoutes(ctx: AppContext): OpenAPIHono<AppEnv> {
         week ?? localDateAt(ctx.clock.now(), currentTimezone(ctx, user)),
       );
       return c.json({ weekStart, checkins: listWeekCheckins(ctx, user, weekStart) }, 200);
+    },
+  );
+
+  app.openapi(
+    createRoute({
+      method: 'patch',
+      path: '/checkins/{id}',
+      tags,
+      summary: 'Sportart und Notiz des eigenen Check-ins ändern (nur bis zum Ende seiner Woche)',
+      description:
+        'Zum Beispiel, wenn die falsche Sportart gewählt wurde. `null` entfernt den Wert, ein weggelassenes Feld ' +
+        'bleibt unverändert. Foto, Selfie und Datum lassen sich nicht ändern; die Wertung der Woche bleibt gleich.',
+      ...auth,
+      request: {
+        params: z.object({ id: z.string().min(1).max(40) }),
+        body: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: z.object({
+                tag: z.enum(CHECKIN_TAGS).nullable().optional(),
+                note: z.string().max(NOTE_MAX_LENGTH).nullable().optional(),
+              }),
+            },
+          },
+        },
+      },
+      responses: {
+        200: jsonResponse(z.object({ checkin: checkinSchema }), 'Geändert'),
+        ...errorResponses,
+      },
+    }),
+    (c) => {
+      const checkin = updateCheckin(
+        ctx,
+        currentAuth(c).user,
+        c.req.valid('param').id,
+        c.req.valid('json'),
+      );
+      return c.json({ checkin: checkin satisfies CheckinDto }, 200);
     },
   );
 

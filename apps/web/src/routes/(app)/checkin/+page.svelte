@@ -14,7 +14,7 @@
   import { NATIVE } from '#lib/native/flag.ts';
   import { cameraAvailable, cameraMessage, cameraProblem, type Facing, frameToJpeg, fileToJpeg, startCamera, stopStream, takeNativePhoto } from '#lib/util/camera.ts';
   import { longDate, weekdayDate } from '#lib/util/format.ts';
-  import { TAG_VALUES, tagList } from '#lib/util/tags.ts';
+  import { isTag, type TagValue, tagList } from '#lib/util/tags.ts';
   import { pushWidget } from '#lib/util/widget.ts';
   import { streakStore } from '#lib/state/streak.svelte.ts';
   import { todayStore } from '#lib/state/today.svelte.ts';
@@ -49,7 +49,7 @@
   let selfieMessage = $state<string | null>(null);
   /** Läuft die Live-Kamera? Sonst gibt es für das Selfie nur die Fotoauswahl. */
   let liveCamera = $state(true);
-  let tag = $state<string | null>(readTag());
+  let tag = $state<TagValue | null>(readTag());
   let note = $state('');
   /** Die Notiz ist eingeklappt, bis man sie braucht. */
   let noteOpen = $state(false);
@@ -88,10 +88,10 @@
   }
 
   /** Zuletzt gewählte Trainingsart, vorbelegt (weniger Entscheidungen); unbekannte Werte werden ignoriert. */
-  function readTag(): string | null {
+  function readTag(): TagValue | null {
     try {
       const stored = localStorage.getItem(TAG_PREF);
-      return stored && TAG_VALUES.includes(stored) ? stored : null;
+      return isTag(stored) ? stored : null;
     } catch {
       return null;
     }

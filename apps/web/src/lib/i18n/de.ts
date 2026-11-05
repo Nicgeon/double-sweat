@@ -133,6 +133,8 @@ export const de = {
   'photo.selfieOf': 'Selfie von {name}',
   'photo.showSelfie': 'Selfie groß zeigen',
   'photo.showPhoto': 'Foto groß zeigen',
+  'photo.edit': 'Bearbeiten',
+  'photo.saved': 'Gespeichert.',
   'photo.undo': 'Check-in zurücknehmen',
   'photo.reactTo': 'Auf das Training von {name} reagieren',
   'camera.shutter': 'Foto aufnehmen',

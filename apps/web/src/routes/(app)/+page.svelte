@@ -196,6 +196,16 @@
     viewing = null;
     void load();
   }}
+  onupdated={(updated) => {
+    // Sportart und Notiz stehen auch auf der Kachel im Feed
+    viewing = updated;
+    if (todayStore.dashboard) {
+      todayStore.dashboard = {
+        ...todayStore.dashboard,
+        feed: todayStore.dashboard.feed.map((c) => (c.id === updated.id ? updated : c)),
+      };
+    }
+  }}
   onreacted={(id, reactions) => {
     // Auch wenn das Fenster inzwischen zu ist: Die Kachel im Feed muss den neuen Stand zeigen
     if (viewing?.id === id) viewing = { ...viewing, reactions };

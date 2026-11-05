@@ -131,6 +131,8 @@ export const en: Record<MessageKey, string> = {
   'photo.selfieOf': 'Selfie by {name}',
   'photo.showSelfie': 'Show selfie large',
   'photo.showPhoto': 'Show photo large',
+  'photo.edit': 'Edit',
+  'photo.saved': 'Saved.',
   'photo.undo': 'Undo check-in',
   'photo.reactTo': 'React to {name}’s workout',
   'camera.shutter': 'Take photo',

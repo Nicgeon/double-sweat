@@ -538,6 +538,10 @@ der Android-App).
   begonnen haben; leer lassen zieht sie zurück). Schafft jemand sein Ziel, wird bei der Abrechnung die Belohnung
   des anderen "verdient" und beide bekommen eine Mitteilung. Nur wer sie verdient hat, markiert sie als
   "Erhalten". Der Text wird bei der Abrechnung festgehalten.
+- **Check-in bearbeiten:** Wer die falsche Sportart gewählt oder eine Notiz vergessen hat, ändert beides im Foto-Fenster
+  über "Bearbeiten" (`PATCH /api/v1/checkins/{id}`). Nur der eigene Check-in, nur Sportart und Notiz, und wie beim
+  Zurücknehmen nur, solange die Woche läuft. Foto, Selfie, Datum und die Wertung der Woche bleiben; der Partner bekommt
+  keine neue Mitteilung, sieht aber den neuen Stand.
 - **Reaktionen:** Auf das Check-in des Partners reagiert man mit Feuer, Bravo, Stark oder Stolz (eine Reaktion
   je Check-in, erneutes Antippen nimmt sie zurück). Der Partner erfährt von der ersten Reaktion; Wechseln oder
   Zurücknehmen erzeugt keine weitere Mitteilung.

@@ -262,6 +262,50 @@ export function listTeamCheckins(
   return rows.map((r) => toCheckinDto(r.checkin, r.displayName, reacted.get(r.checkin.id) ?? []));
 }
 
+export interface CheckinPatch {
+  /** `null` entfernt die Sportart, ohne Angabe bleibt sie. */
+  tag?: CheckinTag | null;
+  /** `null` oder nur Leerzeichen entfernt die Notiz, ohne Angabe bleibt sie. */
+  note?: string | null;
+}
+
+/**
+ * Sportart und Notiz des eigenen Check-ins ändern (zum Beispiel, wenn die falsche Sportart gewählt wurde). Wie das
+ * Zurücknehmen geht das nur, solange die Woche läuft. Foto, Selfie und Tag bleiben, die Wertung ändert sich nicht.
+ */
+export function updateCheckin(
+  ctx: AppContext,
+  user: User,
+  id: string,
+  patch: CheckinPatch,
+): CheckinDto {
+  const row = ctx.db
+    .select()
+    .from(checkins)
+    .where(and(eq(checkins.id, id), eq(checkins.userId, user.id)))
+    .get();
+  if (!row) throw notFound('Check-in nicht gefunden');
+  if (isWeekClosed(row.weekStart, row.tz, ctx.clock.now())) {
+    throw conflict(
+      'week_closed',
+      'Die Woche ist abgeschlossen, der Check-in kann nicht mehr geändert werden',
+    );
+  }
+  const changes: { tag?: string | null; note?: string | null } = {};
+  if (patch.tag !== undefined) changes.tag = patch.tag;
+  if (patch.note !== undefined) {
+    const note = patch.note?.trim() || null;
+    if (note && note.length > NOTE_MAX_LENGTH)
+      throw badRequest('note_too_long', 'Die Notiz ist zu lang');
+    changes.note = note;
+  }
+  if (Object.keys(changes).length === 0)
+    throw badRequest('nothing_to_change', 'Gib Sportart oder Notiz an');
+  ctx.db.update(checkins).set(changes).where(eq(checkins.id, id)).run();
+  const updated = ctx.db.select().from(checkins).where(eq(checkins.id, id)).get() ?? row;
+  return toCheckinDto(updated, user.displayName, reactionsFor(ctx.db, [id]).get(id) ?? []);
+}
+
 /** Eigenen Check-in zurücknehmen, solange seine Woche noch läuft. */
 export async function deleteCheckin(ctx: AppContext, user: User, id: string): Promise<void> {
   const row = ctx.db
