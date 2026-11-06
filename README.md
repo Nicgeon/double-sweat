@@ -472,18 +472,17 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.caddy.yml up -d
 ```
 
 `git pull` brauchst du nur, wenn sich Compose-Dateien oder `.env.example` geändert haben. Welche Version Compose holt,
-bestimmt `DS_IMAGE` in der `.env` (Standard `:latest`, der getestete Stand von `main`):
+bestimmt `DS_IMAGE` in der `.env` (Standard `:latest`, das jüngste stabile Release). Images entstehen nur bei einem
+Release (siehe [Release veröffentlichen](#release-veröffentlichen-github)), nicht bei jedem Push:
 
-| Tag                   | Bedeutung                                                                           |
-| --------------------- | ----------------------------------------------------------------------------------- |
-| `latest`              | Stand von `main`, also der getestete Stand (gibt es ab dem ersten Stand auf `main`) |
-| `beta`                | Stand von `develop`, zum Testen                                                     |
-| `0.2`                 | bleibt in der Linie 0.2 (nur kleine Updates, kein Sprung auf 0.3)                   |
-| `0.2.0`, `0.2.0-rc.1` | genau diese Version (Release-Tags; auch Vorabversionen)                             |
-| `sha-1a2b3c4`         | genau dieser Commit; zum Zurückrollen von `latest` oder `beta`                      |
+| Tag                   | Bedeutung                                                                             |
+| --------------------- | ------------------------------------------------------------------------------------- |
+| `latest`              | das jüngste stabile Release (zum Beispiel 0.2.0)                                      |
+| `beta`                | die jüngste Vorabversion (zum Beispiel 0.3.0-rc.1), zum Testen                        |
+| `0.2`                 | bleibt in der Linie 0.2 (nur kleine Updates, kein Sprung auf 0.3)                     |
+| `0.2.0`, `0.2.0-rc.1` | genau diese Version (Release-Tags; auch Vorabversionen); zum Festhalten, Zurückrollen |
 
-`latest` und `beta` wandern mit jedem Stand weiter, tragen aber keine Versionsnummer; zum Festhalten oder Zurückrollen
-dienen die Versions-Tags und `sha-…`. Ein neuerer Server kann ältere App-Versionen aussperren (siehe unten): Wer das
+`latest` und `beta` wandern mit jedem Release weiter; zum Festhalten oder Zurückrollen dienen die Versions-Tags. Ein neuerer Server kann ältere App-Versionen aussperren (siehe unten): Wer das
 nicht möchte, setzt `DS_IMAGE` auf eine feste Linie wie `:0.2`.
 
 Wer lieber selbst baut (Fork, eigene Änderungen): `git pull` und `up -d --build`, wie bei der Erstinstallation.
@@ -647,13 +646,19 @@ scripts/       Backup-Skript, Design-Werkzeuge, Android-Bau (Schlüssel, APK)
 
 Branches: `main` (stabil, getestet) und `develop` (Integration). Änderungen laufen über `develop`.
 
-**CI.** `.github/workflows/ci.yml` prüft jede Änderung auf `develop`, `main` und jeden Pull Request: Lint, Typen,
-Designsystem, Vitest, die Ende-zu-Ende-Tests im Browser (Playwright), die Kotlin-Tests der App und ob alle
-Versionsnummern gleich sind. Sie braucht keine Geheimnisse.
+**CI.** `.github/workflows/ci.yml` enthält die Prüfungen: Lint, Typen, Designsystem, Vitest, die Ende-zu-Ende-Tests im
+Browser (Playwright), die Kotlin-Tests der App und ob alle Versionsnummern gleich sind. Sie braucht keine Geheimnisse.
+**Sie läuft nicht bei jedem Push** (das verbraucht GitHub-Minuten, bei einem privaten Repository sind es im Monat nur
+2000), sondern als Voraussetzung eines Releases (`release.yml` ruft sie auf, bevor etwas gebaut wird) und von Hand
+(Actions → CI → "Run workflow"). Im Alltag laufen dieselben Prüfungen lokal: `pnpm lint`, `pnpm typecheck`,
+`pnpm design:check`, `pnpm test`, `pnpm test:e2e` und `pnpm android:test`.
 
 ### Release veröffentlichen (GitHub)
 
-Ein Tag `v<Version>` löst `.github/workflows/release.yml` aus: Der Workflow baut die signierte Standard-APK
+Ein Tag `v<Version>` löst `.github/workflows/release.yml` aus. Das ist der **einzige Workflow, der von selbst startet**:
+Normale Pushes und Pull Requests lösen nichts aus. Reihenfolge: Tag und Version prüfen, die Prüfungen (CI), dann APK
+und Server-Image; schlagen die Prüfungen fehl, wird nichts gebaut und nichts veröffentlicht. Ein Release kostet etwa
+25 Minuten Rechenzeit (Prüfungen rund 12, APK rund 5, Server-Image rund 8). Der Workflow baut die signierte Standard-APK
 (`foss`), prüft Signatur und Fingerabdruck und legt ein GitHub-Release mit APK, Prüfsumme und Änderungsliste an.
 
 **Einmalig einrichten**
@@ -693,14 +698,14 @@ git tag v0.2.0 && git push origin v0.2.0
   passen (`bump-version.mjs`, committen).
 - Der Tag muss zur Version im Code passen; sonst bricht der Lauf ab, bevor etwas gebaut wird.
   Versionscode der App: `Major*10000 + Minor*100 + Patch` (0.2.0 → 200); ein Suffix wie `-rc.1` steht nur im Namen.
-- **Probelauf ohne Release:** Actions → Release → "Run workflow". Er baut und prüft alles und legt die APK nur als
-  Artefakt ab.
+- **Probelauf ohne Release:** Actions → Release → "Run workflow". Er prüft und baut alles, legt die APK nur als
+  Artefakt ab und veröffentlicht kein Server-Image. Auch er kostet die Minuten eines Releases.
 - Ist ein Tag falsch gesetzt: `git push --delete origin v0.2.0 && git tag -d v0.2.0`, dazu ein bereits angelegtes
   Release auf GitHub löschen.
 - Das Server-Image baut derselbe Tag über `.github/workflows/docker.yml` (amd64 und arm64, vorher ein Smoke-Test) und
-  legt es mit den Tags `0.2.0` und `0.2` (Vorabversionen nur mit der genauen Version) in die Registry. `latest` kommt
-  von jedem Stand auf `main`, `beta` von `develop`. Der Server aktualisiert sich mit `docker compose pull` und
-  `up -d`. Das APK selbst liefert er nicht aus.
+  legt es mit den Tags `0.2.0` und `0.2` in die Registry; ein stabiles Release setzt außerdem `latest`, eine
+  Vorabversion (`-rc.1`) stattdessen `beta` (und nur die genaue Version, nicht `0.2`). Der Server aktualisiert sich
+  mit `docker compose pull` und `up -d`. Das APK selbst liefert er nicht aus.
 
 **Forks.** Wer einen Fork betreibt, setzt die Secrets im eigenen Repository, trägt in `apps/web/src/lib/util/source.ts`
 den eigenen Quelltext-Link ein (siehe [Lizenz](#lizenz)) und ändert die App-ID (`app.doublesweat.mobile`) nur, wenn
