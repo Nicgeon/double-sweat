@@ -589,8 +589,9 @@ der Android-App).
   `no-new-privileges`, Port nur lokal gebunden.
 - **Secrets:** Platzhalter aus `.env.example` werden abgelehnt; Logs enthalten keine Zugangsdaten.
 
-Sicherheitslücke gefunden? Bitte nicht öffentlich als Issue melden, sondern den Betreiber des Repositories direkt
-kontaktieren.
+Sicherheitslücke gefunden? Bitte nicht öffentlich als Issue melden, sondern privat über den Reiter **Security**
+("Report a vulnerability") im Repository. Wie das abläuft und was im Geltungsbereich liegt, steht in
+[SECURITY.md](SECURITY.md).
 
 ## Datenschutz
 
