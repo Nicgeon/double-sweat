@@ -721,6 +721,9 @@ zeigt die Profilseite der App einen Link zum Quelltext; wer verändert und für 
 Adresse ein (`apps/web/src/lib/util/source.ts`). Wer die unveränderte Software für sich und seinen Partner betreibt,
 hat keine zusätzliche Pflicht. (Das ist eine Zusammenfassung, keine Rechtsberatung; maßgeblich ist der Lizenztext.)
 
+Copyright (C) 2026 Nicgeon und Mitwirkende. Das Programm wird in der Hoffnung verteilt, dass es nützlich ist, aber ohne
+jede Gewährleistung; Einzelheiten stehen in der [LICENSE](LICENSE).
+
 Mitgelieferte Fremdkomponenten behalten ihre Lizenz: die Schriften Archivo und Atkinson Hyperlegible Next
 (SIL Open Font License 1.1) und die Icons von Lucide (ISC), jeweils mit Lizenztext in `design/licenses/`. Die
 Abhängigkeiten aus `pnpm-lock.yaml` stehen unter ihren eigenen Lizenzen.
