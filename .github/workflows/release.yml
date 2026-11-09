@@ -120,6 +120,19 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0" "build-tools;36.0.0" >/dev/null
 
+      - name: Gradle bereitstellen (bei Netzfehlern bis zu viermal versucht)
+        working-directory: apps/android/android
+        run: |
+          # Der Wrapper lädt Gradle beim ersten Aufruf herunter; der Server antwortet gelegentlich mit 504. Nur dieser
+          # Download wird wiederholt, nicht der Build: ein echter Fehler im Code soll sofort sichtbar werden.
+          for versuch in 1 2 3 4; do
+            if ./gradlew --version; then exit 0; fi
+            echo "::warning::Gradle konnte nicht geladen werden (Versuch $versuch von 4), neuer Versuch in 20 Sekunden."
+            sleep 20
+          done
+          echo "::error::Gradle konnte nach vier Versuchen nicht geladen werden (Netzwerk oder Gradle-Server)."
+          exit 1
+
       - name: Signaturschlüssel bereitstellen
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
