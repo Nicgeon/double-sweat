@@ -17,8 +17,10 @@ name: Release
 # Geheimnisse (Settings → Secrets and variables → Actions), Anleitung im README und am Ende von scripts/gen-keystore.sh:
 #   KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD   Signaturschlüssel (Pflicht)
 #   GOOGLE_SERVICES_JSON                                          Firebase-Datei (nur für die optionale FCM-Variante)
-# Variable (kein Geheimnis):
+#   DS_SERVER_URL                                                 optional: Server, auf den die FCM-App eingestellt wird
+# Variablen (kein Geheimnis):
 #   APK_CERT_SHA256                                               erwarteter Zertifikat-Fingerabdruck (empfohlen)
+#   DS_SERVER_LOCK                                                "true": die FCM-App wechselt den Server nie (sonst nur ein Vorschlag)
 #
 # Das Release enthält nur die Standard-Variante (foss, ohne Google-Dienste). Die FCM-Variante hängt am eigenen
 # Firebase-Projekt, nützt anderen also nichts: Sie entsteht nur, wenn GOOGLE_SERVICES_JSON gesetzt ist, und bleibt ein
@@ -194,6 +196,10 @@ jobs:
         id: fcm
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          # Optional: Server der FCM-App vorschlagen (Secret) oder fest einstellen (Variable DS_SERVER_LOCK=true).
+          # Leer = wie bisher: man gibt die Adresse in der App ein.
+          DS_SERVER_URL: ${{ secrets.DS_SERVER_URL }}
+          DS_SERVER_LOCK: ${{ vars.DS_SERVER_LOCK }}
         run: |
           set -eu
           if [ -z "$GOOGLE_SERVICES_JSON" ]; then

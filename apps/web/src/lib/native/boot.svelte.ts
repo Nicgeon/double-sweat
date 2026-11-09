@@ -6,6 +6,7 @@ import { backAction } from './back.ts';
 import type { JoinLink } from './deeplink.ts';
 import { parseJoinLink, parseOpenLink } from './deeplink.ts';
 import { ALLOW_HTTP, NATIVE } from './flag.ts';
+import { serverPreset } from './server-preset.ts';
 
 /** Einladung, die per Link in die App gekommen ist und auf Bestätigung des Servers wartet. */
 class PendingJoin {
@@ -29,6 +30,8 @@ export async function handleOpenedUrl(url: string): Promise<void> {
     await goto(`/join/${link.code}`);
     return;
   }
+  // Auf einen Server festgelegte App: Einladungen anderer Server gelten hier nicht
+  if (serverPreset().locked) return;
   // Anderer oder noch unbekannter Server: erst bestätigen lassen (Schutz vor Phishing-Einladungen)
   pendingJoin.link = link;
 }

@@ -8,6 +8,13 @@
 # Ohne "fcm" entsteht der Standard-Build: UnifiedPush, keine Google-Bibliotheken. Mit "fcm" kommt Firebase Cloud
 # Messaging dazu (braucht apps/android/firebase/google-services.json, siehe README).
 #
+# Server fest einstellen (optional, für eine App, die nur zu deinem Server gehört):
+#   DS_SERVER_URL=https://sweat.example.org sh scripts/android-build.sh release fcm
+#       Die App trägt die Adresse beim Einrichten schon ein; man bestätigt nur noch mit "Verbinden".
+#   DS_SERVER_LOCK=true (zusammen mit DS_SERVER_URL)
+#       Die Adresse steht fest: kein Eingabefeld, kein Serverwechsel, Einladungen anderer Server werden ignoriert.
+# Die Adresse steckt danach im APK und lässt sich dort auslesen.
+#
 # Voraussetzung: JDK 21 und das Android-SDK (Umgebungsvariable ANDROID_HOME). Das APK landet in apps/android/dist/.
 set -eu
 
@@ -33,7 +40,47 @@ if [ -z "$ANDROID_HOME" ] || [ ! -d "$ANDROID_HOME" ]; then
 fi
 export ANDROID_HOME
 
+# Gibt DS_SERVER_URL / DS_SERVER_LOCK an den Web-Build weiter (als VITE_DEFAULT_SERVER / VITE_SERVER_LOCKED). Eine
+# unbrauchbare Adresse bricht den Build ab, statt eine App zu bauen, die ihren Server nicht findet. http:// gibt es nur
+# in Test-Builds (debug und test).
+prepare_server() {
+  unset VITE_DEFAULT_SERVER VITE_SERVER_LOCKED
+  LOCK="${DS_SERVER_LOCK:-}"
+  case "$LOCK" in
+    ""|false|0) LOCK="" ;;
+    true|1) LOCK=true ;;
+    *) echo "DS_SERVER_LOCK muss true oder leer sein (war: $LOCK)." >&2; exit 2 ;;
+  esac
+  if [ -z "${DS_SERVER_URL:-}" ]; then
+    if [ -n "$LOCK" ]; then
+      echo "DS_SERVER_LOCK=true braucht DS_SERVER_URL (die Adresse, auf die die App festgelegt wird)." >&2
+      exit 2
+    fi
+    return 0
+  fi
+  case "$MODE" in debug|test) ALLOW_HTTP_SERVER=1 ;; *) ALLOW_HTTP_SERVER=0 ;; esac
+  if ! SERVER="$(ALLOW_HTTP_SERVER="$ALLOW_HTTP_SERVER" node -e "
+    let v = process.argv[1].trim();
+    if (!/^[a-z][a-z0-9+.-]*:\\/\\//i.test(v)) v = 'https://' + v;
+    const u = new URL(v);
+    const ok = u.protocol === 'https:' || (u.protocol === 'http:' && process.env.ALLOW_HTTP_SERVER === '1');
+    if (!ok || u.username || u.password || !u.hostname) process.exit(1);
+    console.log(u.origin);
+  " "$DS_SERVER_URL" 2>/dev/null)"; then
+    echo "DS_SERVER_URL ist keine brauchbare Serveradresse (erlaubt: https://host, ohne Zugangsdaten; http:// nur in Test-Builds)." >&2
+    exit 2
+  fi
+  export VITE_DEFAULT_SERVER="$SERVER"
+  if [ -n "$LOCK" ]; then
+    export VITE_SERVER_LOCKED=true
+    echo "Server fest eingestellt: $SERVER (die App wechselt nicht)"
+  else
+    echo "Server vorgeschlagen: $SERVER (änderbar)"
+  fi
+}
+
 sync_web() {
+  prepare_server
   pnpm --filter @double-sweat/web "$1"
   (cd "$ANDROID" && pnpm exec cap sync android)
 }

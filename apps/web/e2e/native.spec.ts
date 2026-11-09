@@ -235,6 +235,85 @@ test('Server wechseln im Profil meldet ab und fragt nach einem neuen Server', as
   expect(await stored(page)).toBeNull();
 });
 
+/** Stellt der App eine Serveradresse voraus, wie sie der Build mit DS_SERVER_URL (und DS_SERVER_LOCK) fest einbaut. */
+async function presetServer(page: Page, url: string, locked: boolean) {
+  await page.addInitScript((p) => Object.assign(window, { __dsServerPreset: p }), { url, locked });
+}
+
+test('Server-Voreinstellung: Adresse ist vorausgefüllt, ein Tipp genügt, der Wechsel bleibt möglich', async ({
+  browser,
+}) => {
+  const api = await Api.create();
+  const f = await api.founder('Anna');
+  const { page, problems } = await appPage(browser);
+  await presetServer(page, BASE, false);
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Mit deinem Server verbinden.' })).toBeVisible();
+  await expect(page.getByLabel('Serveradresse')).toHaveValue(BASE);
+  await expect(page.getByText('Diese App-Version schlägt den Server vor.')).toBeVisible();
+  await page.getByRole('button', { name: 'Verbinden' }).click();
+  await expect(page.getByRole('heading', { name: 'Willkommen zurück.' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'ändern' })).toBeVisible();
+
+  await page.getByLabel('E-Mail').fill(f.email);
+  await page.getByLabel('Passwort').fill(PASSWORD);
+  await page.getByRole('button', { name: 'Anmelden' }).click();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
+  await page.goto('/profile');
+  await expect(page.getByRole('button', { name: 'Server wechseln' })).toBeVisible();
+  await expect(page.getByText('Fest eingestellt')).toHaveCount(0);
+  expect(problems).toEqual([]);
+});
+
+test('Server fest eingestellt: keine Eingabe, kein Wechsel, fremde Einladungen zählen nicht', async ({
+  browser,
+}) => {
+  const api = await Api.create();
+  const f = await api.founder('Anna');
+  const { code } = await api.invite();
+  const { page, problems } = await appPage(browser);
+  const open = (url: string) =>
+    page.evaluate(
+      (u) => (window as unknown as { __dsOpenUrl: (u: string) => Promise<void> }).__dsOpenUrl(u),
+      url,
+    );
+
+  // Die App war schon auf einen anderen Server eingerichtet (etwa eine ältere Version ohne Festlegung) …
+  await connect(page, 'http://localhost:4173');
+  await expect(page.getByRole('heading', { name: 'Willkommen zurück.' })).toBeVisible();
+  expect((await stored(page)).server).toBe('http://localhost:4173');
+  // … und wird jetzt in einer Version geöffnet, die auf BASE festgelegt ist: sie landet dort, ohne zu fragen
+  await presetServer(page, BASE, true);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Willkommen zurück.' })).toBeVisible();
+  expect((await stored(page)).server).toBe(BASE);
+  await expect(page.getByText('Server: 127.0.0.1:4173')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'ändern' })).toHaveCount(0);
+
+  // Die Seite zum Einrichten gibt es nicht mehr
+  await page.goto('/server');
+  await expect(page.getByRole('heading', { name: 'Willkommen zurück.' })).toBeVisible();
+  await expect(page.getByLabel('Serveradresse')).toHaveCount(0);
+
+  // Einladung eines anderen Servers: ignoriert, kein Fenster, Server bleibt
+  await open(`doublesweat://join?s=${encodeURIComponent('http://localhost:4173')}&c=${code}`);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect((await stored(page)).server).toBe(BASE);
+  // Einladung des eigenen Servers funktioniert
+  await open(`doublesweat://join?s=${encodeURIComponent(BASE)}&c=${code}`);
+  await expect(page.getByRole('heading', { name: 'Anna lädt dich ein.' })).toBeVisible();
+
+  await page.goto('/login');
+  await page.getByLabel('E-Mail').fill(f.email);
+  await page.getByLabel('Passwort').fill(PASSWORD);
+  await page.getByRole('button', { name: 'Anmelden' }).click();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
+  await page.goto('/profile');
+  await expect(page.getByText(/^Server: 127\.0\.0\.1:4173 · Fest eingestellt/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Server wechseln' })).toHaveCount(0);
+  expect(problems).toEqual([]);
+});
+
 test('Zurück-Knopf: erst Fenster zu, dann Unterseite zurück, Tab-Wurzel zu „Heute“, dort beenden', async ({
   browser,
 }) => {

@@ -18,6 +18,7 @@ import {
   setTokens,
 } from '#lib/native/auth-store.ts';
 import { NATIVE } from '#lib/native/flag.ts';
+import { serverPreset } from '#lib/native/server-preset.ts';
 import { type Compatibility, compatibility, type ServerInfo } from '#lib/native/server-url.ts';
 import { disablePush } from '#lib/util/push.ts';
 import { clearWidget } from '#lib/util/widget.ts';
@@ -42,6 +43,14 @@ class Session {
   async init(): Promise<void> {
     if (NATIVE) {
       this.serverUrl = (await loadAuth()).server;
+      // Fest eingestellter Server (Build-Einstellung): ein anderer gespeicherter, etwa aus einer älteren Version ohne
+      // Festlegung, wird vergessen; Anmeldung und Tokens gehören dann nicht mehr hierher
+      const preset = serverPreset();
+      if (preset.locked && preset.url && this.serverUrl !== preset.url) {
+        if (this.serverUrl) await this.forgetServer();
+        await setServer(preset.url);
+        this.serverUrl = preset.url;
+      }
       if (!this.serverUrl) {
         this.ready = true;
         return;
@@ -154,6 +163,8 @@ class Session {
 
   /** App: Server einrichten (nach erfolgreicher Prüfung der Adresse). */
   async useServer(origin: string, info: ServerInfo): Promise<void> {
+    const preset = serverPreset();
+    if (preset.locked && origin !== preset.url) throw new Error('server locked');
     await setServer(origin);
     this.serverUrl = origin;
     this.health = { app: 'double-sweat', ...info } as Health;

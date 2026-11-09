@@ -299,7 +299,8 @@ ein eigenes (kostenloses) Firebase-Projekt und eine App-Version mit FCM, die du 
 4. `pnpm android:apk:fcm` baut das signierte APK mit FCM (`pnpm android:debug:fcm` das Test-APK), siehe
    [Android-App](#android-app). Der Standard-Build und der FCM-Build haben (je nach Paketname) verschiedene App-IDs
    und sind getrennte Apps. Debug- und Release-Build des FCM-Builds sind verschieden signiert: beim Wechsel zuerst
-   deinstallieren.
+   deinstallieren. Weil die App ohnehin zu _deinem_ Server gehört, kannst du ihn gleich einbauen
+   ([Server fest einstellen](#server-fest-einstellen)).
 5. Auf dem Handy "Profil → Benachrichtigungen → Push": Ist keine UnifiedPush-App installiert, nutzt die App FCM
    direkt. Sind beide Wege möglich, fragt sie nach.
 
@@ -389,6 +390,29 @@ Das Ergebnis liegt in `apps/android/dist/double-sweat-<Version>.apk` (mit FCM: `
 Zertifikats. **Sichere `apps/android/signing/` an einem zweiten Ort.** Android nimmt ein Update nur an, wenn es mit
 demselben Schlüssel signiert ist; ohne ihn müsstest du die App deinstallieren und neu einrichten. Wer den Ordner
 hat, kann Updates in deinem Namen signieren.
+
+#### Server fest einstellen
+
+Eine App, die du für dich und dein Team baust (vor allem die FCM-Variante, die ohnehin nur zu deinem Server passt),
+muss nicht erst nach der Serveradresse fragen. Das Bauskript nimmt sie als Umgebungsvariable:
+
+```bash
+# Die App trägt die Adresse beim Einrichten schon ein; ein Tipp auf "Verbinden" genügt, ändern bleibt möglich
+DS_SERVER_URL=https://sweat.example.org pnpm android:apk:fcm
+
+# Die Adresse steht fest: kein Eingabefeld, kein "Server wechseln", Einladungen anderer Server werden ignoriert
+DS_SERVER_URL=https://sweat.example.org DS_SERVER_LOCK=true pnpm android:apk:fcm
+```
+
+Das gilt für jeden Build des Skripts (auch `pnpm android:apk` und die Debug-Builds). Ohne `DS_SERVER_URL` bleibt alles
+wie bisher. Die Adresse muss `https://` sein (nur in Debug-Builds auch `http://`), ohne Zugangsdaten; ein Pfad wird
+abgeschnitten. Eine Sperre ohne Adresse bricht den Build ab. Eine gesperrte App verbindet sich beim Start selbst mit
+ihrem Server (die Prüfung, ob dort ein Double-Sweat-Server in passender Version antwortet, läuft wie sonst); war sie
+vorher auf einen anderen Server eingerichtet, wird sie auf den festen umgestellt und dort neu angemeldet. Unter
+"Profil" steht dann "Fest eingestellt in dieser App-Version".
+
+Die Adresse steckt danach im APK und lässt sich dort auslesen. Das ist kein Geheimnis, die Festlegung ist auch kein
+Schutz: Wer die APK verändert, kann sie umbauen. Sie erspart nur das Eintippen und Verwechseln.
 
 **Installieren (Sideloading):** APK aufs Handy kopieren, öffnen und "Unbekannte Apps installieren" für die
 öffnende App erlauben. Oder per Kabel: `adb install double-sweat-0.1.0.apk`. Zur Kontrolle auf dem Rechner:
@@ -679,6 +703,11 @@ und Server-Image; schlagen die Prüfungen fehl, wird nichts gebaut und nichts ve
 3. Optional, nur für die FCM-Variante: Secret `GOOGLE_SERVICES_JSON` mit dem Inhalt der Firebase-Datei
    (`gh secret set GOOGLE_SERVICES_JSON < apps/android/firebase/google-services.json`). Der Lauf legt die FCM-APK
    dann als **Artefakt** des Laufs ab (14 Tage, nicht im Release); wer Lesezugriff aufs Repository hat, kann es laden.
+   Ebenfalls optional und nur für diese Variante: Secret `DS_SERVER_URL` (zum Beispiel
+   `gh secret set DS_SERVER_URL --body https://sweat.example.org`) trägt deinen Server in der App vor, und die
+   **Variable** `DS_SERVER_LOCK` mit dem Wert `true` (`gh variable set DS_SERVER_LOCK --body true`) stellt ihn fest
+   ein, siehe [Server fest einstellen](#server-fest-einstellen). Die Adresse steckt im APK; bei einem öffentlichen
+   Repository kann jedes angemeldete GitHub-Konto das Artefakt laden und sie auslesen.
 4. Das Repository öffentlich machen, wenn andere die APK ohne Konto laden sollen.
 
 **Ein Release**

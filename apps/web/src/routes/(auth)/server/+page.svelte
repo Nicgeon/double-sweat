@@ -5,16 +5,20 @@
   import Button from '#lib/components/Button.svelte';
   import Field from '#lib/components/Field.svelte';
   import { NATIVE } from '#lib/native/flag.ts';
+  import { serverPreset } from '#lib/native/server-preset.ts';
   import { normalizeServerUrl, probeServer, ServerError } from '#lib/native/server-url.ts';
   import { session } from '#lib/state/session.svelte.ts';
 
-  let address = $state(session.serverUrl ?? '');
+  // Eine App-Version kann einen Server vorschlagen (Build-Einstellung); ein gespeicherter Server geht vor
+  const preset = serverPreset();
+  let address = $state(session.serverUrl ?? preset.url ?? '');
   let error = $state<string | null>(null);
   let busy = $state(false);
 
-  // Die Web-App kennt ihren Server (same-origin); die Seite gibt es nur in der Android-App
+  // Die Web-App kennt ihren Server (same-origin), eine auf einen Server festgelegte App ebenfalls: die Seite gibt es
+  // nur in der Android-App und nur, solange die Adresse nicht feststeht
   $effect(() => {
-    if (!NATIVE) void goto('/', { replaceState: true });
+    if (!NATIVE || preset.locked) void goto('/', { replaceState: true });
   });
 
   async function connect(e: SubmitEvent) {
@@ -42,6 +46,6 @@
 <p class="auth__lead">{t('server.lead')}</p>
 {#if error}<Banner tone="error">{error}</Banner>{/if}
 <form class="form" onsubmit={connect}>
-  <Field label={t('server.address')} bind:value={address} type="text" inputmode="url" placeholder={t('server.placeholder')} autocapitalize="none" autocomplete="url" spellcheck={false} hint={t('server.hint')} required />
+  <Field label={t('server.address')} bind:value={address} type="text" inputmode="url" placeholder={t('server.placeholder')} autocapitalize="none" autocomplete="url" spellcheck={false} hint={preset.url ? t('server.hintPreset') : t('server.hint')} required />
   <Button type="submit" size="lg" loading={busy}>{t('server.connect')}</Button>
 </form>

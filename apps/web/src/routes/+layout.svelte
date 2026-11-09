@@ -7,6 +7,7 @@
   import JoinLinkSheet from '#lib/components/JoinLinkSheet.svelte';
   import { startBackButton, startDeepLinks } from '#lib/native/boot.svelte.ts';
   import { CLIENT_API, NATIVE } from '#lib/native/flag.ts';
+  import { serverPreset } from '#lib/native/server-preset.ts';
   import Banner from '#lib/components/Banner.svelte';
   import Button from '#lib/components/Button.svelte';
   import LanguageSwitch from '#lib/components/LanguageSwitch.svelte';
@@ -16,6 +17,7 @@
 
   let { children } = $props();
   let retrying = $state(false);
+  const serverLocked = serverPreset().locked;
 
   onMount(() => {
     theme.init();
@@ -59,8 +61,8 @@
         {t('root.versionHint', { app: CLIENT_API, server: session.health?.apiVersion ?? '?' })}
       </Banner>
       <Button size="lg" icon="refresh-cw" loading={retrying} onclick={retry}>{t('common.retry')}</Button>
-      {#if NATIVE}<Button variant="ghost" href="/server">{t('root.changeServer')}</Button>
-      {:else}<Button variant="ghost" onclick={() => location.reload()}>{t('error.reload')}</Button>{/if}
+      {#if !NATIVE}<Button variant="ghost" onclick={() => location.reload()}>{t('error.reload')}</Button>
+      {:else if !serverLocked}<Button variant="ghost" href="/server">{t('root.changeServer')}</Button>{/if}
       <LanguageSwitch />
     </div>
   </div>
@@ -73,7 +75,7 @@
         {t('root.unreachableBody')}
       </Banner>
       <Button size="lg" icon="refresh-cw" loading={retrying} onclick={retry}>{t('common.retry')}</Button>
-      {#if NATIVE}<Button variant="ghost" href="/server">{t('root.changeServer')}</Button>{/if}
+      {#if NATIVE && !serverLocked}<Button variant="ghost" href="/server">{t('root.changeServer')}</Button>{/if}
       <LanguageSwitch />
     </div>
   </div>

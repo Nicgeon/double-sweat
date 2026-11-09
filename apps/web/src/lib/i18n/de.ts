@@ -221,6 +221,8 @@ export const de = {
   'server.placeholder': 'sweat.beispiel.de',
   'server.hint':
     'Nur HTTPS. Vor jeder Anmeldung prüft die App, ob dort ein Double-Sweat-Server antwortet.',
+  'server.hintPreset':
+    'Diese App-Version schlägt den Server vor. Nur HTTPS. Vor jeder Anmeldung prüft die App, ob dort ein Double-Sweat-Server antwortet.',
   'server.connect': 'Verbinden',
   'reset.docTitle': 'Neues Passwort',
   'reset.title': 'Neues Passwort.',
@@ -520,6 +522,7 @@ export const de = {
   'profile.signIn': 'Anmeldung',
   'profile.theme': 'Hell oder dunkel',
   'profile.serverLine': 'Server: {host}',
+  'profile.serverLocked': 'Fest eingestellt in dieser App-Version',
   'more.profile': 'Profil',
   'more.nothingToSave': 'Nichts zu speichern.',
   'more.saved': 'Gespeichert.',

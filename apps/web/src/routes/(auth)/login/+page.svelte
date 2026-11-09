@@ -8,8 +8,10 @@
   import Field from '#lib/components/Field.svelte';
   import { session } from '#lib/state/session.svelte.ts';
   import { NATIVE } from '#lib/native/flag.ts';
+  import { serverPreset } from '#lib/native/server-preset.ts';
   import { safeNext } from '#lib/util/next.ts';
 
+  const serverLocked = serverPreset().locked;
   let email = $state('');
   let password = $state('');
   let error = $state<string | null>(null);
@@ -42,7 +44,7 @@
 
 <h1 class="auth__title">{t('login.title')}</h1>
 {#if NATIVE && session.serverUrl}
-  <p class="small muted">{t('login.server', { host: new URL(session.serverUrl).host })} · <a href="/server">{t('login.serverChange')}</a></p>
+  <p class="small muted">{t('login.server', { host: new URL(session.serverUrl).host })}{#if !serverLocked} · <a href="/server">{t('login.serverChange')}</a>{/if}</p>
 {/if}
 {#if expired}<Banner tone="info" title={t('login.expiredTitle')}>{t('login.expiredBody')}</Banner>{/if}
 {#if error}<Banner tone="error">{error}</Banner>{/if}

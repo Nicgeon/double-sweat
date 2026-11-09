@@ -6,6 +6,7 @@
   import LinkRow from '#lib/components/LinkRow.svelte';
   import Page from '#lib/components/Page.svelte';
   import { NATIVE } from '#lib/native/flag.ts';
+  import { serverPreset } from '#lib/native/server-preset.ts';
   import { colorName } from '#lib/state/colors.ts';
   import { healthStore } from '#lib/state/health.svelte.ts';
   import { session } from '#lib/state/session.svelte.ts';
@@ -25,6 +26,8 @@
   const lookCaption = $derived([user ? colorName(user.color) : '', LANGUAGE_NAMES[i18n.current], themeName].filter(Boolean).join(' · '));
   const teamCaption = $derived(partner ? t('profile.capTeamWith', { name: partner.displayName }) : t('profile.capTeamAlone'));
   const serverHost = $derived(NATIVE && session.serverUrl ? new URL(session.serverUrl).host : null);
+  /** Diese App-Version ist fest auf einen Server eingestellt (Build-Einstellung): kein Wechsel */
+  const serverLocked = serverPreset().locked;
 
   async function changeServer() {
     await session.forgetServer();
@@ -64,10 +67,10 @@
 
     <div class="profile-foot">
       {#if serverHost}
-        <p class="small muted">{t('profile.serverLine', { host: serverHost })}</p>
+        <p class="small muted">{t('profile.serverLine', { host: serverHost })}{serverLocked ? ` · ${t('profile.serverLocked')}` : ''}</p>
       {/if}
       <div class="row">
-        {#if serverHost}<Button variant="ghost" size="sm" icon="refresh-cw" onclick={changeServer}>{t('more.switchServer')}</Button>{/if}
+        {#if serverHost && !serverLocked}<Button variant="ghost" size="sm" icon="refresh-cw" onclick={changeServer}>{t('more.switchServer')}</Button>{/if}
         <Button variant="secondary" size="sm" icon="log-out" onclick={logout}>{t('common.signOut')}</Button>
       </div>
     </div>

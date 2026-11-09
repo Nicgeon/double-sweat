@@ -216,6 +216,8 @@ export const en: Record<MessageKey, string> = {
   'server.placeholder': 'sweat.example.com',
   'server.hint':
     'HTTPS only. Before every sign-in the app checks that a Double Sweat server answers there.',
+  'server.hintPreset':
+    'This app version suggests the server. HTTPS only. Before any sign-in the app checks that a Double Sweat server answers there.',
   'server.connect': 'Connect',
   'reset.docTitle': 'New password',
   'reset.title': 'New password.',
@@ -514,6 +516,7 @@ export const en: Record<MessageKey, string> = {
   'profile.signIn': 'Sign-in',
   'profile.theme': 'Light or dark',
   'profile.serverLine': 'Server: {host}',
+  'profile.serverLocked': 'Fixed in this app version',
   'more.profile': 'Profile',
   'more.nothingToSave': 'Nothing to save.',
   'more.saved': 'Saved.',
