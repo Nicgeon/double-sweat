@@ -502,7 +502,7 @@ Release (siehe [Release veröffentlichen](#release-veröffentlichen-github)), ni
 | Tag                   | Bedeutung                                                                             |
 | --------------------- | ------------------------------------------------------------------------------------- |
 | `latest`              | das jüngste stabile Release (zum Beispiel 0.2.0)                                      |
-| `beta`                | die jüngste Vorabversion (zum Beispiel 0.3.0-rc.1), zum Testen                        |
+| `beta`                | das jüngste Release überhaupt, stabil oder Vorabversion (zum Beispiel 0.3.0-rc.1)     |
 | `0.2`                 | bleibt in der Linie 0.2 (nur kleine Updates, kein Sprung auf 0.3)                     |
 | `0.2.0`, `0.2.0-rc.1` | genau diese Version (Release-Tags; auch Vorabversionen); zum Festhalten, Zurückrollen |
 
@@ -733,8 +733,9 @@ git tag v0.2.0 && git push origin v0.2.0
 - Ist ein Tag falsch gesetzt: `git push --delete origin v0.2.0 && git tag -d v0.2.0`, dazu ein bereits angelegtes
   Release auf GitHub löschen.
 - Das Server-Image baut derselbe Tag über `.github/workflows/docker.yml` (amd64 und arm64, vorher ein Smoke-Test) und
-  legt es mit den Tags `0.2.0` und `0.2` in die Registry; ein stabiles Release setzt außerdem `latest`, eine
-  Vorabversion (`-rc.1`) stattdessen `beta` (und nur die genaue Version, nicht `0.2`). Der Server aktualisiert sich
+  legt es mit den Tags `0.2.0` und `0.2` in die Registry; ein stabiles Release setzt außerdem `latest` und `beta`,
+  eine Vorabversion (`-rc.1`) nur `beta` (und nur die genaue Version, nicht `0.2`), sodass `beta` nie hinter `latest`
+  zurückliegt. Der Server aktualisiert sich
   mit `docker compose pull` und `up -d`. Das APK selbst liefert er nicht aus.
 
 **Forks.** Wer einen Fork betreibt, setzt die Secrets im eigenen Repository, trägt in `apps/web/src/lib/util/source.ts`

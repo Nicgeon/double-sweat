@@ -246,7 +246,12 @@ jobs:
         run: |
           set -eu
           SUMME="$(cut -d' ' -f1 release/SHA256SUMS)"
-          PREV="$(git describe --tags --abbrev=0 --match 'v[0-9]*' "$TAG^" 2>/dev/null || true)"
+          # Die Änderungsliste reicht beim stabilen Release bis zum vorigen stabilen Release (nicht nur bis zur letzten
+          # Vorabversion), bei einer Vorabversion bis zum vorigen Tag
+          case "$VERSION" in
+            *-*) PREV="$(git describe --tags --abbrev=0 --match 'v[0-9]*' "$TAG^" 2>/dev/null || true)" ;;
+            *)   PREV="$(git describe --tags --abbrev=0 --match 'v[0-9]*' --exclude 'v*-*' "$TAG^" 2>/dev/null || true)" ;;
+          esac
           if [ -n "$PREV" ]; then RANGE="$PREV..$TAG"; else RANGE="$TAG"; fi
           {
             echo "## Installation"
@@ -265,7 +270,7 @@ jobs:
             echo
             echo "## Änderungen"
             echo
-            git log --no-merges --pretty='- %s' "$RANGE" | head -60
+            git log --no-merges --pretty='- %s' "$RANGE" | grep -v '^- Version ' | head -60
           } > notes.md
           case "$VERSION" in *-*) PRE=true ;; *) PRE=false ;; esac
           if gh release view "$TAG" >/dev/null 2>&1; then

@@ -6,9 +6,14 @@ name: Docker-Image
 # Das Image entsteht nur bei einem Release (ein Tag v…), nicht bei normalen Pushes: release.yml ruft diese Datei auf,
 # nachdem die Prüfungen bestanden sind.
 #
-#   Tag v0.2.0        →  :0.2.0, :0.2 und :latest   die stabile Version; der Tag muss zur Version im Code passen und
-#                                                    auf main liegen. :latest ist immer das jüngste stabile Release
-#   Tag v0.2.0-rc.1   →  :0.2.0-rc.1 und :beta      Vorabversion zum Testen (darf von develop kommen)
+#   Tag v0.2.0        →  :0.2.0, :0.2, :latest und :beta   die stabile Version; der Tag muss zur Version im Code
+#                                                           passen und auf main liegen. :latest ist immer das jüngste
+#                                                           stabile Release
+#   Tag v0.2.0-rc.1   →  :0.2.0-rc.1 und :beta             Vorabversion zum Testen (darf von develop kommen)
+#
+# :beta ist das jüngste Release überhaupt, stabil oder Vorabversion: Wer testen will, hängt sich an :beta und hat nie
+# einen älteren Stand als :latest. (Erscheint ein stabiles Hotfix-Release, während eine neuere Vorabversion schon
+# draußen ist, zeigt :beta bis zur nächsten Vorabversion auf das Hotfix-Release.)
 #
 # Vor dem Veröffentlichen wird das Image einmal gestartet und der Health-Check abgefragt (Smoke-Test). Es braucht
 # keine Geheimnisse: Der Workflow meldet sich mit dem eingebauten Token der Ausführung an.
@@ -85,7 +90,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}},enable=${{ !contains(github.ref_name, '-') }}
             type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
-            type=raw,value=beta,enable=${{ contains(github.ref_name, '-') }}
+            type=raw,value=beta
           labels: |
             org.opencontainers.image.title=Double Sweat
             org.opencontainers.image.description=Selbst gehostete Paar-Fitness-Accountability-App
