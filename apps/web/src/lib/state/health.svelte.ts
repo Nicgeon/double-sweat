@@ -1,5 +1,9 @@
+import { App } from '@capacitor/app';
 import { NATIVE } from '#lib/native/flag.ts';
 import { type HealthAvailability, HealthConnect, type HealthSession } from '#lib/native/plugins.ts';
+import { dateInZone, pendingSessions } from '#lib/util/health-suggest.ts';
+import { session } from './session.svelte.ts';
+import { todayStore } from './today.svelte.ts';
 
 const PREF = 'ds_health';
 const USED = 'ds_health_used';
@@ -39,9 +43,24 @@ class HealthStore {
     return NATIVE && this.enabled && this.granted;
   }
 
-  /** Noch nicht übernommene Trainings, das jüngste zuerst. */
+  /**
+   * Trainings von heute, für die es noch keinen Check-in gibt und die nicht übernommen oder ausgeblendet wurden, das
+   * jüngste zuerst (siehe `pendingSessions`).
+   */
   get suggestions(): HealthSession[] {
-    return this.active ? this.sessions.filter((s) => !this.used.includes(s.id)) : [];
+    if (!this.active) return [];
+    const timezone = session.user?.timezone;
+    const me = todayStore.me;
+    const checkins = (todayStore.dashboard?.feed ?? [])
+      .filter((c) => c.userId === me?.userId)
+      .map((c) => c.createdAt);
+    return pendingSessions({
+      sessions: this.sessions,
+      used: this.used,
+      checkins,
+      today: me?.days.find((d) => d.isToday)?.date ?? dateInZone(Date.now(), timezone),
+      timezone,
+    });
   }
 
   /** Fragt Verfügbarkeit und Erlaubnis ab und lädt, wenn aktiv, die Trainings. */
@@ -65,6 +84,28 @@ class HealthStore {
     } finally {
       this.loaded = true;
     }
+  }
+
+  /**
+   * Hält die Vorschläge frisch, solange eine Seite sie zeigt: liest jetzt und bei jeder Rückkehr in die App neu (ein
+   * Training ist dann vielleicht inzwischen eingetragen). Ausgeschaltet wird nichts gelesen. Gibt die Abmeldung zurück.
+   */
+  watch(): () => void {
+    if (!NATIVE) return () => {};
+    const reload = () => {
+      if (this.enabled) void this.refresh();
+    };
+    reload();
+    let stopped = false;
+    let handle: { remove: () => Promise<void> } | undefined;
+    void App.addListener('resume', reload).then((h) => {
+      if (stopped) void h.remove();
+      else handle = h;
+    });
+    return () => {
+      stopped = true;
+      void handle?.remove();
+    };
   }
 
   /** Einschalten: fragt die Erlaubnis bei Health Connect ab. Gibt zurück, ob es nun an ist. */
@@ -93,7 +134,7 @@ class HealthStore {
     write(PREF, null);
   }
 
-  /** Ein Training wurde mit einem Check-in übernommen und wird nicht noch einmal vorgeschlagen. */
+  /** Ein Training wurde mit einem Check-in übernommen oder ausgeblendet und wird nicht noch einmal vorgeschlagen. */
   markUsed(id: string): void {
     this.used = [id, ...this.used.filter((x) => x !== id)].slice(0, USED_MAX);
     write(USED, JSON.stringify(this.used));

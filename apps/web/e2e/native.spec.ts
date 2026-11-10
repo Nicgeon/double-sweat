@@ -387,6 +387,16 @@ async function fakeHealth(page: Page, fake: Record<string, unknown>) {
   await page.addInitScript((f) => Object.assign(window, { __dsHealthFake: f }), fake);
 }
 
+/**
+ * Zeitpunkt vor `minutes` Minuten, aber nie vor Mitternacht: Vorschläge gelten nur für Trainings von heute, der Test
+ * soll auch kurz nach Mitternacht laufen.
+ */
+const todayAgo = (minutes: number) => {
+  const midnight = new Date();
+  midnight.setHours(0, 0, 0, 0);
+  return Math.max(midnight.getTime() + 60_000, Date.now() - minutes * 60_000);
+};
+
 const healthState = (page: Page) =>
   page.evaluate(
     () => (window as unknown as { __dsHealthFake: Record<string, unknown> }).__dsHealthFake,
@@ -396,25 +406,12 @@ test('Health Connect: einschalten, Trainings als Vorschlag im Check-in, Übernom
   browser,
 }) => {
   const { page, problems } = await appPage(browser);
-  const now = Date.now();
   await fakeHealth(page, {
     availability: 'available',
     granted: false,
     sessions: [
-      {
-        id: 'lauf',
-        tag: 'laufen',
-        startMs: now - 3 * 3600_000,
-        endMs: now - 2 * 3600_000,
-        minutes: 45,
-      },
-      {
-        id: 'kraft',
-        tag: 'kraft',
-        startMs: now - 8 * 3600_000,
-        endMs: now - 7.5 * 3600_000,
-        minutes: 30,
-      },
+      { id: 'lauf', tag: 'laufen', startMs: todayAgo(180), endMs: todayAgo(120), minutes: 45 },
+      { id: 'kraft', tag: 'kraft', startMs: todayAgo(480), endMs: todayAgo(450), minutes: 30 },
     ],
   });
   await registerInApp(page);
@@ -449,7 +446,7 @@ test('Health Connect: einschalten, Trainings als Vorschlag im Check-in, Übernom
 
   // Check-in (innerhalb der App navigieren, damit der vorgespielte Stand bleibt)
   await page.getByRole('navigation').getByRole('link', { name: /Heute/ }).click();
-  await page.getByRole('link', { name: 'Einchecken' }).first().click();
+  await page.locator('a.ds-fab').click();
   await expect(page.getByTestId('camera')).toBeVisible();
   await page.getByRole('button', { name: 'Foto aufnehmen' }).click();
   await page.getByRole('button', { name: 'Selfie überspringen' }).click();
@@ -471,6 +468,8 @@ test('Health Connect: einschalten, Trainings als Vorschlag im Check-in, Übernom
     .getByRole('radio', { name: 'Rad' })
     .click();
   await expect(run).toHaveAttribute('aria-checked', 'false');
+  // … und die Dauer, die der Vorschlag eingetragen hatte, geht mit
+  await expect(page.getByLabel('Notiz (optional)')).toHaveCount(0);
   await run.click();
   await page.getByRole('button', { name: 'Einchecken' }).click();
   await expect(page.getByRole('heading', { name: 'Eingecheckt.' })).toBeVisible();
@@ -492,6 +491,101 @@ test('Health Connect: einschalten, Trainings als Vorschlag im Check-in, Übernom
   const again = page.getByRole('radiogroup', { name: 'Aus Health Connect' });
   await expect(again.getByRole('radio')).toHaveCount(1);
   await expect(again.getByRole('radio', { name: /^Kraft · 30 min/ })).toBeVisible();
+  expect(problems).toEqual([]);
+});
+
+/** Health Connect ist schon eingeschaltet und erlaubt (wie nach dem ersten Einrichten), dazu die Trainings von heute. */
+async function healthOn(page: Page, sessions: Record<string, unknown>[]) {
+  await fakeHealth(page, { availability: 'available', granted: true, sessions });
+  await page.addInitScript(() => localStorage.setItem('ds_health', '1'));
+}
+
+test('Health Connect: Heute schlägt ein erkanntes Training als Check-in vor, ein Tipp trägt Sportart und Dauer ein', async ({
+  browser,
+}) => {
+  const { page, problems } = await appPage(browser);
+  await healthOn(page, [
+    { id: 'lauf', tag: 'laufen', startMs: todayAgo(75), endMs: todayAgo(30), minutes: 45 },
+    { id: 'kraft', tag: 'kraft', startMs: todayAgo(480), endMs: todayAgo(450), minutes: 30 },
+  ]);
+  await registerInApp(page);
+
+  // Das jüngste Training steht als Karte auf „Heute“, das andere ist nur ein Hinweis darunter
+  const card = page.getByRole('region', { name: 'Training erkannt' });
+  await expect(card).toContainText('Laufen');
+  await expect(card).toContainText('45 min');
+  await expect(card).toContainText('+1 weiteres Training heute');
+
+  // Ein Tipp führt in die Kamera; in der Vorschau ist alles schon eingetragen
+  await card.getByRole('link', { name: 'Einchecken' }).click();
+  await expect(page).toHaveURL(/\/checkin\?hc=lauf$/);
+  await expect(page.getByTestId('camera')).toBeVisible();
+  await page.getByRole('button', { name: 'Foto aufnehmen' }).click();
+  await page.getByRole('button', { name: 'Selfie überspringen' }).click();
+  await expect(page.getByRole('img', { name: 'Dein Foto' })).toBeVisible();
+  await expect(
+    page
+      .getByRole('radiogroup', { name: 'Aus Health Connect' })
+      .getByRole('radio', { name: /^Laufen · 45 min/ }),
+  ).toHaveAttribute('aria-checked', 'true');
+  await expect(
+    page.getByRole('radiogroup', { name: 'Training' }).getByRole('radio', { name: 'Laufen' }),
+  ).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByLabel('Notiz (optional)')).toHaveValue('45 min');
+  await page.getByRole('button', { name: 'Einchecken' }).click();
+  await expect(page.getByRole('heading', { name: 'Eingecheckt.' })).toBeVisible();
+
+  // Zurück auf „Heute“: der Lauf ist übernommen, das Krafttraining bleibt als nächster Vorschlag
+  await page.getByRole('link', { name: 'Fertig' }).click();
+  await expect(card).toContainText('Kraft');
+  await expect(card).not.toContainText('Laufen');
+  await expect(card).not.toContainText('weitere');
+
+  // Ausblenden: weg, auch nach dem Neuladen
+  await card.getByRole('button', { name: 'Ausblenden' }).click();
+  await expect(card).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Training erkannt' })).toHaveCount(0);
+  expect(problems).toEqual([]);
+});
+
+test('Health Connect: ein Check-in ohne Vorschlag deckt das Training zu, es wird danach nicht noch einmal vorgeschlagen', async ({
+  browser,
+}) => {
+  const { page, problems } = await appPage(browser);
+  await healthOn(page, [
+    { id: 'lauf', tag: 'laufen', startMs: todayAgo(75), endMs: todayAgo(30), minutes: 45 },
+  ]);
+  await registerInApp(page);
+  await expect(page.getByRole('region', { name: 'Training erkannt' })).toBeVisible();
+
+  // Check-in über den Knopf in der Leiste, den Vorschlag lässt man links liegen
+  await page.locator('a.ds-fab').click();
+  await expect(page.getByTestId('camera')).toBeVisible();
+  await page.getByRole('button', { name: 'Foto aufnehmen' }).click();
+  await page.getByRole('button', { name: 'Selfie überspringen' }).click();
+  await page.getByRole('radio', { name: 'Yoga' }).click();
+  await page.getByRole('button', { name: 'Einchecken' }).click();
+  await expect(page.getByRole('heading', { name: 'Eingecheckt.' })).toBeVisible();
+  await page.getByRole('link', { name: 'Fertig' }).click();
+  await expect(page.getByRole('heading', { name: 'Heute', level: 1 })).toBeVisible();
+  await expect(page.locator('.ds-photo')).toContainText('Yoga');
+  await expect(page.getByRole('region', { name: 'Training erkannt' })).toHaveCount(0);
+  expect(problems).toEqual([]);
+});
+
+test('Health Connect: ohne Training von heute gibt es keine Karte', async ({ browser }) => {
+  const { page, problems } = await appPage(browser);
+  // Eingeschaltet, aber das einzige Training endete gestern: ein Check-in zählt nur für heute
+  const midnight = new Date();
+  midnight.setHours(0, 0, 0, 0);
+  const yesterday = midnight.getTime() - 3600_000;
+  await healthOn(page, [
+    { id: 'gestern', tag: 'rad', startMs: yesterday - 3600_000, endMs: yesterday, minutes: 60 },
+  ]);
+  await registerInApp(page);
+  await expect(page.getByRole('region', { name: 'Training erkannt' })).toHaveCount(0);
   expect(problems).toEqual([]);
 });
 

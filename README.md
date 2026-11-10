@@ -58,6 +58,12 @@ darunter die Trainingsart als wischbare Chip-Reihe (die zuletzt gewählte ist vo
 die eingeklappte Notiz. "Einchecken" liegt in einer festen Leiste am unteren Rand und ist ohne Scrollen erreichbar;
 zurück oder schließen fragt nur dann "Foto verwerfen?", wenn schon ein Foto gemacht wurde.
 
+**Kameraeinstellungen:** Fokus, Belichtung und Weißabgleich stehen auf automatisch (Dauerfokus). Ein Tipp aufs Bild
+stellt an dieser Stelle scharf (ein Ring zeigt wo; nach ein paar Sekunden folgt wieder der Autofokus), zwei Finger
+zoomen. Unten im Bild liegen ein Zoom-Regler und, über das Sonnen-Symbol, die Belichtungskorrektur (mit
+"Zurücksetzen"). Die Regler erscheinen nur, wenn die Kamera sie meldet; bei der Frontkamera, am Desktop und in
+Browsern ohne diese Funktionen fehlen sie einfach. Das Selfie-Bild stellt nur automatisch ein, ohne Regler.
+
 ```bash
 git clone https://github.com/Nicgeon/double-sweat.git
 cd double-sweat
@@ -331,10 +337,15 @@ Zugangsdaten; ein Tipp öffnet die App. Gestaltet nach dem Designsystem (Schrift
 mit 24-dp-Radius); bei kleinen Rastern fallen zuerst Symbol und Kopfzeile weg, nie wird Text abgeschnitten. Beim Abmelden werden sie geleert. Hinzufügen: Startbildschirm lange drücken →
 Widgets → Double Sweat.
 
-**Health Connect (optional, aus):** Unter _Profil → Health Connect_ schaltest du ein, dass der Check-in Trainings deiner
-Uhr oder Fitness-App als Vorschlag zeigt. Nach dem Foto erscheint eine Reihe wie "Laufen · 45 min · 07:15"; ein Tipp
-wählt die Sportart und schreibt die Dauer in die Notiz (sichtbar, änderbar). Das Foto bleibt Pflicht, ein
-Vorschlag ersetzt keinen Check-in. Gelesen wird nur **lesend** und nur **Trainingseinheiten der letzten 24 Stunden**
+**Health Connect (optional, aus):** Unter _Profil → Health Connect_ schaltest du ein, dass die App Trainings deiner
+Uhr oder Fitness-App als Check-in vorschlägt. Auf "Heute" erscheint dann die Karte "Training erkannt" ("Laufen · 45 min ·
+07:15"); ein Tipp auf "Einchecken" öffnet die Kamera, Sportart und Dauer sind schon eingetragen (sichtbar, änderbar),
+"Ausblenden" verwirft den Vorschlag. Die App liest beim Öffnen und bei jeder Rückkehr in die App neu. Vorgeschlagen
+werden nur Trainings, die **heute** geendet haben und für die es noch keinen Check-in gibt (ein Check-in kurz vor bis
+einige Stunden nach dem Training gilt als dessen Check-in; jeder Check-in deckt höchstens ein Training zu). Beim
+Check-in selbst zeigt eine Reihe "Aus Health Connect" alle offenen Trainings zur Auswahl. Das Foto bleibt Pflicht,
+ein Vorschlag ersetzt keinen Check-in. Eine Mitteilung bei einem erkannten Training gibt es nicht: Dafür müsste die
+App im Hintergrund lesen. Gelesen wird nur **lesend** und nur **Trainingseinheiten der letzten 24 Stunden**
 (Art, Dauer, Startzeit), ohne Titel, Notizen, Herzfrequenz oder Standort, und nur **auf dem Gerät**: Der Server
 erfährt nur, was du mit dem Check-in abschickst. Beim Einschalten fragt Health Connect nach der Leseerlaubnis; du
 kannst sie dort jederzeit entziehen (die App führt dich über "Health Connect öffnen" hin). Ein übernommenes Training
@@ -461,7 +472,8 @@ zusammenpassen (App zu alt für den Server oder Server zu alt für die App) und 
   Rückkamera, Selfie mit der Frontkamera, wie im Browser) und fragt dafür beim ersten Mal nach der Kamera-Erlaubnis.
   Lehnst du ab, bietet sie die Kamera-App des Geräts und die Fotoauswahl an; "Kamera erneut versuchen" fragt noch
   einmal, hat Android die Frage gesperrt, hilft nur die App-Einstellung des Handys. Das Live-Bild ist etwas weniger
-  scharf als die Kamera-App (höchstens 2000 px, kein HDR, kein Nachtmodus). Aufnahmen verlassen die App nur als
+  scharf als die Kamera-App (höchstens 2000 px, kein HDR, kein Nachtmodus), hat aber Autofokus, Tipp-zum-Fokussieren,
+  Zoom und Belichtungskorrektur, soweit die Kamera des Handys sie meldet. Aufnahmen verlassen die App nur als
   Check-in.
 - Push-Nachrichten sind, wenn der Verteiler Schlüssel liefert, Ende-zu-Ende verschlüsselt und bleiben minimal;
   sonst enthält die Nachricht nur einen neutralen Text.
@@ -477,7 +489,7 @@ Trainingsarten aus Health Connect); Android Lint ohne
 Fehler; das Release wird beim Bauen mit `apksigner` geprüft.
 
 **Was noch nicht geprüft ist (bitte auf deinem Gerät testen).** Hier gibt es keinen Emulator und kein Handy.
-Ungetestet sind deshalb: Live-Kamera und Selfie auf dem Handy, Safe-Area/Statusleiste auf deinem Handy, Push über ntfy (Anmeldung beim
+Ungetestet sind deshalb: Live-Kamera und Selfie auf dem Handy (neu: Autofokus, Zoom, Belichtung; die Regler sind gegen eine vorgespielte Handykamera getestet, nicht gegen die echte), Safe-Area/Statusleiste auf deinem Handy, Push über ntfy (Anmeldung beim
 Verteiler und Benachrichtigung), Push über FCM mit echten Google-Servern (die Serverseite ist gegen einen
 nachgebauten FCM-Dienst getestet, die Entschlüsselung gegen den Beispielwert aus RFC 8291), Deep-Links aus einem Mail- oder Chat-Programm, Teilen-Menü beim Export,
 Tastatur-Verhalten in den Formularen (etwa die feste Leiste im Check-in), der Zurück-Knopf des Handys, Health Connect
@@ -632,8 +644,9 @@ Sicherheitslücke gefunden? Bitte nicht öffentlich als Issue melden, sondern pr
 - **Health Connect** (nur Android-App, nur wenn du es einschaltest): liest nur Trainingseinheiten der letzten
   24 Stunden (Art, Dauer, Startzeit), nur lesend und nur auf dem Gerät. Diese Daten gehen nie von selbst an den Server;
   übermittelt wird nur, was du mit einem Check-in abschickst (die gewählte Sportart und, wenn du sie stehen lässt, die
-  Dauer in der Notiz). Bereits übernommene Einträge merkt sich das Gerät nur als Kennung, damit sie nicht doppelt
-  vorgeschlagen werden.
+  Dauer in der Notiz). Bereits übernommene oder ausgeblendete Einträge merkt sich das Gerät nur als Kennung, damit sie
+  nicht doppelt vorgeschlagen werden; ob schon ein Check-in zum Training existiert, rechnet die App auf dem Gerät aus
+  den Zeitpunkten der eigenen Check-ins.
 - Konto löschen (`DELETE /api/v1/me`, Passwort nötig) entfernt die eigenen Check-ins samt Fotodateien; das Team
   des Partners bleibt bestehen. Team auflösen (`DELETE /api/v1/team`) löscht alle Teamdaten und -fotos.
 

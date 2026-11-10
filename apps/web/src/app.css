@@ -402,6 +402,91 @@ p {
   opacity: 0;
 }
 
+/* Fläche über dem Bild für Gesten: Tipp stellt scharf, zwei Finger zoomen (die Seite selbst soll dabei nicht zoomen) */
+.camera__touch {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+}
+
+/* Ring an der Stelle, auf die scharfgestellt wird */
+.camera__ring {
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  margin: -36px 0 0 -36px;
+  border: 2px solid var(--on-scrim);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35);
+  pointer-events: none;
+  animation: camera-ring 0.35s ease-out;
+}
+
+@keyframes camera-ring {
+  from {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .camera__ring {
+    animation: none;
+  }
+}
+
+/* Regler für Zoom und Belichtung über dem Auslöser; nur da, wo die Kamera sie meldet */
+.camtools {
+  position: absolute;
+  right: var(--space-3);
+  bottom: calc(var(--space-8) + 6.25rem + env(safe-area-inset-bottom, 0px));
+  left: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 24rem;
+  margin-inline: auto;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--scrim);
+  color: var(--on-scrim);
+}
+
+.camtools__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+}
+
+/* Beschriftung links, immer gleich breit: die Regler beginnen untereinander an derselben Stelle */
+.camtools__lead {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  font: 700 12px / 16px var(--font-body);
+}
+
+.camtools__range {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  accent-color: var(--on-scrim);
+}
+
+.camtools__value {
+  flex: none;
+  min-width: 3.25rem;
+  text-align: right;
+  font: 700 14px / 20px var(--font-body);
+  font-variant-numeric: tabular-nums;
+}
+
 .camera__top {
   position: absolute;
   top: calc(var(--space-3) + env(safe-area-inset-top, 0px));

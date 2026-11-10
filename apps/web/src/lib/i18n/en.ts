@@ -138,6 +138,11 @@ export const en: Record<MessageKey, string> = {
   'camera.shutter': 'Take photo',
   'camera.view': 'Camera image',
   'camera.flip': 'Switch camera',
+  'camera.tools': 'Camera settings',
+  'camera.zoom': 'Zoom',
+  'camera.exposure': 'Exposure',
+  'camera.exposureToggle': 'Adjust exposure',
+  'camera.exposureReset': 'Reset',
   'camera.denied':
     'Camera access is blocked. Allow it via the camera icon in the address bar or in your browser’s site settings and try again.',
   'camera.deniedApp':
@@ -502,6 +507,11 @@ export const en: Record<MessageKey, string> = {
   'health.refresh': 'Refresh',
   'health.minutes': '{n} min',
   'health.suggest': 'From Health Connect',
+  'health.detected': 'Workout found',
+  'health.checkinNow': 'Check in',
+  'health.dismiss': 'Hide',
+  'health.more_one': '+{n} more workout today',
+  'health.more_other': '+{n} more workouts today',
   // Profile
   'profile.capAccount': 'Name, email, password, time zone',
   'profile.capReminderOn': 'Reminder at {time}',

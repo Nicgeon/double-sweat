@@ -140,6 +140,11 @@ export const de = {
   'camera.shutter': 'Foto aufnehmen',
   'camera.view': 'Kamerabild',
   'camera.flip': 'Kamera wechseln',
+  'camera.tools': 'Kameraeinstellungen',
+  'camera.zoom': 'Zoom',
+  'camera.exposure': 'Belichtung',
+  'camera.exposureToggle': 'Belichtung einstellen',
+  'camera.exposureReset': 'Zurücksetzen',
   'camera.denied':
     'Der Zugriff auf die Kamera ist blockiert. Erlaube ihn über das Kamera-Symbol in der Adressleiste oder in den Seiteneinstellungen deines Browsers und versuche es noch einmal.',
   'camera.deniedApp':
@@ -508,6 +513,11 @@ export const de = {
   'health.refresh': 'Aktualisieren',
   'health.minutes': '{n} min',
   'health.suggest': 'Aus Health Connect',
+  'health.detected': 'Training erkannt',
+  'health.checkinNow': 'Einchecken',
+  'health.dismiss': 'Ausblenden',
+  'health.more_one': '+{n} weiteres Training heute',
+  'health.more_other': '+{n} weitere Trainings heute',
   // Profil
   'profile.capAccount': 'Name, E-Mail, Passwort, Zeitzone',
   'profile.capReminderOn': 'Erinnerung um {time} Uhr',

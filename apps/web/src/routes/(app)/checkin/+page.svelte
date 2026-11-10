@@ -2,8 +2,10 @@
   import { t, tn } from '#lib/i18n/index.svelte.ts';
   import { onDestroy, onMount, tick, untrack } from 'svelte';
   import { beforeNavigate, goto } from '$app/navigation';
+  import { page } from '$app/state';
   import { api, ApiError, type Checkin, unwrap, uploadCheckin } from '#lib/api/client.ts';
   import Banner from '#lib/components/Banner.svelte';
+  import CameraControls from '#lib/components/CameraControls.svelte';
   import Button from '#lib/components/Button.svelte';
   import Field from '#lib/components/Field.svelte';
   import Icon from '#lib/components/Icon.svelte';
@@ -354,6 +356,26 @@
     }
   }
 
+  /** Man wählt selbst eine Sportart: Der Vorschlag gilt nicht mehr, und die Dauer, die er eingetragen hat, geht mit. */
+  function pickTag() {
+    sessionId = null;
+    if (autoNote && note === autoNote) note = '';
+    autoNote = '';
+  }
+
+  // Tipp auf "Einchecken" bei einem erkannten Training auf der Heute-Seite (/checkin?hc=ID): Sportart und Dauer sind
+  // schon eingetragen, sobald der Vorschlag da ist. Nur einmal, damit eine spätere eigene Wahl nicht überschrieben wird.
+  const wantedSession = page.url.searchParams.get('hc');
+  let wantedApplied = false;
+  $effect(() => {
+    if (!wantedSession || wantedApplied || !healthStore.suggestions.some((s) => s.id === wantedSession)) return;
+    wantedApplied = true;
+    untrack(() => {
+      sessionId = wantedSession;
+      pickSession(wantedSession);
+    });
+  });
+
   const suggestionOptions = $derived(
     healthStore.suggestions.map((s) => {
       const meta = tagMeta(s.tag);
@@ -402,6 +424,7 @@
   <div class="camera" data-testid={step === 'selfie' ? 'selfie-camera' : 'camera'}>
     <!-- svelte-ignore a11y_media_has_caption -->
     <video bind:this={video} class="camera__video {mirrored ? 'camera__video--mirror' : ''} {cameraReady ? '' : 'camera__video--wait'}" playsinline muted aria-label={t('camera.view')} onplaying={onPlaying}></video>
+    <CameraControls {stream} {video} {mirrored} tools={step === 'camera'} />
     <div class="camera__top">
       <Button variant="ghost" iconOnly icon="x" class="camera__round" onclick={() => (step === 'selfie' ? skipSelfie() : goto('/'))}>{t('common.close')}</Button>
       <div class="camera__group">
@@ -449,7 +472,7 @@
 
         <div class="stack stack--tight">
           <p class="ds-field__label">{t('checkin.workout')}</p>
-          <Segmented scroll label={t('checkin.workout')} options={tagList()} bind:value={tag} onchange={() => (sessionId = null)} />
+          <Segmented scroll label={t('checkin.workout')} options={tagList()} bind:value={tag} onchange={pickTag} />
         </div>
 
         {#if noteOpen || note}

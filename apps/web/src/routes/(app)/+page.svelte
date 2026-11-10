@@ -6,6 +6,7 @@
   import { api, ApiError, type Checkin, unwrap } from '#lib/api/client.ts';
   import Banner from '#lib/components/Banner.svelte';
   import Button from '#lib/components/Button.svelte';
+  import HealthSuggestion from '#lib/components/HealthSuggestion.svelte';
   import HintCard from '#lib/components/HintCard.svelte';
   import Icon from '#lib/components/Icon.svelte';
   import InviteSheet from '#lib/components/InviteSheet.svelte';
@@ -15,6 +16,7 @@
   import StartGuide from '#lib/components/StartGuide.svelte';
   import TodayCard from '#lib/components/TodayCard.svelte';
   import WeekCard from '#lib/components/WeekCard.svelte';
+  import { healthStore } from '#lib/state/health.svelte.ts';
   import { session } from '#lib/state/session.svelte.ts';
   import { streakStore } from '#lib/state/streak.svelte.ts';
   import { todayStore } from '#lib/state/today.svelte.ts';
@@ -44,6 +46,8 @@
   onMount(() => {
     void load();
     void streakStore.load();
+    // App mit Health Connect: Trainings jetzt und bei jeder Rückkehr in die App neu lesen (Vorschlag für den Check-in)
+    return healthStore.watch();
   });
 
   // Links aus dem Postfach (/?photo=ID) öffnen das Foto gleich. Danach verschwindet der Zusatz aus der Adresse, damit
@@ -68,6 +72,8 @@
   const canNudge = $derived(partner !== undefined && !partner.checkedInToday && partner.status !== 'done');
   const memberById = $derived(new Map((data?.members ?? []).map((m) => [m.userId, m])));
   const guide = $derived(data ? startGuide(data) : null);
+  /** Trainings von heute aus Health Connect, für die noch kein Check-in da ist (nur solange heute noch einer geht) */
+  const suggestions = $derived(todayStore.canCheckin ? healthStore.suggestions : []);
   const hint = $derived(data && !guide?.visible ? pickHint(data) : null);
   /** Heutiges Datum des Teams (Montag der Woche plus Tag-Nummer), für die Zeile unter dem Titel. */
   const today = $derived.by(() => {
@@ -121,6 +127,10 @@
     <div class="cols cols--today">
       <div class="stack">
         {#if me}<TodayCard {me} partnerName={partner?.displayName} firstTime={!!guide && guide.visible && !guide.steps.find((s) => s.id === 'checkin')?.done} />{/if}
+
+        {#if suggestions[0]}
+          <HealthSuggestion session={suggestions[0]} more={suggestions.length - 1} ondismiss={() => suggestions[0] && healthStore.markUsed(suggestions[0].id)} />
+        {/if}
 
         <WeekCard
           weekLabel={me ? weekLabel(me.weekStart) : ''}
